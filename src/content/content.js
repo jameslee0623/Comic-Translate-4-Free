@@ -886,8 +886,9 @@
   // ------------------------------------------------------------ one-time support popup
   // Shown once, after the extension has translated 50 pictures in total
   // (the SW counts and sends 'ct/show-support'). Centered over a dimmed
-  // page, X top right, three buttons. Closing it — X, backdrop click,
-  // Escape, or any button — never shows it again: the SW marks it shown
+  // page, X top right, three buttons. Only X closes it (2.2.20): the
+  // buttons open their link and leave the modal open, backdrop click
+  // and Escape do nothing. It never shows again: the SW marks it shown
   // only when the content script confirms the modal actually rendered.
   let supportModal = null;
   function supportStoreUrl() {
@@ -911,22 +912,15 @@
   function closeSupportModal() {
     try { if (supportModal) supportModal.remove(); } catch { /* already gone */ }
     supportModal = null;
-    // 2.2.12: remove the Escape listener added by showSupportModal.
-    if (supportModalKeyHandler) {
-      try { document.removeEventListener('keydown', supportModalKeyHandler); } catch {}
-      supportModalKeyHandler = null;
-    }
   }
-  let supportModalKeyHandler = null;
   function showSupportModal() {
     if (supportModal) return false; // already showing
     const wrap = document.createElement('div');
     wrap.id = 'ct-support-modal';
     wrap.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;';
-    // 2.2.12: backdrop click and Escape close the modal (was X only).
-    wrap.addEventListener('click', (e) => { if (e.target === wrap) closeSupportModal(); });
-    supportModalKeyHandler = (e) => { if (e.key === 'Escape') closeSupportModal(); };
-    document.addEventListener('keydown', supportModalKeyHandler);
+    // 2.2.20: only X closes the modal — no backdrop-click or Escape
+    // listener (the 2.2.12 ones are gone), and the buttons below do not
+    // close it either.
     const card = document.createElement('div');
     card.style.cssText = 'position:relative;width:340px;max-width:calc(100vw - 32px);background:#1c1c22;color:#eee;' +
       'font:14px/1.4 sans-serif;padding:24px 20px 20px;border-radius:12px;border:1px solid #3a3a40;' +
@@ -947,9 +941,10 @@
       const b = document.createElement('button');
       b.textContent = supportMsg(labelKey, fallback);
       b.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
+      // 2.2.20: the button opens its link but leaves the modal open —
+      // only X closes it.
       b.onclick = () => {
-        try { chrome.runtime.sendMessage({ type: 'ct/open-link', url }); } catch { /* link open failed — still close */ }
-        closeSupportModal();
+        try { chrome.runtime.sendMessage({ type: 'ct/open-link', url }); } catch { /* link open failed — modal stays */ }
       };
       return b;
     };
