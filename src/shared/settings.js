@@ -3,7 +3,7 @@
 
 export const DEFAULT_SETTINGS = {
   sourceLang: 'auto', // 'auto' = detect from the OCR'd text; or 'ja' | 'en' | 'zh-CN' | 'zh-TW'
-  targetLang: 'en',
+  targetLang: 'en', // static fallback only — with no stored value, readSettingsRaw()/getSettings() use the browser language instead (browserTargetLang, below)
   translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm'
   backendFailover: true, // if the selected backend fails, try another (default on, 2026-10-26)
   azureKey: '',
@@ -155,11 +155,50 @@ export const TARGET_LANGS = [
   ['zu', 'Zulu'],
 ];
 
+// Map a browser UI locale (e.g. 'zh-TW', 'en-US', 'pt-BR') to the nearest
+// supported target language. Exact match first, then the Traditional/Simplified
+// Chinese regions, then the base language ('es-MX' -> 'es'); anything unknown
+// falls back to English. Pure function, so the harness can test it.
+export function targetLangForLocale(locale) {
+  if (!locale || typeof locale !== 'string') return 'en';
+  const tag = locale.trim();
+  if (!tag) return 'en';
+  const codes = TARGET_LANGS.map(([c]) => c);
+  const exact = codes.find(c => c === tag) || codes.find(c => c.toLowerCase() === tag.toLowerCase());
+  if (exact) return exact;
+  // Chinese regions: TW/HK/MO read Traditional, CN/SG read Simplified.
+  if (/^zh-(TW|HK|MO)$/i.test(tag)) return 'zh-TW';
+  if (/^zh-(CN|SG)$/i.test(tag)) return 'zh-CN';
+  const base = tag.split('-')[0].toLowerCase();
+  const baseHit = codes.find(c => c.toLowerCase() === base);
+  if (baseHit) return baseHit;
+  if (base === 'zh') return 'zh-CN';
+  return 'en';
+}
+
+// The browser's UI language as a target language. chrome.i18n is the
+// extension API for it; navigator.language is the fallback (and the only
+// one in a plain page context). Guarded for node, where neither exists.
+export function browserTargetLang() {
+  let locale = '';
+  try {
+    if (typeof chrome !== 'undefined' && chrome.i18n && chrome.i18n.getUILanguage) locale = chrome.i18n.getUILanguage();
+  } catch { /* fall through to navigator */ }
+  if (!locale) {
+    try { if (typeof navigator !== 'undefined' && navigator.language) locale = navigator.language; } catch { /* fall through */ }
+  }
+  return targetLangForLocale(locale);
+}
+
 // Raw settings read: merged with defaults, no migrations or validation.
 // Use for UI reads; getSettings() below is the validated pipeline read.
 export async function readSettingsRaw() {
   const stored = await chrome.storage.local.get('settings');
-  return { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
+  const s = { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
+  // No stored target language (fresh install): default to the browser
+  // language. A stored value — the user's own choice — always wins.
+  if (!stored.settings || !stored.settings.targetLang) s.targetLang = browserTargetLang();
+  return s;
 }
 
 // Serialized settings write: read-modify-write chained so concurrent
@@ -191,6 +230,10 @@ export async function updateSettingsField(key, value) {
 export async function getSettings() {
   const stored = await chrome.storage.local.get('settings');
   const s = { ...DEFAULT_SETTINGS, ...(stored.settings || {}) };
+  // No stored target language (fresh install): default to the browser
+  // language, same as readSettingsRaw. Not persisted — a stored value,
+  // once the user picks one, always wins.
+  if (!stored.settings || !stored.settings.targetLang) s.targetLang = browserTargetLang();
   // One-time migration: the default minimum image size dropped 600 -> 500.
   // Installs still sitting on the old default follow it; a value the user
   // deliberately chose is left alone.
@@ -210,9 +253,9 @@ export async function getSettings() {
     chrome.storage.local.set({ settings: s }).catch(() => {});
   }
   // Target languages are now the Google∩Azure intersection (2026-09-28).
-  // A stored targetLang that's not in the list falls back to English.
+  // A stored targetLang that's not in the list falls back to the browser language.
   if (s.targetLang && !TARGET_LANGS.some(([code]) => code === s.targetLang)) {
-    s.targetLang = DEFAULT_SETTINGS.targetLang;
+    s.targetLang = browserTargetLang();
     chrome.storage.local.set({ settings: s }).catch(() => {});
   }
   // Prune removed models. Tracks which IDs were pruned so newly added
