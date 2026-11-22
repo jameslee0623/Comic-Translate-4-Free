@@ -1,14 +1,14 @@
-# AMO Submission Notes — comic-translate-4-free v1.0.0
+# AMO Submission Notes — comic-translate-4-free v1.7.0
 
-## Version notes (v1.0.0)
+## Version notes (v1.7.0)
 
 A browser extension that translates manga/comic pages in-place. All machine
 learning (text detection, OCR, inpainting) runs locally in the browser via
 ONNX Runtime Web (WebAssembly); translation uses the user's choice of
-Google's free API, Azure Translator, or a local LM Studio server.
+Google's free API, Gemini, Azure Translator, or a local LM Studio server.
 
 Key features:
-- Auto-translates the page's main image on load; right-click any image for
+- Auto-translates every picture on the page (up to 50 per run) on load; right-click any image for
   "Send to comic-translate-4-free" to translate it specifically.
 - Source-language auto-detect (Japanese/English/Simplified/Traditional Chinese);
   114 target languages.
@@ -19,7 +19,7 @@ Key features:
 ## Test accounts
 
 No account is required. The default translation backend (Google free API)
-works without any key. Azure Translator and LM Studio are optional
+works without any key. Gemini, Azure Translator and LM Studio are optional
 user-configured backends; reviewers can test with the default.
 
 To test: install, open the popup, allow a site (or enable "allow all sites"),

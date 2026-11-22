@@ -16,14 +16,14 @@ comic-translate-4-free menerjemahkan manga dan komik otomatis saat menjelajah. M
 - Terjemahan otomatis — buka halaman manga di situs yang diizinkan dan versi terjemahannya akan muncul di tempatnya, tanpa perlu mengeklik tombol.
 - Setiap gambar di halaman — terjemahan otomatis menangani semua gambar di sebuah halaman (hingga 50 per proses), bukan hanya gambar utama.
 - Klik kanan pada gambar apa pun — pilih "Kirim ke comic-translate-4-free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
-- 114 bahasa target melalui Google Translate, Azure Translator, atau server LM Studio lokal Anda sendiri.
+- 114 bahasa target melalui Google Translate, Gemini, Azure Translator, atau server LM Studio lokal Anda sendiri.
 - Deteksi otomatis bahasa sumber — bahasa Jepang, Inggris, Tionghoa Sederhana/Tradisional dikenali secara otomatis dari teks hasil OCR.
 - Dukungan strip panjang / webtoon — halaman tinggi diproses dalam segmen yang tumpang tindih sehingga teks tetap tajam.
 - 17 bahasa UI — antarmuka ekstensi mengikuti pengaturan bahasa browser Anda.
 
 🔒 Privasi
 - AI berjalan di komputer Anda. Deteksi gelembung, OCR, dan inpainting semuanya berjalan secara lokal di browser Anda. Deteksi dan OCR berjalan melalui WebAssembly. Inpainting berjalan di GPU di Chrome (dengan fallback WebAssembly), dan melalui WebAssembly di Firefox. Halaman Anda tidak pernah meninggalkan perangkat Anda.
-- Hanya teks terjemahan yang dikirim keluar — hanya string yang diekstrak yang dikirim ke layanan terjemahan yang Anda pilih (Google / Azure / LM Studio lokal Anda).
+- Hanya teks terjemahan yang dikirim keluar — hanya string yang diekstrak yang dikirim ke layanan terjemahan yang Anda pilih (Google / Gemini / Azure / LM Studio lokal Anda).
 - Tanpa akun, tanpa pelacakan, tanpa telemetri. Semua pengaturan dan model yang di-cache tetap berada di penyimpanan lokal browser Anda.
 
 💡 Cara Menggunakan
@@ -36,7 +36,7 @@ Tips:
 - Klik kanan pada gambar apa pun → Kirim ke comic-translate-4-free untuk menerjemahkan hanya gambar itu.
 
 - Jika sebuah situs memblokir unduhan (HTTP 403), ekstensi akan otomatis mencoba lagi melalui tab latar belakang.
-- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Azure Translator (ajukan kunci di bawah — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
+- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan, ajukan kunci di bawah — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
 - Aktifkan Mode debug (pemeriksa tahap) di Pengaturan untuk memeriksa setiap tahap pipeline.
 
 ⚠️ Masalah yang Diketahui

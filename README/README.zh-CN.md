@@ -46,15 +46,16 @@ comic-translate-4-free 会在你浏览时自动翻译漫画和连环画。它能
 - 页面上的每张图片 — 自动翻译会处理页面上的所有图片（每次最多 50 张），而不仅仅是主图。
 - 预先翻译下一页 — 在您阅读当前页时，下一页的图片会在后台翻译好，打开时即可直接查看（仅限一幅图片；默认开启，可在设置中关闭）。
 - 右键点击任意图片 — 选择“发送到 comic-translate-4-free”来翻译特定图片，即使它小于最小尺寸也可以。
-- 通过 Google Translate、Azure Translator 或你自己的本地 LM Studio 服务器，支持 114 种目标语言。
+- 通过 Google Translate、Gemini、Azure Translator 或你自己的本地 LM Studio 服务器，支持 114 种目标语言。
 - 源语言自动检测 — 根据 OCR 识别的文本自动识别日语、英语、简体/繁体中文。
 - 长条 / 网络漫画支持 — 高页面按重叠分段处理，文字保持清晰。
 - 17 种界面语言 — 扩展界面遵循浏览器的语言设置。
+- 目标语言默认为浏览器语言 — 可在设置中随时更改。
 
 ### 🔒 隐私
 
 - AI 在你的电脑上运行。气泡检测、OCR 和修复填充（inpainting）都在浏览器中本地运行。检测和 OCR 通过 WebAssembly 运行。修复填充在 Chrome 上通过 GPU 运行（可回退到 WebAssembly），在 Firefox 上通过 WebAssembly 运行。你的页面永远不会离开你的设备。
-- 只有翻译后的文本会被发送出去 — 只有提取出的字符串会发送到你选择的翻译服务（Google / Azure / 你本地的 LM Studio）。
+- 只有翻译后的文本会被发送出去 — 只有提取出的字符串会发送到你选择的翻译服务（Google / Gemini / Azure / 你本地的 LM Studio）。
 - 无账号、无追踪、无遥测。所有设置和缓存的模型都保留在浏览器的本地存储中。
 
 ---
@@ -89,12 +90,24 @@ Firefox:
   ![右键发送图片](../docs/images/right-click.png)
 
 - 如果某个网站阻止下载（HTTP 403），扩展会通过后台标签页自动重试。
-- 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Azure Translator（在下方申请密钥 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
+- 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Gemini（免费 API 密钥 — 漫画翻译效果更好，推荐使用）、Azure Translator（即将停用，在下方申请密钥 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
 - 在设置中启用调试模式（阶段检查器），可以检查流水线的每个阶段。
+
+## 🔑 获取 Gemini API 密钥
+
+Gemini 的漫画翻译效果最好。要将其用作翻译引擎：
+
+1. 打开 [Google AI Studio](https://aistudio.google.com/apikey)，点击 “Create API key” — 免费，无需信用卡
+2. 如果被要求，选择或创建 Google Cloud 项目
+3. 复制密钥
+4. 把它粘贴到扩展设置里的 Gemini API 密钥字段，然后点击“检查 Gemini 连接”
+5. 在设置中选择 Gemini（免费，需要密钥）作为翻译引擎。
 
 ---
 
 ## 🔑 申请 Microsoft Azure 账号
+
+> Azure Translator 即将停用，并将在未来版本中移除。如需更好的翻译，请改用 Gemini（见上文）。
 
 要将 Azure Translator 用作翻译引擎：
 

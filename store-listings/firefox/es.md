@@ -16,14 +16,14 @@ comic-translate-4-free traduce manga y cómics automáticamente mientras navegas
 - Traducción automática — abre una página de manga en un sitio permitido y la versión traducida aparece en su lugar, sin necesidad de hacer clic en ningún botón.
 - Cada imagen en la página — la traducción automática gestiona todas las imágenes de una página (hasta 50 por ejecución), no solo la imagen principal.
 - Clic derecho en cualquier imagen — elige "Enviar a comic-translate-4-free" para traducir una imagen concreta, incluso si es más pequeña que el tamaño mínimo.
-- 114 idiomas de destino con Google Translate, Azure Translator o tu propio servidor local de LM Studio.
+- 114 idiomas de destino con Google Translate, Gemini, Azure Translator o tu propio servidor local de LM Studio.
 - Detección automática del idioma de origen — japonés, inglés, chino simplificado/tradicional se identifican automáticamente a partir del texto leído por OCR.
 - Soporte para tiras largas / webtoon — las páginas altas se procesan en segmentos superpuestos para que el texto se mantenga nítido.
 - 17 idiomas de interfaz — la interfaz de la extensión sigue el ajuste de idioma de tu navegador.
 
 🔒 Privacidad
 - La IA se ejecuta en tu equipo. La detección de bocadillos, el OCR y el inpainting se ejecutan localmente en tu navegador. La detección y el OCR se ejecutan con WebAssembly. El inpainting se ejecuta con GPU en Chrome (con WebAssembly como alternativa) y con WebAssembly en Firefox. Tus páginas nunca salen de tu dispositivo.
-- Solo se envía el texto traducido — solo las cadenas extraídas van al servicio de traducción que elijas (Google / Azure / tu LM Studio local).
+- Solo se envía el texto traducido — solo las cadenas extraídas van al servicio de traducción que elijas (Google / Gemini / Azure / tu LM Studio local).
 - Sin cuenta, sin rastreo, sin telemetría. Todos los ajustes y modelos en caché permanecen en el almacenamiento local de tu navegador.
 
 💡 Cómo usarlo
@@ -36,7 +36,7 @@ Consejos:
 - Clic derecho en cualquier imagen → Enviar a comic-translate-4-free para traducir solo esa imagen.
 
 - Si un sitio bloquea las descargas (HTTP 403), la extensión reintenta automáticamente a través de una pestaña en segundo plano.
-- Elige tu motor de traducción en Ajustes: Google (gratis, sin clave), Azure Translator (solicita las claves abajo — 2M de caracteres/mes gratis) o LM Studio (servidor local).
+- Elige tu motor de traducción en Ajustes: Google (gratis, sin clave), Gemini (clave de API gratuita — mejor traducción de manga, recomendado), Azure Translator (se está retirando, solicita las claves abajo — 2M de caracteres/mes gratis) o LM Studio (servidor local).
 - Activa el Modo de depuración (inspector de etapas) en Ajustes para inspeccionar cada etapa del proceso.
 
 ⚠️ Problemas conocidos

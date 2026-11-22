@@ -16,14 +16,14 @@ comic-translate-4-free translates manga and comic pages automatically as you bro
 - Automatic translation — open a manga page on an allowed site and the translated version appears in place, no button click needed.
 - Every picture on the page — auto-translate handles all pictures on a page (up to 50 per run), not just the main image.
 - Right-click any image — choose "Send to comic-translate-4-free" to translate a specific picture, even one smaller than the minimum size.
-- 114 target languages via Google Translate, Azure Translator, or your own local LM Studio server.
+- 114 target languages via Google Translate, Gemini, Azure Translator, or your own local LM Studio server.
 - Source language auto-detect — Japanese, English, Simplified/Traditional Chinese identified automatically from the OCR'd text.
 - Long-strip / webtoon support — tall pages are processed in overlapping segments so text stays sharp.
 - 17 UI languages — the extension interface follows your browser's language setting.
 
 🔒 Privacy
 - The AI runs on your machine. Bubble detection, OCR, and inpainting all run locally in your browser. Detection and OCR run via WebAssembly. Inpainting runs on GPU on Chrome (with WebAssembly fallback), and via WebAssembly on Firefox. Your pages never leave your device.
-- Only translated text is sent out — just the extracted strings go to the translation service you choose (Google / Azure / your local LM Studio).
+- Only translated text is sent out — just the extracted strings go to the translation service you choose (Google / Gemini / Azure / your local LM Studio).
 - No account, no tracking, no telemetry. All settings and cached models stay in your browser's local storage.
 
 💡 How to Use
@@ -36,7 +36,7 @@ Tips:
 - Right-click any image → Send to comic-translate-4-free to translate just that picture.
 
 - If a site blocks downloads (HTTP 403), the extension automatically retries via a background tab.
-- Pick your translation engine in Settings: Google (free, no key), Azure Translator (apply for keys below — 2M characters/month free), or LM Studio (local server).
+- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired, apply for keys below — 2M characters/month free), or LM Studio (local server).
 - Enable Debug mode in Settings to inspect every pipeline stage.
 
 ⚠️ Known Issues

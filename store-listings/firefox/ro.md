@@ -16,14 +16,14 @@ comic-translate-4-free traduce automat manga și benzi desenate în timp ce navi
 - Traducere automată — deschide o pagină de manga pe un site permis, iar versiunea tradusă apare chiar acolo, fără să fie nevoie să apeși vreun buton.
 - Fiecare imagine de pe pagină — traducerea automată gestionează toate imaginile de pe o pagină (până la 50 pe rulare), nu doar imaginea principală.
 - Clic dreapta pe orice imagine — alege „Trimite la comic-translate-4-free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
-- 114 limbi țintă prin Google Translate, Azure Translator sau propriul tău server local LM Studio.
+- 114 limbi țintă prin Google Translate, Gemini, Azure Translator sau propriul tău server local LM Studio.
 - Detectare automată a limbii sursă — japoneza, engleza, chineza simplificată/tradițională sunt identificate automat din textul recunoscut prin OCR.
 - Suport pentru benzi lungi / webtoon — paginile înalte sunt procesate în segmente care se suprapun, astfel încât textul rămâne clar.
 - 17 limbi pentru interfață — interfața extensiei urmează setarea de limbă a browserului tău.
 
 🔒 Confidențialitate
 - AI-ul rulează pe calculatorul tău. Detectarea bulelor, OCR-ul și inpainting-ul rulează toate local, în browserul tău. Detectarea și OCR-ul rulează prin WebAssembly. Inpainting-ul rulează pe GPU în Chrome (cu revenire la WebAssembly), iar în Firefox prin WebAssembly. Paginile tale nu părăsesc niciodată dispozitivul tău.
-- Doar textul tradus este trimis mai departe — doar șirurile de text extrase ajung la serviciul de traducere pe care îl alegi (Google / Azure / LM Studio local).
+- Doar textul tradus este trimis mai departe — doar șirurile de text extrase ajung la serviciul de traducere pe care îl alegi (Google / Gemini / Azure / LM Studio local).
 - Fără cont, fără urmărire, fără telemetrie. Toate setările și modelele stocate în cache rămân în stocarea locală a browserului tău.
 
 💡 Cum se folosește
@@ -36,7 +36,7 @@ Sfaturi:
 - Clic dreapta pe orice imagine → Trimite la comic-translate-4-free pentru a traduce doar acea imagine.
 
 - Dacă un site blochează descărcările (HTTP 403), extensia încearcă din nou automat printr-o filă de fundal.
-- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Azure Translator (cere chei mai jos — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
+- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere, cere chei mai jos — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
 - Activează Mod depanare (inspector de etape) în Setări pentru a inspecta fiecare etapă a procesului.
 
 ⚠️ Probleme cunoscute

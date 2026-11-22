@@ -36,7 +36,7 @@ service you choose.
 - Automatic translation when pages load — no button pressing
 - Translates every picture on the page (up to 50 per run), not just the main image
 - Right-click any image → "Send to comic-translate-4-free" to translate it directly
-- 114 target languages via Google Translate, Azure Translator, or your own
+- 114 target languages via Google Translate, Gemini, Azure Translator, or your own
   local LM Studio server
 - Source language auto-detection
 - Long-strip / webtoon support

@@ -16,14 +16,14 @@ comic-translate-4-free traduz mangá e quadrinhos automaticamente enquanto você
 - Tradução automática — abra uma página de mangá em um site permitido e a versão traduzida aparece no lugar, sem precisar clicar em nenhum botão.
 - Cada imagem na página — a tradução automática cuida de todas as imagens da página (até 50 por execução), não apenas a imagem principal.
 - Clique com o botão direito em qualquer imagem — escolha "Enviar para comic-translate-4-free" para traduzir uma imagem específica, mesmo que seja menor que o tamanho mínimo.
-- 114 idiomas de destino via Google Translate, Azure Translator ou o seu próprio servidor local LM Studio.
+- 114 idiomas de destino via Google Translate, Gemini, Azure Translator ou o seu próprio servidor local LM Studio.
 - Detecção automática do idioma de origem — japonês, inglês, chinês simplificado/tradicional identificados automaticamente a partir do texto lido por OCR.
 - Suporte a tiras longas / webtoon — páginas altas são processadas em segmentos sobrepostos para que o texto fique nítido.
 - 17 idiomas de interface — a interface da extensão segue a configuração de idioma do seu navegador.
 
 🔒 Privacidade
 - A IA roda na sua máquina. A detecção de balões, o OCR e o inpainting rodam todos localmente no seu navegador. A detecção e o OCR rodam via WebAssembly. O inpainting roda na GPU no Chrome (com fallback para WebAssembly) e via WebAssembly no Firefox. Suas páginas nunca saem do seu dispositivo.
-- Apenas o texto traduzido é enviado — apenas as strings extraídas vão para o serviço de tradução que você escolher (Google / Azure / seu LM Studio local).
+- Apenas o texto traduzido é enviado — apenas as strings extraídas vão para o serviço de tradução que você escolher (Google / Gemini / Azure / seu LM Studio local).
 - Sem conta, sem rastreamento, sem telemetria. Todas as configurações e modelos em cache ficam no armazenamento local do seu navegador.
 
 💡 Como usar
@@ -36,7 +36,7 @@ Dicas:
 - Clique com o botão direito em qualquer imagem → Enviar para comic-translate-4-free para traduzir só aquela imagem.
 
 - Se um site bloquear downloads (HTTP 403), a extensão tenta novamente automaticamente por meio de uma aba em segundo plano.
-- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Azure Translator (solicite as chaves abaixo — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
+- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado, solicite as chaves abaixo — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
 - Ative o Modo de depuração (inspetor de etapas) em Configurações para inspecionar cada etapa do pipeline.
 
 ⚠️ Problemas conhecidos

@@ -46,15 +46,16 @@ comic-translate-4-free übersetzt Manga und Comics automatisch. Es liest Japanis
 - Jedes Bild auf der Seite — die automatische Übersetzung verarbeitet alle Bilder einer Seite (bis zu 50 pro Durchlauf), nicht nur das Hauptbild.
 - Nächste Seite vorab übersetzen — während du die aktuelle Seite liest, wird das Bild der nächsten Seite im Hintergrund übersetzt und ist bereit, sobald du sie öffnest (nur ein Bild; standardmäßig an, in den Einstellungen abschaltbar).
 - Rechtsklick auf ein beliebiges Bild — wähle „An comic-translate-4-free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
-- 114 Zielsprachen über Google Translate, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
+- 114 Zielsprachen über Google Translate, Gemini, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
 - Automatische Quellspracherkennung — Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch werden automatisch aus dem per OCR gelesenen Text erkannt.
 - Unterstützung für lange Strips / Webtoons — hohe Seiten werden in überlappenden Abschnitten verarbeitet, damit der Text scharf bleibt.
 - 17 UI-Sprachen — die Oberfläche der Erweiterung folgt der Spracheinstellung deines Browsers.
+- Die Zielsprache ist standardmäßig die Sprache deines Browsers — du kannst sie jederzeit in den Einstellungen ändern.
 
 ### 🔒 Datenschutz
 
 - Die KI läuft auf deinem Rechner. Blasenerkennung, OCR und Inpainting laufen alle lokal in deinem Browser. Erkennung und OCR laufen über WebAssembly. Inpainting läuft in Chrome auf der GPU (mit WebAssembly-Fallback) und in Firefox über WebAssembly. Deine Seiten verlassen dein Gerät nie.
-- Nur übersetzter Text wird nach außen gesendet — nur die extrahierten Zeichenketten gehen an den Übersetzungsdienst deiner Wahl (Google / Azure / dein lokales LM Studio).
+- Nur übersetzter Text wird nach außen gesendet — nur die extrahierten Zeichenketten gehen an den Übersetzungsdienst deiner Wahl (Google / Gemini / Azure / dein lokales LM Studio).
 - Kein Konto, kein Tracking, keine Telemetrie. Alle Einstellungen und zwischengespeicherten Modelle bleiben im lokalen Speicher deines Browsers.
 
 ---
@@ -89,12 +90,26 @@ Tipps:
   ![Rechtsklick, um ein Bild zu senden](../docs/images/right-click.png)
 
 - Wenn eine Website Downloads blockiert (HTTP 403), versucht es die Erweiterung automatisch über einen Hintergrund-Tab erneut.
-- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Azure Translator (Schlüssel unten beantragen — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
+- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt, Schlüssel unten beantragen — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
 - Aktiviere den Debug-Modus (Stufen-Inspektor) in den Einstellungen, um jede Pipeline-Stufe zu prüfen.
 
 ---
 
+## 🔑 Gemini-API-Schlüssel erhalten
+
+Gemini liefert die besten Manga-Übersetzungen. Um es als Übersetzungs-Engine zu verwenden:
+
+1. Öffne [Google AI Studio](https://aistudio.google.com/apikey) und klicke auf „Create API key“ — kostenlos, keine Kreditkarte nötig
+2. Wähle ein Google-Cloud-Projekt aus oder erstelle eins, falls danach gefragt wird
+3. Kopiere den Schlüssel
+4. Füge ihn in das Feld Gemini-API-Schlüssel in den Einstellungen der Erweiterung ein und klicke dann auf „Gemini-Verbindung prüfen“
+5. Wähle Gemini (kostenlos, Schlüssel erforderlich) als Übersetzungs-Engine in den Einstellungen
+
+---
+
 ## 🔑 Microsoft-Azure-Konto beantragen
+
+> Azure Translator wird eingestellt und in einer zukünftigen Version entfernt. Für bessere Übersetzungen verwende stattdessen Gemini (siehe oben).
 
 Um Azure Translator als Übersetzungs-Engine zu verwenden:
 

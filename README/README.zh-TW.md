@@ -46,15 +46,16 @@ comic-translate-4-free 會在你瀏覽時自動翻譯漫畫和連環畫。它能
 - 頁面上的每張圖片 — 自動翻譯會處理頁面上的所有圖片（每次最多 50 張），而不只是主圖。
 - 預先翻譯下一頁 — 在您閱讀目前頁面時，下一頁的圖片會在背景翻譯好，打開時即可直接查看（僅限一幅圖片；預設開啟，可在設定中關閉）。
 - 在任意圖片上按右鍵 — 選擇「傳送到 comic-translate-4-free」來翻譯特定圖片，即使它小於最小尺寸也可以。
-- 透過 Google Translate、Azure Translator 或你自己的本機 LM Studio 伺服器，支援 114 種目標語言。
+- 透過 Google Translate、Gemini、Azure Translator 或你自己的本機 LM Studio 伺服器，支援 114 種目標語言。
 - 來源語言自動偵測 — 根據 OCR 辨識的文字自動辨識日語、英語、簡體/繁體中文。
 - 長條 / 網路漫畫支援 — 高頁面按重疊分段處理，文字保持清晰。
 - 17 種介面語言 — 擴充功能介面遵循瀏覽器的語言設定。
+- 目標語言預設為你瀏覽器的語言 — 可隨時在設定中更改。
 
 ### 🔒 隱私
 
 - AI 在你的電腦上執行。氣泡偵測、OCR 和修補填充（inpainting）都在瀏覽器中本機執行。偵測和 OCR 透過 WebAssembly 執行。修補填充在 Chrome 上透過 GPU 執行（可退回 WebAssembly），在 Firefox 上透過 WebAssembly 執行。你的頁面永遠不會離開你的裝置。
-- 只有翻譯後的文字會被傳送出去 — 只有擷取出的字串會傳送到你選擇的翻譯服務（Google / Azure / 你本機的 LM Studio）。
+- 只有翻譯後的文字會被傳送出去 — 只有擷取出的字串會傳送到你選擇的翻譯服務（Google / Gemini / Azure / 你本機的 LM Studio）。
 - 無帳號、無追蹤、無遙測。所有設定和快取的模型都保留在瀏覽器的本機儲存空間中。
 
 ---
@@ -89,12 +90,24 @@ Firefox:
   ![按右鍵傳送圖片](../docs/images/right-click.png)
 
 - 如果網站封鎖下載（HTTP 403），擴充功能會自動透過背景分頁重試。
-- 在設定中選擇你的翻譯引擎：Google（免費，不需金鑰）、Azure Translator（在下方申請金鑰 — 每月 200 萬字元免費）或 LM Studio（本機伺服器）。
+- 在設定中選擇你的翻譯引擎：Google（免費，不需金鑰）、Gemini（免費 API 金鑰 — 漫畫翻譯效果更好，建議使用）、Azure Translator（即將停用，在下方申請金鑰 — 每月 200 萬字元免費）或 LM Studio（本機伺服器）。
 - 在設定中開啟除錯模式（階段檢視器），可以檢查管線的每個階段。
+
+## 🔑 取得 Gemini API 金鑰
+
+Gemini 的漫畫翻譯效果最好。要將其用作翻譯引擎：
+
+1. 開啟 [Google AI Studio](https://aistudio.google.com/apikey)，點選「Create API key」— 免費，無需信用卡
+2. 如果被要求，請選擇或建立 Google Cloud 專案
+3. 複製金鑰
+4. 把它貼到擴充功能設定中的 Gemini API 金鑰欄位，然後點選「檢查 Gemini 連線」
+5. 在設定中選擇 Gemini（免費，需要金鑰）作為翻譯引擎。
 
 ---
 
 ## 🔑 申請 Microsoft Azure 帳號
+
+> Azure Translator 即將停用，未來版本將被移除。如需更好的翻譯，請改用 Gemini（見上文）。
 
 要將 Azure Translator 用作翻譯引擎：
 

@@ -16,14 +16,14 @@ comic-translate-4-free tự động dịch manga và truyện tranh khi bạn du
 - Dịch tự động — mở một trang manga trên một trang web được phép và bản dịch sẽ xuất hiện ngay tại chỗ, không cần bấm nút.
 - Mỗi hình ảnh trên trang — dịch tự động xử lý tất cả hình ảnh trên một trang (tối đa 50 hình mỗi lần chạy), không chỉ hình ảnh chính.
 - Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến comic-translate-4-free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
-- 114 ngôn ngữ đích qua Google Translate, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
+- 114 ngôn ngữ đích qua Google Translate, Gemini, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
 - Tự động phát hiện ngôn ngữ nguồn — tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể được xác định tự động từ văn bản đã OCR.
 - Hỗ trợ truyện dài / webtoon — các trang cao được xử lý thành các đoạn chồng lên nhau để chữ vẫn sắc nét.
 - 17 ngôn ngữ giao diện — giao diện của tiện ích mở rộng tuân theo cài đặt ngôn ngữ của trình duyệt của bạn.
 
 🔒 Quyền riêng tư
 - AI chạy trên máy của bạn. Phát hiện bong bóng, OCR và inpainting đều chạy cục bộ trong trình duyệt của bạn. Phát hiện và OCR chạy qua WebAssembly. Inpainting chạy trên GPU trên Chrome (với WebAssembly dự phòng), và qua WebAssembly trên Firefox. Trang của bạn không bao giờ rời khỏi thiết bị của bạn.
-- Chỉ văn bản đã dịch được gửi ra ngoài — chỉ các chuỗi đã trích xuất mới đến dịch vụ dịch thuật bạn chọn (Google / Azure / LM Studio cục bộ của bạn).
+- Chỉ văn bản đã dịch được gửi ra ngoài — chỉ các chuỗi đã trích xuất mới đến dịch vụ dịch thuật bạn chọn (Google / Gemini / Azure / LM Studio cục bộ của bạn).
 - Không tài khoản, không theo dõi, không đo từ xa. Mọi cài đặt và mô hình đã lưu trong bộ nhớ đệm đều ở trong bộ nhớ cục bộ của trình duyệt của bạn.
 
 💡 Cách sử dụng
@@ -36,7 +36,7 @@ Mẹo:
 - Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến comic-translate-4-free để chỉ dịch hình ảnh đó.
 
 - Nếu một trang web chặn tải xuống (HTTP 403), tiện ích mở rộng sẽ tự động thử lại qua một tab nền.
-- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Azure Translator (đăng ký khóa bên dưới — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
+- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động, đăng ký khóa bên dưới — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
 - Bật Chế độ gỡ lỗi (xem từng giai đoạn) trong Cài đặt để kiểm tra từng giai đoạn của quy trình.
 
 ⚠️ Vấn đề đã biết
