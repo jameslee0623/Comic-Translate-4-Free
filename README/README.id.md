@@ -90,7 +90,7 @@ Tips:
   ![Right-click to send an image](../docs/images/right-click.png)
 
 - Jika sebuah situs memblokir unduhan (HTTP 403), ekstensi akan otomatis mencoba lagi melalui tab latar belakang.
-- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan, ajukan kunci di bawah — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
+- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
 - Aktifkan Mode debug (pemeriksa tahap) di Pengaturan untuk memeriksa setiap tahap pipeline.
 
 ---
@@ -104,21 +104,6 @@ Gemini memberikan terjemahan manga terbaik. Untuk menggunakannya sebagai mesin t
 3. Salin kunci
 4. Tempelkan ke kolom 'Kunci API Gemini' di Pengaturan ekstensi, lalu klik 'Periksa koneksi Gemini'
 5. Pilih Gemini (gratis, perlu kunci API) sebagai mesin terjemahan di Pengaturan
-
----
-
-## 🔑 Ajukan akun Microsoft Azure
-
-> Azure Translator akan dihentikan dan dihapus pada versi mendatang. Untuk terjemahan yang lebih baik, gunakan Gemini sebagai gantinya (lihat di atas).
-
-Untuk menggunakan Azure Translator sebagai mesin terjemahan:
-
-1. Buat/masuk ke akun Microsoft/hotmail/Azure
-2. Buat langganan Azure
-3. Buat sumber daya Azure Translator
-4. Pilih tingkat harga F0 (Gratis) — 2 juta karakter/bulan, tidak kedaluwarsa
-5. Manajemen Sumber Daya → Kunci dan Endpoint → salin KEY 1 dan Location/Region
-6. Tempel ke halaman Pengaturan ekstensi
 
 ---
 

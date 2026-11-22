@@ -36,7 +36,7 @@ Tips:
 - Right-click any image → Send to comic-translate-4-free to translate just that picture.
 
 - If a site blocks downloads (HTTP 403), the extension automatically retries via a background tab.
-- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired, apply for keys below — 2M characters/month free), or LM Studio (local server).
+- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired — 2M characters/month free), or LM Studio (local server).
 - Enable Debug mode in Settings to inspect every pipeline stage.
 
 ⚠️ Known Issues

@@ -90,7 +90,7 @@ Dicas:
   ![Clique com o botão direito para enviar uma imagem](../docs/images/right-click.png)
 
 - Se um site bloquear downloads (HTTP 403), a extensão tenta novamente automaticamente por meio de uma aba em segundo plano.
-- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado, solicite as chaves abaixo — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
+- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
 - Ative o Modo de depuração (inspetor de etapas) em Configurações para inspecionar cada etapa do pipeline.
 
 ---
@@ -104,21 +104,6 @@ O Gemini oferece as melhores traduções de mangá. Para usá-lo como mecanismo 
 3. Copie a chave
 4. Cole-a no campo Chave de API do Gemini nas Configurações da extensão e clique em "Testar conexão do Gemini"
 5. Escolha Gemini (grátis, requer chave) como mecanismo de tradução em Configurações
-
----
-
-## 🔑 Solicitar uma conta do Microsoft Azure
-
-> O Azure Translator está sendo descontinuado e será removido em uma versão futura. Para traduções melhores, use o Gemini (veja acima).
-
-Para usar o Azure Translator como mecanismo de tradução:
-
-1. Crie uma conta Microsoft/hotmail/Azure ou faça login
-2. Crie uma assinatura do Azure
-3. Crie um recurso do Azure Translator
-4. Selecione o nível de preços F0 (gratuito) — 2 milhões de caracteres/mês, não expira
-5. Gerenciamento de recursos → Chaves e Ponto de extremidade → copie KEY 1 e Location/Region
-6. Cole-as na página de Configurações da extensão
 
 ---
 

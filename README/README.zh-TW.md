@@ -90,7 +90,7 @@ Firefox:
   ![按右鍵傳送圖片](../docs/images/right-click.png)
 
 - 如果網站封鎖下載（HTTP 403），擴充功能會自動透過背景分頁重試。
-- 在設定中選擇你的翻譯引擎：Google（免費，不需金鑰）、Gemini（免費 API 金鑰 — 漫畫翻譯效果更好，建議使用）、Azure Translator（即將停用，在下方申請金鑰 — 每月 200 萬字元免費）或 LM Studio（本機伺服器）。
+- 在設定中選擇你的翻譯引擎：Google（免費，不需金鑰）、Gemini（免費 API 金鑰 — 漫畫翻譯效果更好，建議使用）、Azure Translator（即將停用 — 每月 200 萬字元免費）或 LM Studio（本機伺服器）。
 - 在設定中開啟除錯模式（階段檢視器），可以檢查管線的每個階段。
 
 ## 🔑 取得 Gemini API 金鑰
@@ -102,21 +102,6 @@ Gemini 的漫畫翻譯效果最好。要將其用作翻譯引擎：
 3. 複製金鑰
 4. 把它貼到擴充功能設定中的 Gemini API 金鑰欄位，然後點選「檢查 Gemini 連線」
 5. 在設定中選擇 Gemini（免費，需要金鑰）作為翻譯引擎。
-
----
-
-## 🔑 申請 Microsoft Azure 帳號
-
-> Azure Translator 即將停用，未來版本將被移除。如需更好的翻譯，請改用 Gemini（見上文）。
-
-要將 Azure Translator 用作翻譯引擎：
-
-1. 建立 Microsoft/hotmail/Azure 帳號或登入
-2. 建立 Azure 訂閱
-3. 建立 Azure Translator 資源
-4. 選擇 F0（免費）定價層 — 每月 200 萬字元，永不過期
-5. 資源管理 → 金鑰和端點 → 複製 KEY 1 和 Location/Region
-6. 將它們貼到擴充功能的設定頁面
 
 ---
 

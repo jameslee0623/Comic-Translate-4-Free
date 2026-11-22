@@ -90,7 +90,7 @@ Mẹo:
   ![Nhấp chuột phải để gửi một ảnh](../docs/images/right-click.png)
 
 - Nếu một trang web chặn tải xuống (HTTP 403), tiện ích mở rộng sẽ tự động thử lại qua một tab nền.
-- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động, đăng ký khóa bên dưới — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
+- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
 - Bật Chế độ gỡ lỗi (xem từng giai đoạn) trong Cài đặt để kiểm tra từng giai đoạn của quy trình.
 
 ## 🔑 Lấy khóa API Gemini
@@ -102,21 +102,6 @@ Gemini cung cấp những bản dịch manga tốt nhất. Để sử dụng nó
 3. Sao chép khóa
 4. Dán nó vào trường Khóa API Gemini trong Cài đặt của tiện ích mở rộng, sau đó nhấp vào "Kiểm tra kết nối Gemini"
 5. Chọn Gemini (miễn phí, cần khóa) làm công cụ dịch trong Cài đặt.
-
----
-
-## 🔑 Đăng ký tài khoản Microsoft Azure
-
-> Azure Translator sắp ngừng hoạt động và sẽ bị gỡ bỏ trong phiên bản tương lai. Để có bản dịch tốt hơn, hãy dùng Gemini thay thế (xem ở trên).
-
-Để sử dụng Azure Translator làm công cụ dịch:
-
-1. Tạo/đăng nhập tài khoản Microsoft/hotmail/Azure
-2. Tạo đăng ký Azure
-3. Tạo tài nguyên Azure Translator
-4. Chọn gói giá F0 (Miễn phí) — 2 triệu ký tự/tháng, không hết hạn
-5. Quản lý tài nguyên → Khóa và Điểm cuối → sao chép KEY 1 và Location/Region
-6. Dán chúng vào trang Cài đặt của tiện ích mở rộng
 
 ---
 

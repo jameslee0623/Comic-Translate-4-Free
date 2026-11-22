@@ -36,7 +36,7 @@ Tipps:
 - Rechtsklick auf ein beliebiges Bild → An comic-translate-4-free senden, um nur dieses Bild zu übersetzen.
 
 - Wenn eine Website Downloads blockiert (HTTP 403), versucht es die Erweiterung automatisch über einen Hintergrund-Tab erneut.
-- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt, Schlüssel unten beantragen — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
+- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
 - Aktiviere den Debug-Modus (Stufen-Inspektor) in den Einstellungen, um jede Pipeline-Stufe zu prüfen.
 
 ⚠️ Bekannte Probleme

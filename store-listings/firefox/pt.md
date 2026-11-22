@@ -36,7 +36,7 @@ Dicas:
 - Clique com o botão direito em qualquer imagem → Enviar para comic-translate-4-free para traduzir só aquela imagem.
 
 - Se um site bloquear downloads (HTTP 403), a extensão tenta novamente automaticamente por meio de uma aba em segundo plano.
-- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado, solicite as chaves abaixo — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
+- Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
 - Ative o Modo de depuração (inspetor de etapas) em Configurações para inspecionar cada etapa do pipeline.
 
 ⚠️ Problemas conhecidos

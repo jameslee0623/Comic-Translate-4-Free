@@ -90,7 +90,7 @@ Firefox:
   ![右键发送图片](../docs/images/right-click.png)
 
 - 如果某个网站阻止下载（HTTP 403），扩展会通过后台标签页自动重试。
-- 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Gemini（免费 API 密钥 — 漫画翻译效果更好，推荐使用）、Azure Translator（即将停用，在下方申请密钥 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
+- 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Gemini（免费 API 密钥 — 漫画翻译效果更好，推荐使用）、Azure Translator（即将停用 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
 - 在设置中启用调试模式（阶段检查器），可以检查流水线的每个阶段。
 
 ## 🔑 获取 Gemini API 密钥
@@ -102,21 +102,6 @@ Gemini 的漫画翻译效果最好。要将其用作翻译引擎：
 3. 复制密钥
 4. 把它粘贴到扩展设置里的 Gemini API 密钥字段，然后点击“检查 Gemini 连接”
 5. 在设置中选择 Gemini（免费，需要密钥）作为翻译引擎。
-
----
-
-## 🔑 申请 Microsoft Azure 账号
-
-> Azure Translator 即将停用，并将在未来版本中移除。如需更好的翻译，请改用 Gemini（见上文）。
-
-要将 Azure Translator 用作翻译引擎：
-
-1. 创建 Microsoft/hotmail/Azure 账号或登录
-2. 创建 Azure 订阅
-3. 创建 Azure Translator 资源
-4. 选择 F0（免费）定价层 — 每月 200 万字符，永不过期
-5. 资源管理 → 密钥和终结点 → 复制 KEY 1 和 Location/Region
-6. 将它们粘贴到扩展的设置页面
 
 ---
 

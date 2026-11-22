@@ -90,7 +90,7 @@ Sfaturi:
   ![Right-click to send an image](../docs/images/right-click.png)
 
 - Dacă un site blochează descărcările (HTTP 403), extensia încearcă din nou automat printr-o filă de fundal.
-- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere, cere chei mai jos — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
+- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
 - Activează Mod depanare (inspector de etape) în Setări pentru a inspecta fiecare etapă a procesului.
 
 ---
@@ -104,21 +104,6 @@ Gemini oferă cele mai bune traduceri de manga. Pentru a-l folosi ca motor de tr
 3. Copiază cheia
 4. Lipește-o în câmpul Cheie API Gemini din Setările extensiei, apoi apasă „Verifică conexiunea Gemini”
 5. Alege Gemini (gratuit, necesită cheie) ca motor de traducere în Setări
-
----
-
-## 🔑 Solicită un cont Microsoft Azure
-
-> Azure Translator este în curs de retragere și va fi eliminat într-o versiune viitoare. Pentru traduceri mai bune, folosește Gemini în schimb (vezi mai sus).
-
-Pentru a folosi Azure Translator ca motor de traducere:
-
-1. Creează un cont Microsoft/hotmail/Azure sau autentifică-te
-2. Creează un abonament Azure
-3. Creează o resursă Azure Translator
-4. Selectează nivelul de preț F0 (Gratuit) — 2 milioane de caractere/lună, nu expiră
-5. Resource Management → Keys and Endpoint → copiază KEY 1 și Location/Region
-6. Lipește-le în pagina Setări a extensiei
 
 ---
 

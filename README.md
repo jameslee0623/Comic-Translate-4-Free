@@ -91,7 +91,7 @@ Tips:
   ![Right-click to send an image](docs/images/right-click.png)
 
 - If a site blocks downloads (HTTP 403), the extension automatically retries via a background tab.
-- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired, apply for keys below — 2M characters/month free), or LM Studio (local server).
+- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired — 2M characters/month free), or LM Studio (local server).
 - Enable Debug mode in Settings to inspect every pipeline stage.
 
 ---
@@ -105,21 +105,6 @@ Gemini gives the best manga translations. To use it as the translation engine:
 3. Copy the key
 4. Paste it into the Gemini API key field in the extension's Settings, then click "Check Gemini connection"
 5. Pick Gemini as the translation engine in Settings
-
----
-
-## 🔑 Apply for a Microsoft Azure account
-
-> Azure Translator is being retired and will be removed in a future version. For better translations, use Gemini instead (see above).
-
-To use Azure Translator as the translation engine:
-
-1. Create/sign in to a Microsoft/hotmail/Azure account
-2. Create an Azure subscription
-3. Create an Azure Translator resource
-4. Select F0 (Free) pricing tier — 2 million characters/month, does not expire
-5. Resource Management → Keys and Endpoint → copy KEY 1 and Location/Region
-6. Paste them into the extension's Settings page
 
 ---
 

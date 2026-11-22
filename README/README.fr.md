@@ -90,7 +90,7 @@ Conseils :
   ![Clic droit pour envoyer une image](../docs/images/right-click.png)
 
 - Si un site bloque les téléchargements (HTTP 403), l'extension réessaie automatiquement via un onglet en arrière-plan.
-- Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait, demandez les clés ci-dessous — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
+- Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
 - Activez le Mode débogage (inspecteur d'étapes) dans Paramètres pour inspecter chaque étape du pipeline.
 
 ---
@@ -104,21 +104,6 @@ Gemini offre les meilleures traductions de manga. Pour l'utiliser comme moteur d
 3. Copiez la clé
 4. Collez-la dans le champ « Clé API Gemini » dans les Paramètres de l'extension, puis cliquez sur « Vérifier la connexion Gemini »
 5. Sélectionnez Gemini (gratuit, clé requise) comme moteur de traduction dans Paramètres
-
----
-
-## 🔑 Demander un compte Microsoft Azure
-
-> Azure Translator est en cours de retrait et sera supprimé dans une version future. Pour de meilleures traductions, utilisez Gemini à la place (voir ci-dessus).
-
-Pour utiliser Azure Translator comme moteur de traduction :
-
-1. Créez un compte Microsoft/hotmail/Azure ou connectez-vous
-2. Créez un abonnement Azure
-3. Créez une ressource Azure Translator
-4. Sélectionnez le niveau de tarification F0 (gratuit) — 2 millions de caractères/mois, sans expiration
-5. Gestion des ressources → Clés et point de terminaison → copiez KEY 1 et Location/Region
-6. Collez-les dans la page Paramètres de l'extension
 
 ---
 

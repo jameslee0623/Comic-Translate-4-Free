@@ -36,7 +36,7 @@ Conseils :
 - Clic droit sur n'importe quelle image → Envoyer vers comic-translate-4-free pour traduire juste cette image.
 
 - Si un site bloque les téléchargements (HTTP 403), l'extension réessaie automatiquement via un onglet en arrière-plan.
-- Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait, demandez les clés ci-dessous — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
+- Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
 - Activez le Mode débogage (inspecteur d'étapes) dans Paramètres pour inspecter chaque étape du pipeline.
 
 ⚠️ Problèmes connus

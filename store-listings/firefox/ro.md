@@ -36,7 +36,7 @@ Sfaturi:
 - Clic dreapta pe orice imagine → Trimite la comic-translate-4-free pentru a traduce doar acea imagine.
 
 - Dacă un site blochează descărcările (HTTP 403), extensia încearcă din nou automat printr-o filă de fundal.
-- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere, cere chei mai jos — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
+- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
 - Activează Mod depanare (inspector de etape) în Setări pentru a inspecta fiecare etapă a procesului.
 
 ⚠️ Probleme cunoscute

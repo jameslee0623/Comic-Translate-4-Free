@@ -90,7 +90,7 @@ Consejos:
   ![Clic derecho para enviar una imagen](../docs/images/right-click.png)
 
 - Si un sitio bloquea las descargas (HTTP 403), la extensión reintenta automáticamente a través de una pestaña en segundo plano.
-- Elige tu motor de traducción en Ajustes: Google (gratis, sin clave), Gemini (clave de API gratuita — mejor traducción de manga, recomendado), Azure Translator (se está retirando, solicita las claves abajo — 2M de caracteres/mes gratis) o LM Studio (servidor local).
+- Elige tu motor de traducción en Ajustes: Google (gratis, sin clave), Gemini (clave de API gratuita — mejor traducción de manga, recomendado), Azure Translator (se está retirando — 2M de caracteres/mes gratis) o LM Studio (servidor local).
 - Activa el Modo de depuración (inspector de etapas) en Ajustes para inspeccionar cada etapa del proceso.
 
 ---
@@ -104,21 +104,6 @@ Gemini ofrece las mejores traducciones de manga. Para usarlo como motor de tradu
 3. Copia la clave
 4. Pégala en el campo Clave de API de Gemini en los Ajustes de la extensión y haz clic en "Comprobar la conexión de Gemini"
 5. Elige Gemini (gratis, requiere clave) como motor de traducción en Ajustes
-
----
-
-## 🔑 Solicitar una cuenta de Microsoft Azure
-
-> Azure Translator se está retirando y se eliminará en una versión futura. Para mejores traducciones, usa Gemini en su lugar (ver arriba).
-
-Para usar Azure Translator como motor de traducción:
-
-1. Crea una cuenta de Microsoft/hotmail/Azure o inicia sesión
-2. Crea una suscripción de Azure
-3. Crea un recurso de Azure Translator
-4. Selecciona el nivel de precios F0 (gratuito) — 2 millones de caracteres/mes, no caduca
-5. Administración de recursos → Claves y punto de conexión → copia KEY 1 y Location/Region
-6. Pégalas en la página de Ajustes de la extensión
 
 ---
 

@@ -36,7 +36,7 @@ Tips:
 - Klik kanan pada gambar apa pun → Kirim ke comic-translate-4-free untuk menerjemahkan hanya gambar itu.
 
 - Jika sebuah situs memblokir unduhan (HTTP 403), ekstensi akan otomatis mencoba lagi melalui tab latar belakang.
-- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan, ajukan kunci di bawah — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
+- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
 - Aktifkan Mode debug (pemeriksa tahap) di Pengaturan untuk memeriksa setiap tahap pipeline.
 
 ⚠️ Masalah yang Diketahui

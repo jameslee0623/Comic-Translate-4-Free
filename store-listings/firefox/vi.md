@@ -36,7 +36,7 @@ Mẹo:
 - Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến comic-translate-4-free để chỉ dịch hình ảnh đó.
 
 - Nếu một trang web chặn tải xuống (HTTP 403), tiện ích mở rộng sẽ tự động thử lại qua một tab nền.
-- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động, đăng ký khóa bên dưới — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
+- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
 - Bật Chế độ gỡ lỗi (xem từng giai đoạn) trong Cài đặt để kiểm tra từng giai đoạn của quy trình.
 
 ⚠️ Vấn đề đã biết

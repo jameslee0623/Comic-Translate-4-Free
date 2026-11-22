@@ -90,7 +90,7 @@ Tipps:
   ![Rechtsklick, um ein Bild zu senden](../docs/images/right-click.png)
 
 - Wenn eine Website Downloads blockiert (HTTP 403), versucht es die Erweiterung automatisch über einen Hintergrund-Tab erneut.
-- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt, Schlüssel unten beantragen — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
+- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
 - Aktiviere den Debug-Modus (Stufen-Inspektor) in den Einstellungen, um jede Pipeline-Stufe zu prüfen.
 
 ---
@@ -104,21 +104,6 @@ Gemini liefert die besten Manga-Übersetzungen. Um es als Übersetzungs-Engine z
 3. Kopiere den Schlüssel
 4. Füge ihn in das Feld Gemini-API-Schlüssel in den Einstellungen der Erweiterung ein und klicke dann auf „Gemini-Verbindung prüfen“
 5. Wähle Gemini (kostenlos, Schlüssel erforderlich) als Übersetzungs-Engine in den Einstellungen
-
----
-
-## 🔑 Microsoft-Azure-Konto beantragen
-
-> Azure Translator wird eingestellt und in einer zukünftigen Version entfernt. Für bessere Übersetzungen verwende stattdessen Gemini (siehe oben).
-
-Um Azure Translator als Übersetzungs-Engine zu verwenden:
-
-1. Microsoft-/Hotmail-/Azure-Konto erstellen oder anmelden
-2. Azure-Abonnement erstellen
-3. Azure-Translator-Ressource erstellen
-4. Preistarif F0 (kostenlos) auswählen — 2 Mio. Zeichen/Monat, läuft nicht ab
-5. Ressourcenverwaltung → Schlüssel und Endpunkt → KEY 1 und Location/Region kopieren
-6. In die Einstellungsseite der Erweiterung einfügen
 
 ---
 
