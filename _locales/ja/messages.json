@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Gemini接続を確認"
+  },
+  "azure_retire_title": {
+    "message": "Azure は廃止予定です"
+  },
+  "azure_retire_body": {
+    "message": "より良い翻訳には Gemini をお使いください。Azure は将来のバージョンで削除されます。"
+  },
+  "azure_retire_step1": {
+    "message": "Google AI Studio を開いて API キーを作成します — 無料で、クレジットカードは不要です。"
+  },
+  "azure_retire_step2": {
+    "message": "キーをコピーします。"
+  },
+  "azure_retire_step3": {
+    "message": "設定の「Gemini APIキー」欄に貼り付け、「Gemini接続を確認」をクリックします。"
+  },
+  "azure_retire_step4": {
+    "message": "翻訳エンジンに Gemini を選びます。"
+  },
+  "azure_retire_get_key": {
+    "message": "Gemini キーを取得"
+  },
+  "azure_retire_dismiss": {
+    "message": "今後表示しない"
+  },
+  "azure_retire_close": {
+    "message": "閉じる"
+  },
+  "azure_retire_open_settings": {
+    "message": "設定を開く"
   }
 }

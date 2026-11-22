@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Проверить соединение с Gemini"
+  },
+  "azure_retire_title": {
+    "message": "Azure скоро будет отключён"
+  },
+  "azure_retire_body": {
+    "message": "Используйте Gemini для лучшего перевода. Azure будет удалён в будущей версии."
+  },
+  "azure_retire_step1": {
+    "message": "Откройте Google AI Studio и создайте ключ API — бесплатно, карта не нужна."
+  },
+  "azure_retire_step2": {
+    "message": "Скопируйте ключ."
+  },
+  "azure_retire_step3": {
+    "message": "Вставьте его в поле «Ключ API Gemini» в настройках и нажмите «Проверить соединение с Gemini»."
+  },
+  "azure_retire_step4": {
+    "message": "Выберите Gemini в качестве движка перевода."
+  },
+  "azure_retire_get_key": {
+    "message": "Получить ключ Gemini"
+  },
+  "azure_retire_dismiss": {
+    "message": "Больше не показывать"
+  },
+  "azure_retire_close": {
+    "message": "Закрыть"
+  },
+  "azure_retire_open_settings": {
+    "message": "Открыть настройки"
   }
 }

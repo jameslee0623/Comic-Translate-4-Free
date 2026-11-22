@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Check Gemini connection"
+  },
+  "azure_retire_title": {
+    "message": "Azure is being retired"
+  },
+  "azure_retire_body": {
+    "message": "Use Gemini for better translations. Azure will be removed in a future version."
+  },
+  "azure_retire_step1": {
+    "message": "Open Google AI Studio and create an API key — free, no credit card needed."
+  },
+  "azure_retire_step2": {
+    "message": "Copy the key."
+  },
+  "azure_retire_step3": {
+    "message": "Paste it into the Gemini API key field in Settings, then click Check Gemini connection."
+  },
+  "azure_retire_step4": {
+    "message": "Pick Gemini as the translating engine."
+  },
+  "azure_retire_get_key": {
+    "message": "Get a Gemini key"
+  },
+  "azure_retire_dismiss": {
+    "message": "Don't show again"
+  },
+  "azure_retire_close": {
+    "message": "Close"
+  },
+  "azure_retire_open_settings": {
+    "message": "Open Settings"
   }
 }

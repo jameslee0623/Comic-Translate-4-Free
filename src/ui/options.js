@@ -265,6 +265,32 @@ function setCheckResult(el, r) {
 
 function checkingText() { return ctMsg('checking') || 'checking…'; }
 
+// Azure retirement notice (2.2.17): Azure will be retired — when the user
+// checks Azure or picks it as the engine, say so and show how to get a
+// Gemini key. Shown every time until "Don't show again" is clicked.
+function showAzureRetireModal() {
+  if (lastSettings.azureRetireDismissed) return;
+  const m = $('azureRetireModal');
+  if (m) m.style.display = 'flex';
+}
+function hideAzureRetireModal() {
+  const m = $('azureRetireModal');
+  if (m) m.style.display = 'none';
+}
+$('azureRetireClose').onclick = hideAzureRetireModal;
+$('azureRetireModal').onclick = e => { if (e.target === $('azureRetireModal')) hideAzureRetireModal(); };
+$('azureRetireDismiss').onclick = async () => {
+  const s = collect();
+  if (s) { s.azureRetireDismissed = true; lastSettings = s; await persistSettings(s); }
+  hideAzureRetireModal();
+};
+// Picking Azure as the engine shows the notice (programmatic .value sets
+// from applyToForm do not fire 'change', so loading the page with Azure
+// already selected does not pop it up).
+$('backend').addEventListener('change', e => {
+  if (e.target.value === 'azure') showAzureRetireModal();
+});
+
 // Save first so the check uses the latest values, then check.
 // 2.2.12: race the background reply against a 15s timeout — the old plain
 // await hung forever (button stuck on "checking…") when the background was
@@ -272,6 +298,7 @@ function checkingText() { return ctMsg('checking') || 'checking…'; }
 // own 2.5s timeout. The button is re-enabled in a finally so it never
 // sticks disabled.
 $('checkAzure').onclick = async () => {
+  showAzureRetireModal(); // Azure is being retired — say so first, then check as usual.
   const btn = $('checkAzure'), out = $('azureResult');
   btn.disabled = true; out.className = 'check-result'; out.textContent = checkingText();
   try {

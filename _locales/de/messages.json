@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Gemini-Verbindung prüfen"
+  },
+  "azure_retire_title": {
+    "message": "Azure wird eingestellt"
+  },
+  "azure_retire_body": {
+    "message": "Nutze Gemini für bessere Übersetzungen. Azure wird in einer zukünftigen Version entfernt."
+  },
+  "azure_retire_step1": {
+    "message": "Öffne Google AI Studio und erstelle einen API-Schlüssel — kostenlos, keine Kreditkarte nötig."
+  },
+  "azure_retire_step2": {
+    "message": "Kopiere den Schlüssel."
+  },
+  "azure_retire_step3": {
+    "message": "Füge ihn in das Feld „Gemini-API-Schlüssel\" in den Einstellungen ein und klicke dann auf „Gemini-Verbindung prüfen\"."
+  },
+  "azure_retire_step4": {
+    "message": "Wähle Gemini als Übersetzungs-Engine."
+  },
+  "azure_retire_get_key": {
+    "message": "Gemini-Schlüssel holen"
+  },
+  "azure_retire_dismiss": {
+    "message": "Nicht mehr anzeigen"
+  },
+  "azure_retire_close": {
+    "message": "Schließen"
+  },
+  "azure_retire_open_settings": {
+    "message": "Einstellungen öffnen"
   }
 }

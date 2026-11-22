@@ -108,6 +108,26 @@
   -->
 
   <div class="foot" style="margin-top:28px;color:#666;font-size:12px"><span data-i18n="appName">comic-translate-4-free</span> <span id="version"></span></div>
+
+  <!-- Azure retirement notice (2.2.17): shown when the user checks Azure or
+       picks it as the engine. The steps point at the Gemini key field above. -->
+  <div id="azureRetireModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center">
+    <div style="background:#1b1b1f;border:1px solid #3a3a40;border-radius:10px;max-width:480px;width:calc(100% - 48px);padding:20px 22px">
+      <h2 data-i18n="azure_retire_title" style="margin:0 0 8px">Azure is being retired</h2>
+      <p data-i18n="azure_retire_body" style="color:#c9c9ce;margin:0 0 10px">Use Gemini for better translations. Azure will be removed in a future version.</p>
+      <ol style="margin:0 0 14px;padding-left:22px;color:#c9c9ce">
+        <li><span data-i18n="azure_retire_step1">Open Google AI Studio and create an API key — free, no credit card needed.</span> <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color:#8ab4f8">aistudio.google.com/apikey</a></li>
+        <li data-i18n="azure_retire_step2">Copy the key.</li>
+        <li data-i18n="azure_retire_step3">Paste it into the Gemini API key field in Settings, then click Check Gemini connection.</li>
+        <li data-i18n="azure_retire_step4">Pick Gemini as the translating engine.</li>
+      </ol>
+      <div class="row" style="margin:0">
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" data-i18n="azure_retire_get_key" style="padding:7px 14px;border:1px solid #1a73e8;border-radius:6px;background:#1a73e8;color:#fff;text-decoration:none;font-size:13px;font-weight:600">Get a Gemini key</a>
+        <button id="azureRetireDismiss" data-i18n="azure_retire_dismiss">Don't show again</button>
+        <button id="azureRetireClose" data-i18n="azure_retire_close">Close</button>
+      </div>
+    </div>
+  </div>
   <script src="i18n.js"></script>
   <script type="module" src="options.js"></script>
 </body>

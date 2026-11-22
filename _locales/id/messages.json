@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Periksa koneksi Gemini"
+  },
+  "azure_retire_title": {
+    "message": "Azure akan dihentikan"
+  },
+  "azure_retire_body": {
+    "message": "Gunakan Gemini untuk terjemahan yang lebih baik. Azure akan dihapus pada versi mendatang."
+  },
+  "azure_retire_step1": {
+    "message": "Buka Google AI Studio dan buat kunci API — gratis, tidak perlu kartu kredit."
+  },
+  "azure_retire_step2": {
+    "message": "Salin kunci tersebut."
+  },
+  "azure_retire_step3": {
+    "message": "Tempelkan ke kolom Kunci API Gemini di Pengaturan, lalu klik Periksa koneksi Gemini."
+  },
+  "azure_retire_step4": {
+    "message": "Pilih Gemini sebagai mesin penerjemah."
+  },
+  "azure_retire_get_key": {
+    "message": "Dapatkan kunci Gemini"
+  },
+  "azure_retire_dismiss": {
+    "message": "Jangan tampilkan lagi"
+  },
+  "azure_retire_close": {
+    "message": "Tutup"
+  },
+  "azure_retire_open_settings": {
+    "message": "Buka Pengaturan"
   }
 }

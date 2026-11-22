@@ -120,6 +120,7 @@ async function refreshSettings() {
     }
   } catch { /* permissions API unavailable — leave storage alone */ }
   if (settings) {
+    azureRetireDismissed = !!(settings && settings.azureRetireDismissed);
     // Never stomp a control the user already set or is using (see the init
     // race guards above): during init their pick wins, and a focused control
     // keeps its value so an open dropdown isn't disrupted mid-interaction.
@@ -380,6 +381,32 @@ $('translateBtn').onclick = async () => {
 $('backend').onchange = e => {
   markDirty('backend');
   writeSettings({ translationBackend: e.target.value }).catch(() => {});
+  if (e.target.value === 'azure') showAzureRetireModal();
+};
+
+// Azure retirement notice (2.2.17): same message as Settings — picking
+// Azure shows how to get a Gemini key. The dismissed flag is cached from
+// refreshSettings; the buttons below keep it in sync.
+let azureRetireDismissed = false;
+function showAzureRetireModal() {
+  if (azureRetireDismissed) return;
+  const m = $('azureRetireModal');
+  if (m) m.style.display = 'flex';
+}
+function hideAzureRetireModal() {
+  const m = $('azureRetireModal');
+  if (m) m.style.display = 'none';
+}
+$('azureRetireClose').onclick = hideAzureRetireModal;
+$('azureRetireModal').onclick = e => { if (e.target === $('azureRetireModal')) hideAzureRetireModal(); };
+$('azureRetireDismiss').onclick = () => {
+  azureRetireDismissed = true;
+  writeSettings({ azureRetireDismissed: true }).catch(() => {});
+  hideAzureRetireModal();
+};
+$('azureRetireSettings').onclick = () => {
+  try { chrome.runtime.openOptionsPage(); } catch { /* popup closes — nothing to do */ }
+  hideAzureRetireModal();
 };
 
 // ---- translated page cache (same stats as the Settings page) ----

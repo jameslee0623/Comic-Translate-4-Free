@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Kiểm tra kết nối Gemini"
+  },
+  "azure_retire_title": {
+    "message": "Azure sắp bị ngừng"
+  },
+  "azure_retire_body": {
+    "message": "Hãy dùng Gemini để có bản dịch tốt hơn. Azure sẽ bị gỡ bỏ trong phiên bản tương lai."
+  },
+  "azure_retire_step1": {
+    "message": "Mở Google AI Studio và tạo khóa API — miễn phí, không cần thẻ tín dụng."
+  },
+  "azure_retire_step2": {
+    "message": "Sao chép khóa."
+  },
+  "azure_retire_step3": {
+    "message": "Dán khóa vào ô Khóa API Gemini trong Cài đặt, rồi bấm Kiểm tra kết nối Gemini."
+  },
+  "azure_retire_step4": {
+    "message": "Chọn Gemini làm công cụ dịch."
+  },
+  "azure_retire_get_key": {
+    "message": "Lấy khóa Gemini"
+  },
+  "azure_retire_dismiss": {
+    "message": "Không hiển thị lại"
+  },
+  "azure_retire_close": {
+    "message": "Đóng"
+  },
+  "azure_retire_open_settings": {
+    "message": "Mở Cài đặt"
   }
 }

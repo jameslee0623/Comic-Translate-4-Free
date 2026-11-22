@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Verifică conexiunea Gemini"
+  },
+  "azure_retire_title": {
+    "message": "Azure va fi retras"
+  },
+  "azure_retire_body": {
+    "message": "Folosește Gemini pentru traduceri mai bune. Azure va fi eliminat într-o versiune viitoare."
+  },
+  "azure_retire_step1": {
+    "message": "Deschide Google AI Studio și creează o cheie API — gratuit, fără card de credit."
+  },
+  "azure_retire_step2": {
+    "message": "Copiază cheia."
+  },
+  "azure_retire_step3": {
+    "message": "Lipește-o în câmpul „Cheie API Gemini\" din Setări, apoi apasă „Verifică conexiunea Gemini\"."
+  },
+  "azure_retire_step4": {
+    "message": "Alege Gemini ca motor de traducere."
+  },
+  "azure_retire_get_key": {
+    "message": "Obține o cheie Gemini"
+  },
+  "azure_retire_dismiss": {
+    "message": "Nu mai afișa"
+  },
+  "azure_retire_close": {
+    "message": "Închide"
+  },
+  "azure_retire_open_settings": {
+    "message": "Deschide setările"
   }
 }

@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "检查 Gemini 连接"
+  },
+  "azure_retire_title": {
+    "message": "Azure 即将停用"
+  },
+  "azure_retire_body": {
+    "message": "请改用 Gemini 以获得更好的翻译。Azure 将在未来版本中移除。"
+  },
+  "azure_retire_step1": {
+    "message": "打开 Google AI Studio 并创建一个 API 密钥——免费，无需信用卡。"
+  },
+  "azure_retire_step2": {
+    "message": "复制该密钥。"
+  },
+  "azure_retire_step3": {
+    "message": "将其粘贴到设置中的「Gemini API 密钥」栏，然后点击「检查 Gemini 连接」。"
+  },
+  "azure_retire_step4": {
+    "message": "将翻译引擎选择为 Gemini。"
+  },
+  "azure_retire_get_key": {
+    "message": "获取 Gemini 密钥"
+  },
+  "azure_retire_dismiss": {
+    "message": "不再显示"
+  },
+  "azure_retire_close": {
+    "message": "关闭"
+  },
+  "azure_retire_open_settings": {
+    "message": "打开设置"
   }
 }

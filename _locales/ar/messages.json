@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "اختبار اتصال Gemini"
+  },
+  "azure_retire_title": {
+    "message": "سيتم إيقاف Azure"
+  },
+  "azure_retire_body": {
+    "message": "استخدم Gemini لترجمات أفضل. ستتم إزالة Azure في إصدار مستقبلي."
+  },
+  "azure_retire_step1": {
+    "message": "افتح Google AI Studio وأنشئ مفتاح API — مجاني، ولا حاجة لبطاقة ائتمانية."
+  },
+  "azure_retire_step2": {
+    "message": "انسخ المفتاح."
+  },
+  "azure_retire_step3": {
+    "message": "الصقه في حقل «مفتاح Gemini API» في الإعدادات، ثم انقر على «اختبار اتصال Gemini»."
+  },
+  "azure_retire_step4": {
+    "message": "اختر Gemini كمحرك للترجمة."
+  },
+  "azure_retire_get_key": {
+    "message": "الحصول على مفتاح Gemini"
+  },
+  "azure_retire_dismiss": {
+    "message": "عدم الإظهار مجددًا"
+  },
+  "azure_retire_close": {
+    "message": "إغلاق"
+  },
+  "azure_retire_open_settings": {
+    "message": "فتح الإعدادات"
   }
 }

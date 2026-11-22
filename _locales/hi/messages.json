@@ -435,5 +435,35 @@
   },
   "check_gemini": {
     "message": "Gemini कनेक्शन जांचें"
+  },
+  "azure_retire_title": {
+    "message": "Azure जल्द बंद हो रहा है"
+  },
+  "azure_retire_body": {
+    "message": "बेहतर अनुवाद के लिए Gemini का उपयोग करें। Azure को भविष्य के संस्करण में हटा दिया जाएगा।"
+  },
+  "azure_retire_step1": {
+    "message": "Google AI Studio खोलें और एक API कुंजी बनाएँ — मुफ़्त, क्रेडिट कार्ड की ज़रूरत नहीं।"
+  },
+  "azure_retire_step2": {
+    "message": "कुंजी कॉपी करें।"
+  },
+  "azure_retire_step3": {
+    "message": "इसे सेटिंग में Gemini API की फ़ील्ड में चिपकाएँ, फिर Gemini कनेक्शन जांचें पर क्लिक करें।"
+  },
+  "azure_retire_step4": {
+    "message": "अनुवाद इंजन के रूप में Gemini चुनें।"
+  },
+  "azure_retire_get_key": {
+    "message": "Gemini कुंजी प्राप्त करें"
+  },
+  "azure_retire_dismiss": {
+    "message": "फिर से न दिखाएँ"
+  },
+  "azure_retire_close": {
+    "message": "बंद करें"
+  },
+  "azure_retire_open_settings": {
+    "message": "सेटिंग खोलें"
   }
 }
