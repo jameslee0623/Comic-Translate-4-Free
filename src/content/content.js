@@ -742,6 +742,30 @@
     return true;
   }
 
+  // Render-miss diagnostic (2.2.18): when the put-back cannot find the
+  // picture, say why — the uid asked for, the page URL, how many pictures
+  // are on the page now, which uids they carry, and the big pictures' URLs.
+  // Travels back on the RENDER reply; the worker logs it before throwing.
+  function buildRenderMissDiag(msg) {
+    let line = 'render miss uid=' + (msg.uid || '-') + ' srcUrl=' + (msg.srcUrl || '-') +
+      ' url=' + String(document.URL || '').slice(0, 160);
+    try {
+      const all = allImages();
+      const withUid = all.filter(im => im.dataset && im.dataset.ctUid);
+      line += ' imgs=' + all.length + ' withUid=' + withUid.length +
+        ' uids=[' + withUid.slice(0, 8).map(im => im.dataset.ctUid).join(',') + ']';
+      const big = [];
+      for (const im of all) {
+        let w = 0, h = 0;
+        try { const r = im.getBoundingClientRect(); w = r.width; h = r.height; } catch {}
+        if (Math.max(w, h) >= 500) big.push(String(im.currentSrc || im.src || '').slice(0, 120));
+        if (big.length >= 5) break;
+      }
+      line += ' bigSrcs=[' + big.join(' | ') + ']';
+    } catch {}
+    return line;
+  }
+
   // ------------------------------------------------------------ status pill
   let pill = null, pillTimer = null;
   function ensurePill() {
@@ -1660,6 +1684,7 @@
             }
           }
           let replaced = false;
+          let renderMissDiag = null;
           if (mode === 'replace') {
             // In-place: swap the page's original <img> for the translated one.
             // No overlay mask — the translation lives in the page itself.
@@ -1685,6 +1710,7 @@
               if (overlay) overlay.style.display = 'none';
             } else {
               showPillError(pillMsg('pill_err_page_changed'));
+              renderMissDiag = buildRenderMissDiag(msg);
             }
           } else {
             showPillError(pillMsg('pill_err_render_mode'));
@@ -1713,7 +1739,7 @@
             if (dbgBtn) dbgBtn.textContent = 'Debug: on';
             renderDebugTab('render');
           }
-          sendResponse({ ok: true, replaced });
+          sendResponse({ ok: true, replaced, ...(renderMissDiag ? { diag: renderMissDiag } : {}) });
           // The keep-alive stays open: a multi-pic run renders once per
           // picture, and closing here killed the tab-held port after the
           // first render, leaving the rest of the run on the worker-side

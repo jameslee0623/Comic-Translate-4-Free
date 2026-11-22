@@ -1080,6 +1080,10 @@ async function sendRender(tabId, runId, mode, imageDataUrl, w, h, blocks, timing
     throw new Error('render failed: ' + String((renderRes && renderRes.error) || 'no response from page'));
   }
   if (renderRes.replaced === false) {
+    // 2.2.18: the page says why the put-back missed (uid asked for, page
+    // URL, pictures on the page now, their uids) — log it before throwing,
+    // so the next failure explains itself in the diag log.
+    if (renderRes.diag) diagPush(String(renderRes.diag).slice(0, 800));
     throw new Error('render failed: could not find the page image to replace');
   }
   return renderRes;
