@@ -48,23 +48,14 @@
     "message": "If the engine fails, try another",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator (requiere clave)"
-  },
-  "backend_google": {
-    "message": "Google (gratis)"
   },
   "backend_google_opt": {
     "message": "Google (gratis, sin clave)"
   },
   "backend_hint": {
     "message": "La clave y la región de Azure y la clave de API de Gemini se almacenan solo en el almacenamiento de la extensión de este navegador. LM Studio debe estar en ejecución con su servidor compatible con OpenAI habilitado (por defecto http://127.0.0.1:1234)."
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio (local)"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (servidor local)"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini (gratis, requiere clave)"
-  },
-  "backend_gemini": {
-    "message": "Gemini (gratis)"
   },
   "gemini_key": {
     "message": "Clave de API de Gemini"

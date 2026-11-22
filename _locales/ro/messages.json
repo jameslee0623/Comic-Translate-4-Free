@@ -36,23 +36,14 @@
     "message": "Dacă motorul eșuează, încearcă altul",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator (necesită cheie)"
-  },
-  "backend_google": {
-    "message": "Google (gratuit)"
   },
   "backend_google_opt": {
     "message": "Google (gratuit, fără cheie)"
   },
   "backend_hint": {
     "message": "Cheia/regiunea Azure și cheia API Gemini sunt stocate doar în spațiul de stocare al extensiei din acest browser. LM Studio trebuie să ruleze cu serverul compatibil OpenAI activat (implicit http://127.0.0.1:1234)."
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio (local)"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (server local)"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini (gratuit, necesită cheie)"
-  },
-  "backend_gemini": {
-    "message": "Gemini (gratuit)"
   },
   "gemini_key": {
     "message": "Cheie API Gemini"

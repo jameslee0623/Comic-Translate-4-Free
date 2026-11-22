@@ -36,23 +36,14 @@
     "message": "If the engine fails, try another",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator (key required)"
-  },
-  "backend_google": {
-    "message": "Google (free)"
   },
   "backend_google_opt": {
     "message": "Google (free, no key)"
   },
   "backend_hint": {
     "message": "Azure key/region and the Gemini API key are stored only in this browser's extension storage. LM Studio must be running with its OpenAI-compatible server enabled (default http://127.0.0.1:1234)."
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio (local)"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (local server)"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini (free, key required)"
-  },
-  "backend_gemini": {
-    "message": "Gemini (free)"
   },
   "gemini_key": {
     "message": "Gemini API key"

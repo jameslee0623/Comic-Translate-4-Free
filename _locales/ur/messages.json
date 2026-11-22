@@ -48,23 +48,14 @@
     "message": "If the engine fails, try another",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator (کی درکار ہے)"
-  },
-  "backend_google": {
-    "message": "Google (مفت)"
   },
   "backend_google_opt": {
     "message": "Google (مفت، کوئی کی نہیں)"
   },
   "backend_hint": {
     "message": "Azure کی/ریجن اور Gemini API کی صرف اس براؤزر کی ایکسٹینشن اسٹوریج میں محفوظ ہوتے ہیں۔ LM Studio کا OpenAI-compatible سرور فعال ہونا چاہیے (ڈیفالٹ http://127.0.0.1:1234)۔"
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio (مقامی)"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (مقامی سرور)"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini (مفت، کی درکار ہے)"
-  },
-  "backend_gemini": {
-    "message": "Gemini (مفت)"
   },
   "gemini_key": {
     "message": "Gemini API کی"

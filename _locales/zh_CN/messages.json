@@ -36,23 +36,14 @@
     "message": "If the engine fails, try another",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator（需要密钥）"
-  },
-  "backend_google": {
-    "message": "Google（免费）"
   },
   "backend_google_opt": {
     "message": "Google（免费，无需密钥）"
   },
   "backend_hint": {
     "message": "Azure 密钥/区域和 Gemini API 密钥仅存储在此浏览器的扩展存储中。LM Studio 须启用 OpenAI 兼容服务器并运行（默认 http://127.0.0.1:1234）。"
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio（本地）"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio（本地服务器）"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini（免费，需要密钥）"
-  },
-  "backend_gemini": {
-    "message": "Gemini（免费）"
   },
   "gemini_key": {
     "message": "Gemini API 密钥"

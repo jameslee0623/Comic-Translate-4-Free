@@ -36,23 +36,14 @@
     "message": "If the engine fails, try another",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
-  "backend_azure": {
-    "message": "Azure Translator"
-  },
   "backend_azure_opt": {
     "message": "Azure Translator(키 필요)"
-  },
-  "backend_google": {
-    "message": "Google(무료)"
   },
   "backend_google_opt": {
     "message": "Google(무료, 키 불필요)"
   },
   "backend_hint": {
     "message": "Azure 키/리전과 Gemini API 키는 이 브라우저의 확장 프로그램 저장소에만 저장됩니다. LM Studio는 OpenAI 호환 서버를 활성화한 상태로 실행해야 합니다(기본값 http://127.0.0.1:1234)."
-  },
-  "backend_lmstudio": {
-    "message": "LM Studio(로컬)"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio(로컬 서버)"
@@ -438,9 +429,6 @@
   },
   "backend_gemini_opt": {
     "message": "Gemini(무료, 키 필요)"
-  },
-  "backend_gemini": {
-    "message": "Gemini(무료)"
   },
   "gemini_key": {
     "message": "Gemini API 키"
