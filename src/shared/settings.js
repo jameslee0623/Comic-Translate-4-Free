@@ -166,10 +166,21 @@ export function targetLangForLocale(locale) {
   const codes = TARGET_LANGS.map(([c]) => c);
   const exact = codes.find(c => c === tag) || codes.find(c => c.toLowerCase() === tag.toLowerCase());
   if (exact) return exact;
+  // Script forms: zh-Hant(-TW/-HK) is Traditional, zh-Hans(-CN/-SG) is
+  // Simplified. (Without this, zh-Hant fell through to the base 'zh' and
+  // wrongly became Simplified.)
+  if (/^zh-Hant/i.test(tag)) return 'zh-TW';
+  if (/^zh-Hans/i.test(tag)) return 'zh-CN';
   // Chinese regions: TW/HK/MO read Traditional, CN/SG read Simplified.
   if (/^zh-(TW|HK|MO)$/i.test(tag)) return 'zh-TW';
   if (/^zh-(CN|SG)$/i.test(tag)) return 'zh-CN';
   const base = tag.split('-')[0].toLowerCase();
+  // Browsers sometimes use a different code than the target list: 'iw' is
+  // old Hebrew (list has 'he'), 'nn' is Norwegian Nynorsk (list has 'nb'
+  // Bokmal). Javanese has no alias — neither 'jw' nor 'jv' is a target
+  // language, so it stays English.
+  const ALIASES = { iw: 'he', nn: 'nb' };
+  if (ALIASES[base]) return ALIASES[base];
   const baseHit = codes.find(c => c.toLowerCase() === base);
   if (baseHit) return baseHit;
   if (base === 'zh') return 'zh-CN';
