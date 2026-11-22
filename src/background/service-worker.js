@@ -1267,8 +1267,21 @@ async function waitForModels(runId) {
     }
     // Start anything not downloading yet (covers a failed ensureMlHost
     // at the top, and a download that died before writing a chunk).
+    // 2.2.19: a file that never started can stall too — its trigger may
+    // have died silently before the first chunk (host failed, promise
+    // never settled). The old code only restarted STARTED files, so an
+    // unstarted file spun until the 15-minute timeout. Restart it after
+    // the same stall window (startedAt is when this attempt began); a
+    // duplicate start is harmless (same chunk keys).
     for (const f of state.missing) {
-      if (!f.started && !modelDownloadInflight.has(f.id)) triggerModelDownload(f.id);
+      if (f.started) continue;
+      const inflight = modelDownloadInflight.get(f.id);
+      if (!inflight) { triggerModelDownload(f.id); continue; }
+      if (Date.now() - (inflight.startedAt || 0) > MODEL_DOWNLOAD_STALL_MS) {
+        diagPush('model download never started, restarting: ' + f.id);
+        modelDownloadInflight.delete(f.id);
+        triggerModelDownload(f.id);
+      }
     }
     const frac = state.totalBytes ? state.loadedBytes / state.totalBytes : 0;
     setProgress(runId, 'downloading', frac);
@@ -2006,11 +2019,6 @@ async function runPipeline(tabId, opts = {}) {
   }); // FIX1: see helpers above.
   const timings = {};
   const pipelineT0 = performance.now(); // overall wall-clock for this run
-  // Firefox: pre-load the 206MB LaMa first, before detector/OCR fragment the
-  // WASM heap. A fragmented heap can't provide the contiguous block LaMa needs.
-  if (directHandlers()) {
-    try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
-  }
   const pxKeys = []; // IDB pixel-bus keys created this run; dropped in finally
   let result;
   try {
@@ -2023,7 +2031,27 @@ async function runPipeline(tabId, opts = {}) {
     // Auto-download (2.2.2): if the models are not here yet (install
     // download still going, or it never ran), fetch them now and wait,
     // showing progress in the pill, instead of failing the run.
+    // 2.2.19: the wait is the gate for EVERY run — manual Translate,
+    // right-click Send, auto, resume. No ML call runs before it (the
+    // Chrome LaMa preload below moved after it), so a run can never
+    // reach "model not in local cache" mid-pipeline.
     await waitForModels(runId);
+    // 2.2.19: never start ML with a model still missing — if the wait
+    // ever returns early, fail here with a clear error instead of
+    // hitting "model not in local cache" at detect/OCR/inpaint.
+    {
+      const st = await getModelDownloadState().catch(() => null);
+      if (st && st.missing.length) {
+        throw new Error('models are not ready (' + st.missing.map(f => f.id).join(', ') + ' still missing) — the download did not finish; open Settings → Models and tap "Download all models".');
+      }
+    }
+    // Firefox: pre-load the 206MB LaMa first, before detector/OCR fragment the
+    // WASM heap. A fragmented heap can't provide the contiguous block LaMa needs.
+    // (2.2.19: moved after the model gate — the preload is an ML call, and
+    // no ML runs before the models are ready.)
+    if (directHandlers()) {
+      try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
+    }
     // MEASURE1: thread-info diagnostic (best-effort, never fails the run).
     // Served by the same ML host as compute (worker on Firefox, offscreen
     // doc on Chrome — see ML_WORKER_TYPES in ml-bridge.js), so the numbers
