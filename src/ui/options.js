@@ -178,6 +178,16 @@ async function load() {
   refreshModels();
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();
+  // Azure retirement notice (2.3.1): same once-after-update nudge as the
+  // popup — users already on Azure never touch the dropdown, so show the
+  // notice once on first Settings open, then remember it. The flag is
+  // shared with the popup, so it shows exactly once across both pages.
+  if (s.translationBackend === 'azure' && !s.azureRetireDismissed && !s.azureRetireUpdateShown) {
+    const next = { ...s, azureRetireUpdateShown: true };
+    lastSettings = next;
+    await persistSettings(next);
+    showAzureRetireModal();
+  }
 }
 
 // All settings writes go through here.

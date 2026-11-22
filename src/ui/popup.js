@@ -133,6 +133,16 @@ async function refreshSettings() {
     }
     if (!keepUserValue('allowAllSites')) $('allowAllSites').checked = !!(settings && settings.allowAllSites);
   }
+  // Azure retirement notice (2.3.1): users already on Azure never touch the
+  // dropdown, so the interaction triggers never fire for them. Show the
+  // notice once, the first time the popup opens with Azure selected, then
+  // remember it so it never nags again. Dismissed users never see it.
+  // Runs on every refreshSettings call, but the flag makes it fire once —
+  // the storage echo re-running this function sees the flag and skips.
+  if (settings && settings.translationBackend === 'azure' && !settings.azureRetireDismissed && !settings.azureRetireUpdateShown) {
+    await writeSettings({ azureRetireUpdateShown: true }).catch(() => {});
+    showAzureRetireModal();
+  }
   initDone = true;
   await refreshSite(settings || {});
 }
