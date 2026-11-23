@@ -984,7 +984,14 @@ if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onConnect)
 }
 if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
   chrome.alarms.onAlarm.addListener((alarm) => {
-    if (!alarm || !alarm.name || !alarm.name.startsWith('ct-keepalive:')) return;
+    if (!alarm || !alarm.name) return;
+    if (alarm.name === MODEL_WATCHDOG_ALARM) {
+      // Model-download watchdog (2.3.2): restart a download that died
+      // outside a run. Fire-and-forget; the tick guards itself.
+      try { const p = modelWatchdogTick(); if (p && p.catch) p.catch(() => {}); } catch {}
+      return;
+    }
+    if (!alarm.name.startsWith('ct-keepalive:')) return;
     // No-op: the dispatch itself is the activity signal. Never touch
     // runs, ML, or recovery here.
   });
@@ -1206,6 +1213,9 @@ const MODEL_DOWNLOAD_STALL_MS = 3 * 60 * 1000; // no progress for this long = de
 // the first chunk is written does clear it (see below) — otherwise the
 // wait loop skips the file forever and no retry ever starts.
 function triggerModelDownload(fileId) {
+  // The watchdog alarm lives as long as any download is outstanding, so
+  // a download that dies later still gets retried (2.3.2).
+  ensureModelWatchdog();
   if (modelDownloadInflight.has(fileId)) return null;
   modelDownloadInflight.set(fileId, { startedAt: Date.now() });
   const p = ensureMlHost().then(
@@ -1314,6 +1324,71 @@ async function waitForModels(runId) {
       throw new Error('model download timed out after 15 minutes — check the connection, or open Settings → Models and tap "Download all models".');
     }
     await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
+// Model-download watchdog (2.3.2): a download that dies OUTSIDE a run
+// never retries by itself — autoDownloadMissingModels only runs at
+// install/update and inside waitForModels, and it skips files that
+// already wrote chunks. On a phone the ML host (offscreen document) is
+// killed when the browser is backgrounded, so a big file can die
+// mid-download and sit partial forever — the Vivaldi test showed a
+// download stalled at 43% for ~3 minutes with no retry until a run
+// started. A 1-minute alarm re-checks: a missing file that never
+// started (or whose trigger died) is started, and a started file whose
+// bytes stopped growing for 3 minutes is pruned and restarted. While a
+// run is active the watchdog stays out of the way — waitForModels owns
+// restarts then. When nothing is missing the alarm clears itself, so it
+// costs nothing on a healthy install.
+const MODEL_WATCHDOG_ALARM = 'ct-model-watchdog';
+const modelWatchdogProgress = new Map(); // fileId -> { loaded, at }
+function ensureModelWatchdog() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.alarms) {
+      const p = chrome.alarms.create(MODEL_WATCHDOG_ALARM, { periodInMinutes: 1 });
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch {}
+}
+function clearModelWatchdog() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.alarms) {
+      const p = chrome.alarms.clear(MODEL_WATCHDOG_ALARM);
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch {}
+}
+async function modelWatchdogTick() {
+  // A run's wait loop owns restarts while it is active.
+  if (runs.size > 0) return;
+  let state;
+  try { state = await getModelDownloadState(); } catch { return; }
+  if (!state.missing.length) {
+    modelWatchdogProgress.clear();
+    clearModelWatchdog();
+    return;
+  }
+  for (const f of state.missing) {
+    if (!f.started) {
+      const inflight = modelDownloadInflight.get(f.id);
+      if (!inflight) { triggerModelDownload(f.id); continue; }
+      if (Date.now() - (inflight.startedAt || 0) > MODEL_DOWNLOAD_STALL_MS) {
+        diagPush('model download never started, restarting: ' + f.id);
+        modelDownloadInflight.delete(f.id);
+        triggerModelDownload(f.id);
+      }
+      continue;
+    }
+    const prev = modelWatchdogProgress.get(f.id);
+    if (!prev || prev.loaded !== f.loaded) {
+      modelWatchdogProgress.set(f.id, { loaded: f.loaded, at: Date.now() });
+    } else if (Date.now() - prev.at > MODEL_DOWNLOAD_STALL_MS) {
+      diagPush('model download stalled, restarting: ' + f.id);
+      try { await pruneModelIds([f.id]); } catch {}
+      modelDownloadInflight.delete(f.id);
+      modelWatchdogProgress.delete(f.id);
+      triggerModelDownload(f.id);
+    }
   }
 }
 
