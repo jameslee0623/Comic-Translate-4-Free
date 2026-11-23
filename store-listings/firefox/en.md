@@ -2,7 +2,7 @@
 
 ## Summary (250 chars max)
 
-Translate manga and comics in your browser. Reads Japanese, English, Simplified and Traditional Chinese; translates into 114 languages.
+Translate manga and comics in your browser. Reads Japanese, English, Simplified/Traditional Chinese; translates into 114 languages.
 
 (Count: 131)
 
