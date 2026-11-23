@@ -1696,9 +1696,10 @@
           if (mode === 'replace') {
             // In-place: swap the page's original <img> for the translated one.
             // No overlay mask — the translation lives in the page itself.
-            // The multi-pic path names the exact <img> (msg.uid); the
-            // manual-send path names it by src (msg.srcUrl); the auto path
-            // replaces the detected main image.
+            // The multi-pic path names the exact <img> (msg.uid, with
+            // msg.srcUrl as a fallback if the site swapped the element);
+            // the manual-send path names it by src (msg.srcUrl); the auto
+            // path replaces the detected main image.
             // Async blob encode (not toDataURL): toDataURL is fully synchronous
             // and freezes the page for 1-3s on multi-MP images.
             // Note: HTMLCanvasElement has toBlob (callback), not convertToBlob
@@ -1711,9 +1712,15 @@
               reader.onerror = () => reject(reader.error || new Error('read failed'));
               reader.readAsDataURL(blob);
             });
-            replaced = msg.uid ? replaceImageByUid(msg.uid, dataUrl)
-              : msg.srcUrl ? replaceImageBySrc(msg.srcUrl, dataUrl)
-              : replaceMainImage(dataUrl);
+            // Try the uid first (exact picture), then the src — the uid is a
+            // DOM attribute lost if the site swaps the <img> between inventory
+            // and render, but the src survives the swap. Only the no-uid /
+            // no-src auto path replaces the detected main image, so a
+            // multi-pic run never replaces the wrong picture.
+            replaced = false;
+            if (msg.uid) replaced = replaceImageByUid(msg.uid, dataUrl);
+            if (!replaced && msg.srcUrl) replaced = replaceImageBySrc(msg.srcUrl, dataUrl);
+            if (!replaced && !msg.uid && !msg.srcUrl) replaced = replaceMainImage(dataUrl);
             if (replaced) {
               if (overlay) overlay.style.display = 'none';
             } else {

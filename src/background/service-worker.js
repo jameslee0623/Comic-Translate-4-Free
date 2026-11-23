@@ -1237,9 +1237,11 @@ async function isIncognitoTab(tabId) {
 
 // Send the render payload to the page and verify it landed. Shared by the
 // live pipeline and the page-cache hit path (which re-sends a stored entry).
-// extra.srcUrl names the exact <img> for the manual-send path; extra.uid
-// names it for the multi-pic path; the auto path omits both and the page
-// replaces its detected main image.
+// extra.srcUrl names the exact <img> by URL; extra.uid names it by uid.
+// The render tries uid first, then srcUrl — the uid is a DOM attribute
+// lost if the site swaps the <img> between inventory and render, but the
+// src survives the swap. The no-uid/no-src auto path replaces the
+// detected main image.
 async function sendRender(tabId, runId, mode, imageDataUrl, w, h, blocks, timings, debug, extra = {}) {
   // DIAGNOSTIC (temporary): delivery is the decisive step — log the
   // attempt, any send failure, and the reply, so the log shows whether
@@ -1306,6 +1308,7 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
   const tier1TimeoutId = setTimeout(() => { try { translateController.abort(); } catch {} }, 30000);
   const failoverNotice = (p) => {
     if (p && p.failoverFrom && p.failoverTo) {
+      diagPush(`translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
       chrome.tabs.sendMessage(tabId, {
         type: MSG.PILL_NOTICE,
         text: `Engine ${p.failoverFrom} failed — retrying with ${p.failoverTo}`,
@@ -1696,6 +1699,7 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
     return null;
   } catch (e) {
     console.warn('[ct] page-cache lookup failed:', String((e && e.message) || e).slice(0, 120));
+    diagPush('page-cache lookup failed: ' + String((e && e.message) || e).slice(0, 120));
     return null;
   }
 }
@@ -1739,6 +1743,7 @@ async function writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, set
     // READ fallback stays, so entries written by older builds still serve.
   } catch (e) {
     console.warn('[ct] page-cache write failed:', String((e && e.message) || e).slice(0, 120));
+    diagPush('page-cache write failed: ' + String((e && e.message) || e).slice(0, 120));
   }
 }
 
@@ -2225,10 +2230,17 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
           reject(new Error('translate timed out — the translation backend may be stuck'));
         }, TRANSLATE_BACKSTOP_MS);
       });
+      // Pre-translate runs in the background — log the failover to the
+      // diag log, but show no pill (the user is not on this page).
+      const failoverNotice = (p) => {
+        if (p && p.failoverFrom && p.failoverTo) {
+          diagPush(`pre-translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+        }
+      };
       let translated;
       try {
         translated = await Promise.race([
-          translateBlocks(blocks, effSettings, () => {}, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
+          translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
           backstopP,
         ]);
       } finally {
@@ -2344,12 +2356,35 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
   }
   const entry = runs.get(runId);
   const abortController = (entry && entry.abortController) || new AbortController();
-  const timeoutId = setTimeout(() => { try { abortController.abort(); } catch {} }, 30000);
+  // 30s aborts the current attempt so translateBlocks can fail over; the
+  // 60s backstop kills a run wedged past stall (30s) + rescue (20s) — the
+  // same pattern as runOneImage and pretranslateImage, so a hung translate
+  // cannot leave the pre-translate job unsettled forever.
+  const TRANSLATE_TIMEOUT_MS = 30000;
+  const TRANSLATE_BACKSTOP_MS = 60000;
+  let timeoutId = null, backstopId = null;
+  timeoutId = setTimeout(() => { try { abortController.abort(); } catch {} }, TRANSLATE_TIMEOUT_MS);
+  const backstopP = new Promise((_, reject) => {
+    backstopId = setTimeout(() => {
+      reject(new Error('translate timed out — the translation backend may be stuck'));
+    }, TRANSLATE_BACKSTOP_MS);
+  });
+  // Pre-translate runs in the background — log the failover to the diag
+  // log, but show no pill (the user is not on this page).
+  const failoverNotice = (p) => {
+    if (p && p.failoverFrom && p.failoverTo) {
+      diagPush(`pre-translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+    }
+  };
   let translated;
   try {
-    translated = await translateBlocks(blocks, effSettings, () => {}, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true);
+    translated = await Promise.race([
+      translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
+      backstopP,
+    ]);
   } finally {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
+    if (backstopId) clearTimeout(backstopId);
   }
   checkCancelled(runId);
   try {
@@ -2715,9 +2750,9 @@ async function runPipeline(tabId, opts = {}) {
           // Translate-only path: Tier-1 gave us inpainted base + OCR blocks.
           // Translate to the new targetLang, store Tier-2, render.
           return await renderFromTier1(tabId, runId, cacheHit.entry, cacheHit.tier2Key,
-            settings, imgTimings, manualSrc, rgba, w, h, mode, tier, img.uid, imgSetProgress);
+            settings, imgTimings, manualSrc || img.src, rgba, w, h, mode, tier, img.uid, imgSetProgress);
         }
-        return await renderFromPageCache(tabId, runId, cacheHit, settings, imgTimings, manualSrc, { fromCache: true, uid: img.uid, onProgress: imgSetProgress });
+        return await renderFromPageCache(tabId, runId, cacheHit, settings, imgTimings, manualSrc || img.src, { fromCache: true, uid: img.uid, onProgress: imgSetProgress });
       }
 
       // ---- 2. detection (+ tall-image slicing)
@@ -2900,6 +2935,7 @@ async function runPipeline(tabId, opts = {}) {
         try {
           const failoverNotice = (p) => {
             if (p && p.failoverFrom && p.failoverTo) {
+              diagPush(`translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
               chrome.tabs.sendMessage(tabId, {
                 type: MSG.PILL_NOTICE,
                 text: `Engine ${p.failoverFrom} failed — retrying with ${p.failoverTo}`,
@@ -3314,7 +3350,7 @@ async function runPipeline(tabId, opts = {}) {
       // and let a stale render reach the tab.
       checkCancelled(runId);
       imgTimings.total = Math.round(performance.now() - imgT0);
-      await sendRender(tabId, runId, mode, finalDataUrl, w, h, blocks, imgTimings, settings.debugMode, { srcUrl: manualSrc, uid: img.uid });
+      await sendRender(tabId, runId, mode, finalDataUrl, w, h, blocks, imgTimings, settings.debugMode, { srcUrl: manualSrc || img.src, uid: img.uid });
       // ---- 9. page cache: remember this translated page for instant revisits.
       // Best-effort — a cache failure must never fail the run. Skipped in
       // incognito; a cancelled run never reaches this point (it throws above).
@@ -3756,6 +3792,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     }
   } catch (e) {
     console.warn('[ct] auto-translate error:', String((e && e.message) || e).slice(0, 120));
+    diagPush('auto-translate error: ' + String((e && e.message) || e).slice(0, 120));
   }
 }
 // ---------------------------------------------------------------- message router
