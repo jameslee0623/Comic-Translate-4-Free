@@ -5,6 +5,14 @@ import { LANGS, TARGET_LANGS, updateSettingsField } from '../shared/settings.js'
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 // Abort-aware sleep: rejects immediately on cancel instead of waiting out
 // the full backoff delay.
+// Retry logger: the service worker sets this to diagPush so every
+// translate retry lands in the Diagnostic log (backend, attempt,
+// status, wait). Without it a slow translate looks like one slow call
+// when it was really retries + backoff. Set via setTranslateLogger.
+let _translateLog = null;
+export function setTranslateLogger(fn) { _translateLog = typeof fn === 'function' ? fn : null; }
+function tlog(line) { try { if (_translateLog) _translateLog(line); } catch {} }
+
 function sleepAbortable(ms, signal) {
   if (!signal) return sleep(ms);
   if (signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true });
@@ -99,6 +107,7 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
       // Retry on 5xx; 4xx are client errors (not retried).
       if (resp.status >= 500 && resp.status < 600 && attempt < backoffs.length) {
         lastErr = new Error(`LM Studio: HTTP ${resp.status} from ${label} (retrying)`);
+        typeof tlog === 'function' && tlog(`translate retry lmstudio attempt ${attempt + 1}/${backoffs.length} status=${resp.status} backoff=${backoffs[attempt]}ms`);
         continue;
       }
       return resp;
@@ -114,6 +123,7 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
       const isNetwork = e && (e.name === 'TypeError' || /fetch failed|cannot reach|network/i.test(String(e.message)));
       if ((isTimeout || isNetwork) && attempt < backoffs.length) {
         lastErr = e;
+        typeof tlog === 'function' && tlog(`translate retry lmstudio attempt ${attempt + 1}/${backoffs.length} ${e && e.name ? e.name : 'network'} backoff=${backoffs[attempt]}ms`);
         continue;
       }
       throw e;
@@ -172,6 +182,7 @@ async function googleOne(t, src, dst, signal) {
     const retryable = !resp || resp.status === 429 || resp.status >= 500;
     if (!retryable || attempt === delays.length) break;
     const wait = delays[attempt] + Math.random() * 800;
+    typeof tlog === 'function' && tlog(`translate retry google attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
     await sleepAbortable(wait, signal);
     resp = null;
   }
@@ -280,6 +291,7 @@ async function azure(texts, settings, signal) {
       if (resp && resp.ok) break;
       const retryable = !resp || resp.status === 429 || resp.status >= 500;
       if (!retryable || attempt === delays.length) break;
+      typeof tlog === 'function' && tlog(`translate retry azure attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(delays[attempt])}ms`);
       await sleepAbortable(delays[attempt] + Math.random() * 800, signal);
       resp = null;
     }
@@ -418,6 +430,7 @@ async function gemini(texts, settings, signal) {
     if (resp && resp.ok) break;
     const retryable = !resp || resp.status === 429 || resp.status >= 500;
     if (!retryable || attempt === delays.length) break;
+    typeof tlog === 'function' && tlog(`translate retry gemini attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(delays[attempt])}ms`);
     await sleepAbortable(delays[attempt] + Math.random() * 800, signal);
     resp = null;
   }

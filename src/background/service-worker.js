@@ -12,7 +12,7 @@ import {
 import { toGrayU8, meanBrightness, renderScale, resizeBilinearRGBA } from '../shared/image-ops.js';
 import { pixelPut, pixelTake, pixelDrop, pixelPruneRun } from '../shared/pixel-bus.js';
 import { generateMask, detectContentMaskInBbox } from '../shared/mask.js';
-import { translateBlocks, checkAzure, checkLmStudio, checkGemini, BACKEND_LABEL, BACKEND_SHORT_LABEL } from './translators.js';
+import { translateBlocks, checkAzure, checkLmStudio, checkGemini, BACKEND_LABEL, BACKEND_SHORT_LABEL, setTranslateLogger } from './translators.js';
 import { detectPageLang } from '../shared/lang-detect.js';
 import { mlHostAlive, ensureMlHost, callMl, cancelMlForRun, runGpuInpaint, cancelGpuInpaint, runChromeGpuInpaint, cancelChromeGpuInpaint, notifyChromeGpuProgress, makeCanvas, canvasToBlob, directHandlers, WEBP_TYPE, WEBP_QUALITY, setMlAlarmRecoveryHook } from './ml-bridge.js';
 import {
@@ -61,6 +61,10 @@ function diagPush(line) {
     if (diagLogBuf.length > 2000) diagLogBuf.shift();
   } catch {}
 }
+// Translate retries log to the Diagnostic log (so a slow translate shows
+// its retries, not just one slow call). translators.js is a module — it
+// cannot see diagPush directly, so the logger is injected here.
+setTranslateLogger(diagPush);
 
 // 2.1.20: bench trace — every bench line, persisted. diagPush alone is
 // in-memory, so a worker restart wipes the bench lines before the next
