@@ -1043,51 +1043,6 @@ async function clearRunRecord(runId) {
   });
 }
 
-// LaMa crash guard (2.3.20): on Orion a run dies at lama-preload — the
-// 206 MB model load hard-kills the extension, and after the death even
-// Settings will not open until the app is restarted. The death leaves
-// one trace: the persisted run record with stage 'lama-preload'. At
-// background load, a NEW lama-preload death (a runId not seen before)
-// sets a safe-mode flag for this version: the extension stays up, but
-// Translate refuses before any ML work instead of dying again. A new
-// version clears the flag, so a fix gets a fresh chance.
-const LAMA_UNSAFE_KEY = 'ct-lama-unsafe';
-let lamaUnsafe = false;
-let lamaGuardLoad = null;
-function currentVersion() {
-  try { return String(chrome.runtime.getManifest().version || ''); } catch { return ''; }
-}
-// Pure helper for checkLamaGuard (tested): the runIds of runs that died
-// at lama-preload and have not been counted before.
-function lamaGuardFreshDeaths(all, seen) {
-  const s = Array.isArray(seen) ? seen : [];
-  return Object.keys(all || {}).filter(id => all[id] && all[id].stage === 'lama-preload' && !s.includes(id));
-}
-async function checkLamaGuard() {
-  try {
-    const ver = currentVersion();
-    const flag = (await chrome.storage.local.get(LAMA_UNSAFE_KEY))[LAMA_UNSAFE_KEY] || {};
-    const seen = Array.isArray(flag.seen) ? flag.seen : [];
-    lamaUnsafe = !!(flag.version && ver && flag.version === ver);
-    const all = (await chrome.storage.local.get(ACTIVE_RUNS_KEY))[ACTIVE_RUNS_KEY] || {};
-    const fresh = lamaGuardFreshDeaths(all, seen);
-    if (fresh.length) {
-      const nextSeen = [...seen, ...fresh].slice(-20);
-      lamaUnsafe = true;
-      await chrome.storage.local.set({ [LAMA_UNSAFE_KEY]: { version: ver, at: Date.now(), seen: nextSeen } });
-      diagPush('LaMa unsafe: a run died at lama-preload (' + fresh.join(', ') + ') — translation paused so the extension stays working');
-    } else if (flag.version && flag.version !== ver) {
-      // New version: keep the seen list, drop the old flag — the fix
-      // gets a fresh chance.
-      await chrome.storage.local.set({ [LAMA_UNSAFE_KEY]: { version: '', at: 0, seen } });
-    }
-  } catch {}
-}
-function ensureLamaGuardLoaded() {
-  if (!lamaGuardLoad) lamaGuardLoad = checkLamaGuard().catch(() => {});
-  return lamaGuardLoad;
-}
-
 // Crash-stage diagnostic (2.3.11): record the fine stage in the persisted
 // run record (chrome.storage.local survives a process kill) WITHOUT
 // touching the pill — setProgress would also send a pill update, and these
@@ -2007,10 +1962,6 @@ async function joinOrCancelPretranslate(runId, tabUrl, isAuto = true) {
 // incognito, already done).
 async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
   if (!settings || settings.pretranslateNextPage === false) return;
-  // LaMa crash guard (2.3.20): never start a background job that would
-  // die loading LaMa.
-  await ensureLamaGuardLoaded();
-  if (lamaUnsafe) { diagPush('pre-translate skipped: LaMa unsafe'); return; }
   try { if (await isIncognitoTab(sourceTabId)) return; } catch { /* proceed */ }
   cancelPretranslate();
   // Learned rule first: if this site has an active learned rule, build the
@@ -2425,14 +2376,6 @@ async function runPipeline(tabId, opts = {}) {
     // runs-map entry — orphan recovery could later auto-resume a run that
     // never started.
     const settings = await getSettings();
-    // LaMa crash guard (2.3.20): if a run already died loading LaMa on
-    // this version, refuse before any ML work instead of dying again.
-    // The refusal surfaces through the normal error path (popup + panel
-    // + diag log), and the finally clears this run's record.
-    await ensureLamaGuardLoaded();
-    if (lamaUnsafe) {
-      throw new Error('Translation is paused on this device: the inpaint model could not load here before, so translation stays off to keep the extension working. It will try again after the next extension update.');
-    }
     keepAliveStart(runId); // FIX2: hold the background alive for this run only; released in finally.
     // Auto-download (2.2.2): if the models are not here yet (install
     // download still going, or it never ran), fetch them now and wait,
@@ -4472,4 +4415,3 @@ setMlAlarmRecoveryHook(async (entry, msg) => {
 // Fire-and-forget: never block background startup, never throw.
 recoverOrphanedRuns().catch(() => {});
 recoverPretranslateJob().catch(() => {});
-ensureLamaGuardLoaded();
