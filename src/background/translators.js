@@ -439,7 +439,32 @@ async function gemini(texts, settings, signal) {
     const bodyText = await resp.text().catch(() => '');
     throw new Error(`gemini: HTTP ${resp.status} after retries ${bodyText.slice(0, 160)}`);
   }
-  return parseGeminiBody(await resp.text(), texts.length);
+  const out = parseGeminiBody(await resp.text(), texts.length);
+  // 2.3.28: Gemini sometimes ignores the prompt and echoes the source
+  // language (James, 2026-11-23: Japanese out when the target is
+  // Traditional Chinese). A "translation" that is still Japanese is a
+  // failure, not a result — throw so translateBlocks fails over to the
+  // next backend instead of caching and rendering Japanese as if it
+  // were translated. Kana (hiragana/katakana) never appears in
+  // Traditional Chinese, so any kana in the output proves it is
+  // Japanese. The identical-to-source check catches an echo even when
+  // the text has no kana (all-kanji lines).
+  const targetIsJa = settings.targetLang === 'ja';
+  if (!targetIsJa) {
+    const bad = out.findIndex((t, i) => {
+      const s = (t || '').trim();
+      if (!s) return false;
+      if (/[\u3040-\u309F\u30A0-\u30FF]/.test(s)) return true;
+      const src = (texts[i] || '').trim();
+      return src && s === src;
+    });
+    if (bad >= 0) {
+      const why = /[\u3040-\u309F\u30A0-\u30FF]/.test((out[bad] || '')) ? 'still contains Japanese kana' : 'identical to the source text';
+      typeof tlog === 'function' && tlog(`gemini returned ${langName(settings.targetLang)} output in the source language (${why}) — failing over`);
+      throw new Error(`gemini: returned source-language text (${why}), failing over`);
+    }
+  }
+  return out;
 }
 
 export async function checkGemini(settings) {
