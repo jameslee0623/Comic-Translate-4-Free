@@ -9,7 +9,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "開啟後，允許的頁面將在載入完成後立即自動開始翻譯 — 無需點擊按鈕。（提示：從彈出視窗允許網站，擴充功能即可獲得讀取其圖片的權限。）"
+    "message": "開啟後，允許的頁面將在載入完成後立即自動開始翻譯"
   },
   "auto_translate": {
     "message": "頁面載入時自動翻譯"

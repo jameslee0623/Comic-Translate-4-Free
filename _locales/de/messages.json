@@ -9,7 +9,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "Wenn aktiviert, werden zugelassene Seiten automatisch übersetzt, sobald sie fertig geladen sind — kein Klick erforderlich. (Tipp: Lassen Sie eine Website über das Popup zu, damit die Erweiterung deren Bilder lesen darf.)"
+    "message": "Wenn aktiviert, werden zugelassene Seiten automatisch übersetzt, sobald sie fertig geladen sind"
   },
   "auto_translate": {
     "message": "Beim Seitenladen automatisch übersetzen"

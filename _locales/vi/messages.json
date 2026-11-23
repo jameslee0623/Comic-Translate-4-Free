@@ -9,7 +9,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "Khi bật, các trang đã cho phép sẽ tự động dịch ngay sau khi tải xong — không cần bấm nút. (Mẹo: cho phép trang từ cửa sổ popup để tiện ích có quyền đọc ảnh của trang.)"
+    "message": "Khi bật, các trang đã cho phép sẽ tự động dịch ngay sau khi tải xong"
   },
   "auto_translate": {
     "message": "Tự động dịch khi tải trang"

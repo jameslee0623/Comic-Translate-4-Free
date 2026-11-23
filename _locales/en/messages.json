@@ -9,7 +9,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "When on, allowed pages start translating automatically as soon as they finish loading — no button click needed. (Tip: allow a site from the popup so the extension gets permission to read its images.)"
+    "message": "When on, allowed pages start translating automatically as soon as they finish loading"
   },
   "auto_translate": {
     "message": "Auto-translate on page load"

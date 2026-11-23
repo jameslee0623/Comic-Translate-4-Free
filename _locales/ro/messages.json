@@ -9,7 +9,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "Când este activat, paginile permise încep să se traducă automat imediat ce se termină de încărcat — fără să fie nevoie de clic. (Sfat: permite un site din fereastra popup, ca extensia să aibă permisiunea de a-i citi imaginile.)"
+    "message": "Când este activat, paginile permise încep să se traducă automat imediat ce se termină de încărcat"
   },
   "auto_translate": {
     "message": "Traducere automată la încărcarea paginii"

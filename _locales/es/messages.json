@@ -24,7 +24,7 @@
     "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
-    "message": "Cuando está activado, las páginas permitidas comienzan a traducirse automáticamente al terminar de cargarse, sin necesidad de hacer clic en ningún botón. (Consejo: permite un sitio desde la ventana emergente para que la extensión obtenga permiso para leer sus imágenes.)"
+    "message": "Cuando está activado, las páginas permitidas comienzan a traducirse automáticamente al terminar de cargarse"
   },
   "auto_translate": {
     "message": "Traducir automáticamente al cargar la página"
