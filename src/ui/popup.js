@@ -381,6 +381,7 @@ async function refreshSite(settings) {  const [tab] = await chrome.tabs.query({ 
       const next = { ...(cur || {}), siteWhitelist: [...wl2] };
       await writeSettings({ siteWhitelist: next.siteWhitelist });
       refreshSite(next);
+      try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
     });
   };
 }
@@ -505,6 +506,7 @@ $('allowAllSites').onchange = e => {
     if (on && !granted) { e.target.checked = false; return; } // denied: revert
     await writeSettings({ allowAllSites: on });
     refresh();
+    try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
   }).catch(() => { if (on) e.target.checked = false; });
 };
 

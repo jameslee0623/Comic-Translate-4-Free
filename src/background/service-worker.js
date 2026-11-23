@@ -140,6 +140,78 @@ try {
   diagPush('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')');
 } catch {}
 
+// 2.3.15/1.7.15: device + browser line in the diag log, so a pasted log
+// says which device and browser it came from — no need to ask the user
+// (many devices now). Best-effort and async: the phone model comes from
+// userAgentData on Chromium (a promise); the UA string is the fallback.
+// iPhone/iPad means Orion — the only iOS browser that runs this
+// extension. Firefox Android cannot report the phone model (no
+// userAgentData, no model in its UA), so it says Android. Never breaks
+// background load: every step is guarded.
+async function logDeviceLine() {
+  try {
+    if (typeof navigator === 'undefined') return;
+    const ua = String((navigator && navigator.userAgent) || '');
+    const platform = String((navigator && navigator.platform) || '');
+    let model = '';
+    try {
+      const uad = navigator.userAgentData;
+      if (uad && typeof uad.getHighEntropyValues === 'function') {
+        const hv = await uad.getHighEntropyValues(['model']);
+        if (hv && hv.model) model = String(hv.model);
+      }
+    } catch {}
+    let os = '';
+    const am = ua.match(/Android\s+([\d.]+);\s*([^;)]+)/);
+    if (am) {
+      os = 'Android ' + am[1];
+      if (!model && am[2]) model = am[2].split(' Build/')[0].trim();
+      if (model === 'Mobile') model = '';
+    } else if (/iPhone|iPad/.test(ua) || /^iP/.test(platform)) {
+      const ios = ua.match(/OS\s+([\d_]+)/);
+      os = 'iOS ' + (ios ? ios[1].replace(/_/g, '.') : '');
+      if (!model) model = (/iPad/.test(ua) || platform === 'iPad') ? 'iPad' : 'iPhone';
+    } else if (/Mac/.test(platform) || /Macintosh/.test(ua)) {
+      os = 'macOS';
+      if (!model) model = 'Mac';
+    } else if (/Win/.test(platform)) {
+      os = 'Windows';
+      if (!model) model = 'Windows PC';
+    } else if (/Linux/.test(platform)) {
+      os = 'Linux';
+      if (!model) model = 'Linux';
+    }
+    let app = '';
+    if (/iPhone|iPad/.test(ua) || /^iP/.test(platform)) {
+      app = 'Orion';
+    } else {
+      const vm = ua.match(/Vivaldi\/([\d.]+)/);
+      const fm = ua.match(/Firefox\/([\d.]+)/);
+      const em = ua.match(/Edg\/([\d.]+)/);
+      const om = ua.match(/OPR\/([\d.]+)/);
+      const cm = ua.match(/Chrome\/([\d.]+)/);
+      const sm = ua.match(/Version\/([\d.]+).*Safari/);
+      if (vm) app = 'Vivaldi ' + vm[1];
+      else if (fm) app = 'Firefox ' + fm[1];
+      else if (em) app = 'Edge ' + em[1];
+      else if (om) app = 'Opera ' + om[1];
+      else if (cm) app = 'Chrome ' + cm[1];
+      else if (sm) app = 'Safari ' + sm[1];
+      else {
+        let isFF = false;
+        try { isFF = !!chrome.runtime.getManifest().browser_specific_settings; } catch {}
+        app = isFF ? 'Firefox' : 'Chrome';
+      }
+    }
+    const where = model ? model + (os && os !== model ? ' (' + os + ')' : '') : (os || 'unknown device');
+    diagPush('Device: ' + where + ' - ' + (app || 'unknown browser'));
+  } catch {}
+}
+logDeviceLine().catch(() => {});
+// Also refresh the auto-start registrations at background load, so a
+// restart picks up any grant made while the worker was down.
+try { syncAutoStartRegistrations(); } catch {}
+
 // 2.1.29: retired bench lines. 2.1.25 removed these from live code, but
 // they live on in the persisted benchTrace and replay into every run's
 // log. Filter them out of the replay (and purge them at run start).
@@ -243,6 +315,55 @@ function hostAccessError(host) {
   return new Error(
     `"${host}" is allowed but the extension has no access to it, so nothing can be translated. ` +
     `Open the extension popup on this site and click "Grant access".`);
+}
+
+// 2.3.15/1.7.15: Vivaldi auto-translate. The worker can miss
+// tabs.onUpdated 'complete' on Vivaldi (it wakes after the page loaded),
+// so the page-load listener alone never fires auto there. Fix: register
+// the content script for the sites the user already allowed, so the
+// browser injects it on page load by itself — the script then wakes the
+// worker with ct/auto-start. Registration uses only origins the user
+// granted (whitelist hosts, or <all_urls> when allow-all is on): no new
+// permission is requested, and a site typed into Settings without a
+// grant is skipped (registration needs the host permission).
+// registerContentScripts persists across restarts. Sync runs at
+// background load, on settings changes, and when the popup/Settings ask
+// for it (ct/sync-auto-start) right after a grant, so a reload after
+// allowing a site already has the script. Guarded: old Firefox (<128)
+// has no registerContentScripts and Orion's layer may not — a missing
+// API just means the old behavior. Always unregister-then-register, so
+// a removed site or a toggled allow-all cannot leave a stale script.
+const AUTO_START_SCRIPT_ID = 'ct-auto-start';
+async function syncAutoStartRegistrations() {
+  try {
+    const sc = chrome.scripting;
+    if (!sc || typeof sc.registerContentScripts !== 'function') return;
+    const settings = await getSettings();
+    const matches = [];
+    if (settings.allowAllSites) {
+      let ok = false;
+      try { ok = await chrome.permissions.contains({ origins: ['<all_urls>'] }); } catch {}
+      if (ok) matches.push('<all_urls>');
+    } else {
+      for (const host of (settings.siteWhitelist || [])) {
+        if (!host) continue;
+        let ok = false;
+        try { ok = await chrome.permissions.contains({ origins: [`*://${host}/*`] }); } catch {}
+        if (ok) matches.push(`*://${host}/*`, `*://*.${host}/*`);
+      }
+    }
+    try { await sc.unregisterContentScripts({ ids: [AUTO_START_SCRIPT_ID] }); } catch {}
+    if (!matches.length) return;
+    // Paths are extension-root-relative for registerContentScripts (unlike
+    // executeScript on Firefox, which resolves relative to the calling
+    // page — hence the two CONTENT_SCRIPT_FILES variants).
+    await sc.registerContentScripts([{
+      id: AUTO_START_SCRIPT_ID,
+      matches,
+      js: ['src/content/content.js'],
+      runAt: 'document_idle',
+    }]);
+  } catch {}
 }
 
 // ---------------------------------------------------------------- state
@@ -3437,72 +3558,84 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     const inFlight = [...runs].some(([, r]) => r.tabId === tabId && !r.cancelled);
   } catch {}
   if (!changeInfo || changeInfo.status !== 'complete') return;
-  (async () => {
-    try {
-      const settings = await getSettings();
-      const host = hostOf(tab.url || '');
-      if (!host || (!settings.allowAllSites && !isSiteAllowed(host, settings.siteWhitelist || []))) return;
-      // Inject the content script on page load for allowed sites, even
-      // when auto-translate is off: it carries the anti-right-click
-      // override, so it must be on the page BEFORE the user right-clicks
-      // a picture. Best-effort (a chrome:// tab or a revoked permission
-      // throws) — a later runPipeline injection is a no-op thanks to the
-      // script's double-injection guard, and a failed inject here never
-      // blocks auto-translate.
+  maybeAutoStart(tabId, tab, 'page-load', true);
+});
+
+// 2.3.15/1.7.15: auto-translate trigger, shared by the page-load
+// listener above and the registered content script (MSG.AUTO_START).
+// Same gates, same diag lines — `source` only tags the log
+// ('page-load' vs 'content'), so a pasted log shows which trigger
+// fired. The content trigger exists because on Vivaldi the worker can
+// wake after the page loaded and miss 'complete' entirely.
+// `injectFirst` is only for the page-load path: the content path
+// already runs inside the script.
+async function maybeAutoStart(tabId, tab, source, injectFirst) {
+  try {
+    const srcTag = ' (' + source + ')';
+    const settings = await getSettings();
+    const host = hostOf(tab.url || '');
+    if (!host || (!settings.allowAllSites && !isSiteAllowed(host, settings.siteWhitelist || []))) return;
+    // Inject the content script on page load for allowed sites, even
+    // when auto-translate is off: it carries the anti-right-click
+    // override, so it must be on the page BEFORE the user right-clicks
+    // a picture. Best-effort (a chrome:// tab or a revoked permission
+    // throws) — a later runPipeline injection is a no-op thanks to the
+    // script's double-injection guard, and a failed inject here never
+    // blocks auto-translate.
+    if (injectFirst) {
       try {
         await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
       } catch {}
-      // AUTO DIAGNOSTIC (2.3.3): log every auto decision for an allowed
-      // site — on Vivaldi the page-load signal may never arrive (the
-      // worker wakes after the page loaded) or a gate may stop it, and
-      // the log then shows which. Silent for disallowed sites (chrome://
-      // tabs would flood the log). One line per 'complete'.
-      const url = tab.url || '';
-      if (!settings.autoTranslateOnLoad) { diagPush('auto diag skip: auto off ' + url.slice(0, 120)); return; }
-      if (!tab || !tab.active) { diagPush('auto diag skip: tab not active ' + url.slice(0, 120)); return; }
-      const prev = autoFired.get(tabId);
-      const now = Date.now();
-      if (prev && prev.url === url && now - prev.at < 120000) { diagPush('auto diag skip: dedupe 2min ' + url.slice(0, 120)); return; } // same load, don't double-fire
-      // Same page and a run for this tab is still working: a late 'complete'
-      // (slow iframe, ad slot, …) is not a new page and must not kill the run
-      // and restart it from scratch. This matters more now that tiled inpaint
-      // can keep a run busy for many minutes. Backstop: if it has been wedged
-      // for >15min, let the restart through anyway.
-      // (Checked against the live runs map — not a recorded run id — so the
-      // guard works while the run is in flight, which is when it matters.)
-      if (prev && prev.url === url && now - prev.at < 900000) {
-        for (const [, r] of runs) {
-          if (r.tabId === tabId && !r.cancelled) { diagPush('auto diag skip: run in flight ' + url.slice(0, 120)); return; }
-        }
-      }
-      diagPush('auto diag start: ' + url.slice(0, 120));
-      // New page: drop whatever the tab was doing and start fresh immediately.
-      // A stale run must never finish on top of the new page.
-      // Record the fire SYNCHRONOUSLY here, before the await below: two
-      // 'complete' events (page + a slow iframe) can land in the same tick,
-      // and if both pass the dedupe above before either records, both start
-      // a run — they then fight over the page, one dies 'stale run', and
-      // only a couple of pictures get translated. The check and the record
-      // are one synchronous block, so the second event sees it and returns.
-      autoFired.set(tabId, { url, at: now });
-      await cancelRunsForTab(tabId);
-      const r = await runPipeline(tabId, { auto: true });
-      if (!r.ok && !r.cancelled) {
-        console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
-        // 2.3.5: a failed auto run must not consume the dedupe window.
-        // The user may fix the cause (e.g. lower the minimum image size)
-        // and reload at once — that reload would otherwise be skipped as
-        // a dupe for 2 minutes, and auto looks dead. Only clear our own
-        // record (same url), so a newer fire's record survives.
-        const cur = autoFired.get(tabId);
-        if (cur && cur.url === url) autoFired.delete(tabId);
-      }
-    } catch (e) {
-      console.warn('[ct] auto-translate error:', String((e && e.message) || e).slice(0, 120));
     }
-  })();
-});
-
+    // AUTO DIAGNOSTIC (2.3.3): log every auto decision for an allowed
+    // site — on Vivaldi the page-load signal may never arrive (the
+    // worker wakes after the page loaded) or a gate may stop it, and
+    // the log then shows which. Silent for disallowed sites (chrome://
+    // tabs would flood the log). One line per 'complete'.
+    const url = tab.url || '';
+    if (!settings.autoTranslateOnLoad) { diagPush('auto diag skip: auto off ' + url.slice(0, 120) + srcTag); return; }
+    if (!tab || !tab.active) { diagPush('auto diag skip: tab not active ' + url.slice(0, 120) + srcTag); return; }
+    const prev = autoFired.get(tabId);
+    const now = Date.now();
+    if (prev && prev.url === url && now - prev.at < 120000) { diagPush('auto diag skip: dedupe 2min ' + url.slice(0, 120) + srcTag); return; } // same load, don't double-fire
+    // Same page and a run for this tab is still working: a late 'complete'
+    // (slow iframe, ad slot, …) is not a new page and must not kill the run
+    // and restart it from scratch. This matters more now that tiled inpaint
+    // can keep a run busy for many minutes. Backstop: if it has been wedged
+    // for >15min, let the restart through anyway.
+    // (Checked against the live runs map — not a recorded run id — so the
+    // guard works while the run is in flight, which is when it matters.)
+    if (prev && prev.url === url && now - prev.at < 900000) {
+      for (const [, r] of runs) {
+        if (r.tabId === tabId && !r.cancelled) { diagPush('auto diag skip: run in flight ' + url.slice(0, 120) + srcTag); return; }
+      }
+    }
+    diagPush('auto diag start: ' + url.slice(0, 120) + srcTag);
+    // New page: drop whatever the tab was doing and start fresh immediately.
+    // A stale run must never finish on top of the new page.
+    // Record the fire SYNCHRONOUSLY here, before the await below: two
+    // 'complete' events (page + a slow iframe) can land in the same tick,
+    // and if both pass the dedupe above before either records, both start
+    // a run — they then fight over the page, one dies 'stale run', and
+    // only a couple of pictures get translated. The check and the record
+    // are one synchronous block, so the second event sees it and returns.
+    autoFired.set(tabId, { url, at: now });
+    await cancelRunsForTab(tabId);
+    const r = await runPipeline(tabId, { auto: true });
+    if (!r.ok && !r.cancelled) {
+      console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
+      // 2.3.5: a failed auto run must not consume the dedupe window.
+      // The user may fix the cause (e.g. lower the minimum image size)
+      // and reload at once — that reload would otherwise be skipped as
+      // a dupe for 2 minutes, and auto looks dead. Only clear our own
+      // record (same url), so a newer fire's record survives.
+      const cur = autoFired.get(tabId);
+      if (cur && cur.url === url) autoFired.delete(tabId);
+    }
+  } catch (e) {
+    console.warn('[ct] auto-translate error:', String((e && e.message) || e).slice(0, 120));
+  }
+}
 // ---------------------------------------------------------------- message router
 // ------------------------------------------- right-click "send this image"
 // The menu item appears on images on sites that pass the site-access gate:
@@ -3781,7 +3914,10 @@ if (chrome.contextMenus && chrome.contextMenus.onClicked) {
   });
 }
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.settings) refreshContextMenu().catch(() => {});
+  if (area === 'local' && changes.settings) {
+    refreshContextMenu().catch(() => {});
+    try { syncAutoStartRegistrations(); } catch {}
+  }
 });
 refreshContextMenu().catch(() => {});
 
@@ -3796,6 +3932,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         lastLinkClick.set(tabId, { text: String(msg.text || ''), href: String(msg.href), hasImage: !!msg.hasImage, at: Date.now() });
       }
     } catch {}
+    return false;
+  }
+  // 2.3.15: Vivaldi auto-translate trigger (one-way, no reply). The
+  // registered content script sends this on page load; the background
+  // runs the same auto gates as the page-load listener. sender.tab
+  // carries the tab (id, url, active).
+  if (msg && msg.type === MSG.AUTO_START) {
+    try {
+      const tab = sender && sender.tab;
+      if (tab && tab.id !== undefined && tab.id !== null) maybeAutoStart(tab.id, tab, 'content', false);
+    } catch {}
+    return false;
+  }
+  // 2.3.15: re-register the content script after a grant change
+  // (popup/Settings ask for this right after allowing a site).
+  if (msg && msg.type === MSG.SYNC_AUTO_START) {
+    try { syncAutoStartRegistrations(); } catch {}
     return false;
   }
   // Inpaint progress from the Chrome offscreen document (one-way, no reply).

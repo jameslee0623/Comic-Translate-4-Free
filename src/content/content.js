@@ -5,6 +5,19 @@
   if (window.__ctContentLoaded) return;
   window.__ctContentLoaded = true;
 
+  // 2.3.15/1.7.15: Vivaldi auto-translate trigger. This script is
+  // registered for allowed sites (see syncAutoStartRegistrations in the
+  // background), so the browser injects it on page load by itself — even
+  // when the background worker wakes after the page loaded and misses
+  // tabs.onUpdated 'complete'. On load, wake the background and ask for
+  // an auto run; the background applies the same gates (auto off / tab
+  // not active / dedupe / run in flight) and logs the same auto diag
+  // lines, so this and the page-load listener can only fire once per
+  // page. Top frame only: iframes must not start runs.
+  if (window.top === window.self) {
+    try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+  }
+
   const FONT_STACK = '"Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans",sans-serif';
 
   // Anti-right-click override: some sites block the context menu

@@ -72,10 +72,18 @@ function renderSiteList() {
     span.textContent = h;
     const b = document.createElement('button');
     b.textContent = ctMsg('remove') || 'Remove';
-    b.onclick = () => { allowedSites = allowedSites.filter(x => x !== h); renderSiteList(); saveNow(); };
+    b.onclick = () => { allowedSites = allowedSites.filter(x => x !== h); renderSiteList(); saveNow(); syncAutoStart(); };
     li.appendChild(span); li.appendChild(b);
     ul.appendChild(li);
   }
+}
+
+// 2.3.15: tell the background to re-register the content script after
+// a grant change (allow / remove / allow-all), so a reload already has
+// the script for auto-translate. Fire-and-forget; the settings save
+// also reaches the background through storage.onChanged.
+function syncAutoStart() {
+  try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
 }
 
 $('wlAddBtn').onclick = () => {
@@ -105,6 +113,7 @@ $('wlAddBtn').onclick = () => {
     $('wlAdd').value = '';
     renderSiteList();
     saveNow();
+    syncAutoStart();
   });
 };
 // Enter in the input submits like the Add button. The .click() is dispatched
@@ -131,7 +140,8 @@ $('allowAllSites').onchange = e => {
     // If the user dismissed/denied the prompt, revert the checkbox.
     if (on && !granted) e.target.checked = false;
     saveNow();
-  }).catch(() => { if (on) e.target.checked = false; saveNow(); });
+    syncAutoStart();
+  }).catch(() => { if (on) e.target.checked = false; saveNow(); syncAutoStart(); });
 };
 
 // Write the settings object into every form control. Used by load() and by

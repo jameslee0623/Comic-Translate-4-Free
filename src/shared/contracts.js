@@ -16,6 +16,7 @@ export const MSG = {
   PAGE_CACHE_STATS: 'ct/page-cache-stats', // {} -> {ok, count, bytes}
   CLEAR_PAGE_CACHE: 'ct/clear-page-cache', // {} -> {ok, count, bytes}
   GRANT_IMAGE_HOST: 'ct/grant-image-host', // {host} -> {ok} | {ok:false} (pill "Allow" button; re-runs the pipeline on grant)
+  SYNC_AUTO_START: 'ct/sync-auto-start', // {} (popup/Settings -> SW one-way: re-register the content script after a grant change)
   // SW -> popup (broadcast)
   MODEL_PROGRESS: 'ct/model-progress',   // {id, loaded, total}
   RUN_PROGRESS: 'ct/run-progress',       // {runId, stage, progress}
@@ -50,6 +51,7 @@ export const MSG = {
   LINK_CLICKED: 'ct/link-clicked',       // {text, href} (content -> SW: a link was clicked; feeds learned next-page link text)
   // content -> SW
   OPEN_LINK: 'ct/open-link',             // {url} -> {ok} (support popup buttons; SW allowlists the URL and opens a tab)
+  AUTO_START: 'ct/auto-start',           // {} (content -> SW one-way: page loaded on an allowed site; ask for an auto run)
 };
 
 // Store pages for the "5 stars" button — the per-browser URL. The content
