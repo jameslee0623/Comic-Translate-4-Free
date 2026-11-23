@@ -1865,6 +1865,65 @@ function cancelPretranslate() {
   // replaces the slot first, so this never clears a newer job.
 }
 
+// Persisted pre-translate job (2.3.19): the job lived only in memory, so
+// a background restart killed it silently with no retry. The pending
+// record is one slot in storage (a job is a singleton): the next page
+// URL, the source tab + URL, the learned rule key, and how many times it
+// has already been resumed. The page cache is the progress record —
+// pictures already translated are cache hits, so a resumed job only
+// does the rest.
+const PRETRANSLATE_PENDING_KEY = 'ct-pretranslate-pending';
+const MAX_PRETRANSLATE_RESUMES = 2; // same bound as orphan auto-resume
+async function persistPretranslateJob(rec) {
+  try { await chrome.storage.local.set({ [PRETRANSLATE_PENDING_KEY]: rec }); } catch {}
+}
+async function clearPretranslateJob(nextUrl) {
+  try {
+    const rec = (await chrome.storage.local.get(PRETRANSLATE_PENDING_KEY))[PRETRANSLATE_PENDING_KEY];
+    if (rec && (!nextUrl || rec.nextUrl === nextUrl)) await chrome.storage.local.remove(PRETRANSLATE_PENDING_KEY);
+  } catch {}
+}
+// Pure decision for recoverPretranslateJob (tested): 'resume' when the job
+// is still wanted and the source tab is still on the source page; 'drop'
+// otherwise, with the reason in the second element.
+function pretranslateResumeDecision(rec, tab, settingsOn) {
+  if (!rec || !rec.nextUrl) return ['drop', 'no pending job'];
+  if (!settingsOn) return ['drop', 'pre-translate off'];
+  if ((rec.attempts || 0) >= MAX_PRETRANSLATE_RESUMES) return ['drop', 'attempts ' + (rec.attempts || 0) + ' of ' + MAX_PRETRANSLATE_RESUMES];
+  if (!tab || tab.url !== rec.sourceUrl) return ['drop', 'source tab gone or page changed'];
+  return ['resume', ''];
+}
+// Start one pre-translate job for a known next page: fresh runId, runs
+// entry (tabId null, like before), keep-alive, and the done promise that
+// clears the pending record when it settles. Both the fresh trigger
+// (pretranslateNextPage) and the restart resume (recoverPretranslateJob)
+// start jobs here, so there is one copy of the lifecycle.
+function startPretranslateJob(nextUrl, sourceTabId, sourceUrl, settings, learnedKey, attempts = 0, startedAt = Date.now()) {
+  const runId = 'pre-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  const job = { url: nextUrl, runId, done: null, learnedKey: learnedKey || null };
+  pretranslateJob = job;
+  const abortController = new AbortController();
+  runs.set(runId, { cancelled: false, tabId: null, stage: 'pretranslate', abortController });
+  keepAliveStart(runId);
+  persistPretranslateJob({ nextUrl, sourceUrl, sourceTabId, learnedKey: job.learnedKey, startedAt, attempts });
+  job.done = (async () => {
+    try {
+      await runPretranslate(job, sourceTabId, settings);
+      pretranslateDoneUrls.add(nextUrl);
+      if (pretranslateDoneUrls.size > 20) pretranslateDoneUrls.delete(pretranslateDoneUrls.values().next().value);
+    } catch (e) {
+      if (e && e.cancelled) diagPush('pre-translate cancelled for ' + nextUrl);
+      else diagPush('pre-translate skipped ' + nextUrl + ': ' + String((e && e.message) || e).slice(0, 120));
+    } finally {
+      runs.delete(runId);
+      keepAliveStop(runId);
+      if (pretranslateJob === job) pretranslateJob = null;
+      clearPretranslateJob(nextUrl);
+    }
+  })();
+  return job;
+}
+
 // Pure decision for joinOrCancelPretranslate (tested): 'join' when a
 // background job is already translating this page, 'cancel' when an AUTO
 // run starts for another page (the user navigated away), 'keep' when a
@@ -1962,26 +2021,31 @@ async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
   if (pretranslateDoneUrls.has(nextUrl)) return;
   // Remember the prediction so the next navigation can score it.
   if (learned) predictedNext.set(sourceTabId, { url: nextUrl, key: learned.key, sourceUrl, pattern: learned.pattern });
-  const runId = 'pre-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  const job = { url: nextUrl, runId, done: null, learnedKey: learned ? learned.key : null };
-  pretranslateJob = job;
-  const abortController = new AbortController();
-  runs.set(runId, { cancelled: false, tabId: null, stage: 'pretranslate', abortController });
-  keepAliveStart(runId);
-  job.done = (async () => {
-    try {
-      await runPretranslate(job, sourceTabId, settings);
-      pretranslateDoneUrls.add(nextUrl);
-      if (pretranslateDoneUrls.size > 20) pretranslateDoneUrls.delete(pretranslateDoneUrls.values().next().value);
-    } catch (e) {
-      if (e && e.cancelled) diagPush('pre-translate cancelled for ' + nextUrl);
-      else diagPush('pre-translate skipped ' + nextUrl + ': ' + String((e && e.message) || e).slice(0, 120));
-    } finally {
-      runs.delete(runId);
-      keepAliveStop(runId);
-      if (pretranslateJob === job) pretranslateJob = null;
+  startPretranslateJob(nextUrl, sourceTabId, sourceUrl, settings, learned ? learned.key : null);
+}
+
+// Resume a pre-translate job the background restart killed (2.3.19).
+// Runs once at background load, next to recoverOrphanedRuns. Same guards
+// as orphan auto-resume: at most 2 resumes, and the source tab must still
+// be open on the source page. A settings read failure leaves the record
+// for the next load instead of dropping the job.
+async function recoverPretranslateJob() {
+  try {
+    const rec = (await chrome.storage.local.get(PRETRANSLATE_PENDING_KEY))[PRETRANSLATE_PENDING_KEY];
+    if (!rec || !rec.nextUrl) return;
+    const settings = await getSettings().catch(() => null);
+    if (!settings) return;
+    const tab = await chrome.tabs.get(rec.sourceTabId).catch(() => null);
+    const [decision, reason] = pretranslateResumeDecision(rec, tab, settings.pretranslateNextPage !== false);
+    if (decision !== 'resume') {
+      diagPush('pre-translate: resume skipped ' + rec.nextUrl + ': ' + reason);
+      await clearPretranslateJob(rec.nextUrl);
+      return;
     }
-  })();
+    const attempts = (rec.attempts || 0) + 1;
+    diagPush('pre-translate: resuming ' + rec.nextUrl + ' after background restart (attempt ' + attempts + ' of ' + MAX_PRETRANSLATE_RESUMES + ')');
+    startPretranslateJob(rec.nextUrl, rec.sourceTabId, rec.sourceUrl, settings, rec.learnedKey, attempts, rec.startedAt);
+  } catch {}
 }
 
 async function runPretranslate(job, sourceTabId, settings) {
@@ -4350,3 +4414,4 @@ setMlAlarmRecoveryHook(async (entry, msg) => {
 // 1.4.0 (m4): runs on both browsers now (see the FIX1 comment above).
 // Fire-and-forget: never block background startup, never throw.
 recoverOrphanedRuns().catch(() => {});
+recoverPretranslateJob().catch(() => {});
