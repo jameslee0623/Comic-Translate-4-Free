@@ -507,6 +507,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   const attempts = [];
   if (!info.translated) {
     const a0 = performance.now();
+    if (opts.runId) persistDiagStage(opts.runId, 'capture-page-canvas');
     try {
       // 2.2.12: race the content-script round trip against a 30s timeout
       // — a hung content script used to hang the run at "capture" forever.
@@ -533,6 +534,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     failures.push('page canvas skipped (already showing the translated render)');
   }
   const b0 = performance.now();
+  if (opts.runId) persistDiagStage(opts.runId, 'capture-page-fetch');
   try {
     // 2.2.12: race the content-script round trip against a 30s timeout.
     const f = await Promise.race([
@@ -549,6 +551,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   } catch (e) { failures.push('page download: ' + String((e && e.message) || e).slice(0, 100)); }
   attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: false, error: failures[failures.length - 1] });
   const c0 = performance.now();
+  if (opts.runId) persistDiagStage(opts.runId, 'capture-worker-fetch');
   try {
     const { rgba, w, h, bytes } = await fetchImagePixels(info.src, tabUrl);
     attempts.push({ tier: 'worker-fetch', ms: Math.round(performance.now() - c0), ok: true, bytes });
@@ -906,6 +909,18 @@ async function clearRunRecord(runId) {
       persistedStageByRun.delete(runId);
     } catch {}
   });
+}
+
+// Crash-stage diagnostic (2.3.11): record the fine stage in the persisted
+// run record (chrome.storage.local survives a process kill) WITHOUT
+// touching the pill — setProgress would also send a pill update, and these
+// micro-stages are for the orphan-recovery "died at stage X" line only.
+// Called before each heavy step in runPipeline and before each capture
+// attempt, so a death leaves the exact step instead of the run-start
+// default 'capture'. Fire-and-forget, deduped like setProgress.
+function persistDiagStage(runId, stage) {
+  const t = runs.get(runId)?.tabId;
+  if (t != null && persistedStageByRun.get(runId) !== stage) persistRunRecord(runId, t, stage);
 }
 
 // FIX2: run-scoped keep-alive. Firefox MV3 background.page is a
@@ -2173,6 +2188,7 @@ async function runPipeline(tabId, opts = {}) {
     // right-click Send, auto, resume. No ML call runs before it (the
     // Chrome LaMa preload below moved after it), so a run can never
     // reach "model not in local cache" mid-pipeline.
+    persistDiagStage(runId, 'models-wait');
     await waitForModels(runId);
     // 2.2.19: never start ML with a model still missing — if the wait
     // ever returns early, fail here with a clear error instead of
@@ -2188,6 +2204,7 @@ async function runPipeline(tabId, opts = {}) {
     // (2.2.19: moved after the model gate — the preload is an ML call, and
     // no ML runs before the models are ready.)
     if (directHandlers()) {
+      persistDiagStage(runId, 'lama-preload');
       try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
     }
     // MEASURE1: thread-info diagnostic (best-effort, never fails the run).
@@ -2236,6 +2253,7 @@ async function runPipeline(tabId, opts = {}) {
     // translating THIS page, wait for it (its cache write makes this run
     // a cache hit); an auto run for another page cancels the job (the user
     // went elsewhere); a manual run for another page leaves it alone.
+    persistDiagStage(runId, 'pretranslate-join');
     await joinOrCancelPretranslate(runId, tabUrl, !!opts.auto);
     try {
       await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
@@ -2251,6 +2269,7 @@ async function runPipeline(tabId, opts = {}) {
     try {
       await chrome.tabs.sendMessage(tabId, { type: MSG.RUN_STARTED, runId });
     } catch { /* content script not there yet */ }
+    persistDiagStage(runId, 'inventory');
     // Auto-translate only: lazy pictures below the fold have not loaded
     // yet, so the inventory would skip them. Force the page to load
     // every picture first (content script scrolls through the page, then
@@ -2394,7 +2413,7 @@ async function runPipeline(tabId, opts = {}) {
         mode = 'replace';
         tier = 'fallback-tab';
       } else {
-        ({ rgba, w, h, mode, tier, attempts } = await loadPipelineImagePixels(tabId, img, settings, tabUrl, { srcUrl: manualSrc }));
+        ({ rgba, w, h, mode, tier, attempts } = await loadPipelineImagePixels(tabId, img, settings, tabUrl, { srcUrl: manualSrc, runId }));
       }
       imgTimings.capture = Math.round(performance.now() - t0);
       // Capture diagnostic: which tier ran, how long each attempt took, and
