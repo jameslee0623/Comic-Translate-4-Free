@@ -151,7 +151,6 @@ async function refreshSettings() {
       if (settings.targetLang && TARGET_LANGS.some(([c]) => c === settings.targetLang)) $('targetLang').value = settings.targetLang;
       else $('targetLang').value = 'en';
     }
-    if (!keepUserValue('allowAllSites')) $('allowAllSites').checked = !!(settings && settings.allowAllSites);
   }
   // Azure retirement notice (2.3.1): users already on Azure never touch the
   // dropdown, so the interaction triggers never fire for them. Show the
@@ -483,32 +482,6 @@ $('clearCacheBtn').onclick = async () => {
 
 $('sourceLang').onchange = e => saveLang('sourceLang', e.target.value);
 $('targetLang').onchange = e => saveLang('targetLang', e.target.value);
-
-// Allow-all-sites toggle. The <all_urls> request must run synchronously in
-// the change gesture — no awaits before it — or Firefox drops the transient
-// activation and the prompt silently never appears.
-// Note: the permission prompt can close the popup and kill this JS context
-// before the request resolves; the .then() below then never runs. That's OK:
-// the permission itself is durable, and refreshSettings() reconciles storage
-// with it on the next popup open, so one click is enough.
-$('allowAllSites').onchange = e => {
-  const on = e.target.checked;
-  markDirty('allowAllSites');
-  let p;
-  try {
-    p = on
-      ? chrome.permissions.request({ origins: ['<all_urls>'] })
-      : chrome.permissions.remove({ origins: ['<all_urls>'] }).catch(() => true);
-  } catch {
-    p = Promise.resolve(false);
-  }
-  Promise.resolve(p).then(async granted => {
-    if (on && !granted) { e.target.checked = false; return; } // denied: revert
-    await writeSettings({ allowAllSites: on });
-    refresh();
-    try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
-  }).catch(() => { if (on) e.target.checked = false; });
-};
 
 // Sync with the Settings page (and any other settings writer): re-render when
 // settings change elsewhere. Our own writes echo back through here too, but
