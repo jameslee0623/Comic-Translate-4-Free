@@ -36,6 +36,14 @@
     "message": "Dacă motorul eșuează, încearcă altul",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
+  "backend_failover_hint": {
+    "message": "Comută automat la un motor care funcționează, în loc să se oprească.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google nu are nevoie de cheie și nici de configurare.",
+    "description": "Note shown only when Google is the selected engine"
+  },
   "backend_azure_opt": {
     "message": "Azure Translator (necesită cheie)"
   },
@@ -43,7 +51,7 @@
     "message": "Google (gratuit, fără cheie)"
   },
   "backend_hint": {
-    "message": "Cheia/regiunea Azure și cheia API Gemini sunt stocate doar în spațiul de stocare al extensiei din acest browser. LM Studio trebuie să ruleze cu serverul compatibil OpenAI activat (implicit http://127.0.0.1:1234)."
+    "message": "LM Studio trebuie să ruleze cu serverul compatibil OpenAI activat (implicit http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (server local)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "Limbi"
   },
+  "jump_to": {
+    "message": "Mergi la…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API LM Studio"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "Dimensiune minimă a imaginii (px)"
   },
+  "min_image_hint": {
+    "message": "Imaginile mai mici decât aceasta sunt sărite.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (japoneză + engleză + chineză simplificată, antrenat pe manga v1.1)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "Modelele sunt descărcate o dată de pe Hugging Face și stocate în cache în browser (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Modelele se descarcă automat",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "niciun site detectat"
@@ -332,7 +352,7 @@
     "message": "Despre acest proiect"
   },
   "feedback_email": {
-    "message": "✉️ Feedback prin e-mail"
+    "message": "✉️ Trimite feedback prin e-mail"
   },
   "pretranslate_next": {
     "message": "Pretradu pagina următoare"
@@ -341,7 +361,7 @@
     "message": "În timp ce citești această pagină, pagina următoare este tradusă în fundal, așa că e gata când o deschizi."
   },
   "rate_store": {
-    "message": "⭐ 5 stele în magazin"
+    "message": "⭐ Evaluează-o în magazin"
   },
   "support_modal_title": {
     "message": "Îți place Comic Translate 4 Free?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "Permite toate site-urile",
+    "message": "Tradu orice site fără a întreba",
     "description": "site access"
   },
   "allow_all_desc": {

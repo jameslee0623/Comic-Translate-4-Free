@@ -31,11 +31,28 @@ function setProgress(p) {
 // Two buttons: "Translate this page" starts a run, "Cancel" stops one.
 // Translate is disabled while a run is in flight; Cancel is disabled
 // when idle — so a second run can't start and there's nothing to cancel.
+// Translate is also disabled while the required models are still
+// downloading (2.3.14): auto-download fetches them in the background, so
+// the button just waits — no jump to the Models section.
 let running = false;
+let modelsReady = true; // fail-open: only gray out when we positively know models are missing
 function setRunning(r) {
   running = !!r;
-  $('translateBtn').disabled = running;
+  $('translateBtn').disabled = running || !modelsReady;
   $('cancelBtn').disabled = !running;
+}
+
+// Model gate (2.3.14): ask the background which model groups are
+// downloaded. Unknown (background unreachable) leaves the button alone —
+// the run's own model-ready gate waits for the models instead.
+async function refreshModelsReady() {
+  const r = await bgMessage({ type: 'ct/get-models' });
+  if (!r || !r.ok || !Array.isArray(r.models)) return;
+  const ready = r.models.every(g => g.downloaded && !g.sizeMismatch);
+  if (ready === modelsReady) return;
+  modelsReady = ready;
+  setRunning(running);
+  if (!ready) setStatus(ctMsg('models_downloading_auto') || 'Models are downloading automatically');
 }
 
 function fillLangs() {
@@ -89,6 +106,9 @@ async function refreshStatus() {
     const s = st.status;
     lastStatus = s;
     setStatus(STAGE_LABEL[s.stage] || s.stage);
+    // While models are still downloading, the status says so — the 3s
+    // tick must not wipe it back to the idle stage label.
+    if (!modelsReady) setStatus(ctMsg('models_downloading_auto') || 'Models are downloading automatically');
     setProgress(s.progress);
     // Never wipe an error here: a failed click shows its error via the
     // message response just before this refresh runs. Only ever set.
@@ -501,6 +521,8 @@ $('options').onclick = e => {
 };
 
 chrome.runtime.onMessage.addListener(msg => {
+  // A model download finishing (or failing) can flip the Translate gate.
+  if (msg && msg.type === 'ct/model-progress') { refreshModelsReady(); return; }
   if (msg.type === 'ct/run-progress') {
     setStatus(STAGE_LABEL[msg.stage] || msg.stage);
     setProgress(msg.progress);
@@ -530,5 +552,6 @@ try {
   $('build').textContent = `v${v}`;
 } catch { $('build').textContent = 'v' + BUILD; }
 refresh();
+refreshModelsReady();
 refreshCacheStats();
 setInterval(refreshStatus, 3000);

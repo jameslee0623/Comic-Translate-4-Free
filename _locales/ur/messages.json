@@ -15,7 +15,7 @@
   },
   "allow_all_sites": {
     "description": "site access",
-    "message": "تمام سائٹس کو اجازت دیں"
+    "message": "بغیر پوچھے کسی بھی سائٹ کا ترجمہ کریں"
   },
   "appDesc": {
     "message": "اپنے براؤزر میں مانگا اور کامکس کا ترجمہ کریں۔ جاپانی، انگریزی، سادہ اور روایتی چینی پڑھتا ہے؛ 114 زبانوں میں ترجمہ کرتا ہے۔"
@@ -45,8 +45,16 @@
     "message": "ترجمے کا انجن"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "اگر انجن ناکام ہو جائے تو دوسرا آزمائیں",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "رکنے کے بجائے خودکار طور پر کام کرنے والے انجن پر چلا جاتا ہے۔",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google کو نہ کلید چاہیے، نہ سیٹ اپ۔",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (کی درکار ہے)"
@@ -55,7 +63,7 @@
     "message": "Google (مفت، کوئی کی نہیں)"
   },
   "backend_hint": {
-    "message": "Azure کی/ریجن اور Gemini API کی صرف اس براؤزر کی ایکسٹینشن اسٹوریج میں محفوظ ہوتے ہیں۔ LM Studio کا OpenAI-compatible سرور فعال ہونا چاہیے (ڈیفالٹ http://127.0.0.1:1234)۔"
+    "message": "LM Studio کا OpenAI-compatible سرور فعال ہونا چاہیے (ڈیفالٹ http://127.0.0.1:1234)۔"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (مقامی سرور)"
@@ -174,6 +182,10 @@
   "languages": {
     "message": "زبانیں"
   },
+  "jump_to": {
+    "message": "جائیں…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -198,6 +210,10 @@
   "min_image_size": {
     "message": "کم سے کم تصویر کا سائز (px)"
   },
+  "min_image_hint": {
+    "message": "اس سے چھوٹی تصویریں چھوڑ دی جاتی ہیں۔",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (日本語 + English + 简体中文، مانگا پر تربیت یافتہ)"
   },
@@ -212,6 +228,10 @@
   },
   "models_hint": {
     "message": "ماڈل Hugging Face سے ایک بار ڈاؤن لوڈ ہو کر براؤزر (IndexedDB) میں کیش ہو جاتے ہیں۔"
+  },
+  "models_downloading_auto": {
+    "message": "ماڈل خودکار طور پر ڈاؤن لوڈ ہو رہے ہیں",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "کوئی سائٹ نہیں ملی"
@@ -371,7 +391,7 @@
     "message": "اس پروجیکٹ کے بارے میں"
   },
   "feedback_email": {
-    "message": "✉️ ای میل کے ذریعے رائے"
+    "message": "✉️ ای میل کے ذریعے رائے بھیجیں"
   },
   "pretranslate_next": {
     "message": "اگلا صفحہ پہلے سے ترجمہ کریں"
@@ -380,7 +400,7 @@
     "message": "جب آپ یہ صفحہ پڑھ رہے ہوں تو اگلا صفحہ بیک گراؤنڈ میں ترجمہ ہو جاتا ہے، اس لیے کھولتے ہی تیار ہوتا ہے۔"
   },
   "rate_store": {
-    "message": "⭐ اسٹور میں 5 اسٹار دیں"
+    "message": "⭐ اسٹور میں درجہ بندی کریں"
   },
   "support_modal_title": {
     "message": "Comic Translate 4 Free پسند آ رہا ہے؟"

@@ -33,8 +33,16 @@
     "message": "Mecanismo de tradução"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "Se o mecanismo falhar, tente outro",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "Troca automaticamente para um mecanismo que funcione, em vez de parar.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "O Google não precisa de chave nem de configuração.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (requer chave)"
@@ -43,7 +51,7 @@
     "message": "Google (grátis, sem chave)"
   },
   "backend_hint": {
-    "message": "A chave/região do Azure e a chave de API do Gemini ficam armazenadas apenas neste navegador. O LM Studio precisa estar rodando com o servidor compatível com OpenAI ativado (padrão http://127.0.0.1:1234)."
+    "message": "O LM Studio precisa estar rodando com o servidor compatível com OpenAI ativado (padrão http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (servidor local)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "Idiomas"
   },
+  "jump_to": {
+    "message": "Ir para…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API do LM Studio"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "Tamanho mínimo da imagem (px)"
   },
+  "min_image_hint": {
+    "message": "Imagens menores que isso são ignoradas.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (japonês + inglês + chinês simplificado, treinado em mangá)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "Os modelos são baixados do Hugging Face uma vez e armazenados no navegador (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Os modelos estão sendo baixados automaticamente",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "nenhum site detectado"
@@ -332,7 +352,7 @@
     "message": "Sobre este projeto"
   },
   "feedback_email": {
-    "message": "✉️ Comentários por e-mail"
+    "message": "✉️ Enviar comentários por e-mail"
   },
   "pretranslate_next": {
     "message": "Pré-traduzir a próxima página"
@@ -341,7 +361,7 @@
     "message": "Enquanto você lê esta página, a próxima página é traduzida em segundo plano, então já está pronta quando você a abre."
   },
   "rate_store": {
-    "message": "⭐ 5 estrelas na loja"
+    "message": "⭐ Avalie na loja"
   },
   "support_modal_title": {
     "message": "Gostando do Comic Translate 4 Free?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "Permitir todos os sites",
+    "message": "Traduzir qualquer site sem perguntar",
     "description": "site access"
   },
   "allow_all_desc": {

@@ -33,8 +33,16 @@
     "message": "翻译引擎"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "如果引擎失败，请尝试另一个",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "自动切换到可用的引擎，而不是停止。",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google 不需要密钥，也不需要设置。",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator（需要密钥）"
@@ -43,7 +51,7 @@
     "message": "Google（免费，无需密钥）"
   },
   "backend_hint": {
-    "message": "Azure 密钥/区域和 Gemini API 密钥仅存储在此浏览器的扩展存储中。LM Studio 须启用 OpenAI 兼容服务器并运行（默认 http://127.0.0.1:1234）。"
+    "message": "LM Studio 须启用 OpenAI 兼容服务器并运行（默认 http://127.0.0.1:1234）。"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio（本地服务器）"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "语言"
   },
+  "jump_to": {
+    "message": "跳转到…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "最小图片尺寸（px）"
   },
+  "min_image_hint": {
+    "message": "小于此尺寸的图片会被跳过。",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR（日语＋英语＋简体中文，漫画训练）"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "模型从 Hugging Face 下载一次后缓存在浏览器（IndexedDB）中。"
+  },
+  "models_downloading_auto": {
+    "message": "模型正在自动下载",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "未检测到网站"
@@ -332,7 +352,7 @@
     "message": "关于此项目"
   },
   "feedback_email": {
-    "message": "✉️ 通过电子邮件反馈"
+    "message": "✉️ 通过电子邮件发送反馈"
   },
   "pretranslate_next": {
     "message": "预先翻译下一页"
@@ -341,7 +361,7 @@
     "message": "在您阅读本页时，下一页会在后台翻译好，打开时即可直接查看。"
   },
   "rate_store": {
-    "message": "⭐ 在商店给 5 星好评"
+    "message": "⭐ 在商店评分"
   },
   "support_modal_title": {
     "message": "喜欢 Comic Translate 4 Free 吗？"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "允许所有网站",
+    "message": "无需询问即可翻译任何网站",
     "description": "site access"
   },
   "allow_all_desc": {

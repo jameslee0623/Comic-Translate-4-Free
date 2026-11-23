@@ -158,8 +158,6 @@ function applyToForm(s) {
   setVal('lmStudioUrl', s.lmStudioUrl || '');
   setVal('lmStudioApi', s.lmStudioApi || 'lmstudio-v1');
   setVal('lmStudioKey', s.lmStudioKey || '');
-  setVal('threshold', s.detectionThreshold);
-  $('thresholdVal').textContent = Number(s.detectionThreshold).toFixed(2);
   setVal('minImageSize', s.minImageSize);
   setChecked('debugMode', s.debugMode);
   setChecked('autoTranslate', s.autoTranslateOnLoad);
@@ -168,6 +166,7 @@ function applyToForm(s) {
   setChecked('allowAllSites', s.allowAllSites);
   allowedSites = [...(s.siteWhitelist || [])];
   renderSiteList();
+  showEngineFields();
 }
 
 async function load() {
@@ -214,12 +213,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (formLoaded) applyToForm(s);
 });
 
-$('threshold').oninput = e => { $('thresholdVal').textContent = Number(e.target.value).toFixed(2); autoSave(); };
-
 // Every control auto-saves; no Save button.
 for (const id of ['sourceLang', 'targetLang', 'backend', 'backendFailover', 'azureKey', 'azureRegion', 'geminiKey',
     'lmStudioUrl', 'lmStudioApi', 'lmStudioKey',
-    'threshold', 'minImageSize',
+    'minImageSize',
     'debugMode', 'autoTranslate', 'pretranslateNext', 'playDing']) {
   const el = $(id);
   if (!el) continue;
@@ -249,7 +246,6 @@ function collect() {
   // field stays red) instead of vetoing the whole save — previously one bad
   // number silently blocked every other control's save, including toggles
   // like failover, with no "Saved" flash to explain it.
-  const threshold = validNum('threshold', $('threshold').value, 0.05, 0.9);
   const minImg = validNum('minImageSize', $('minImageSize').value, 100, 4000);
   return {
     ...lastSettings,
@@ -260,7 +256,6 @@ function collect() {
     lmStudioUrl: $('lmStudioUrl').value.trim() || DEFAULTS.lmStudioUrl,
     lmStudioApi: $('lmStudioApi').value,
     lmStudioKey: $('lmStudioKey').value.trim(),
-    detectionThreshold: threshold.ok ? threshold.value : (lastSettings.detectionThreshold ?? DEFAULTS.detectionThreshold),
     minImageSize: minImg.ok ? Math.round(minImg.value) : (lastSettings.minImageSize ?? DEFAULTS.minImageSize),
     debugMode: $('debugMode').checked,
     backendFailover: $('backendFailover').checked,
@@ -302,7 +297,21 @@ $('azureRetireDismiss').onclick = async () => {
 // already selected does not pop it up).
 $('backend').addEventListener('change', e => {
   if (e.target.value === 'azure') showAzureRetireModal();
+  showEngineFields();
 });
+
+// Show only the selected engine's fields (the failover row is
+// engine-independent and always stays). Google shows a short note instead
+// of key fields. Called from applyToForm (load + storage sync) and from
+// the backend change above.
+function showEngineFields() {
+  const backend = ($('backend') && $('backend').value) || 'google';
+  document.querySelectorAll('[data-engine]').forEach(el => {
+    el.style.display = el.getAttribute('data-engine') === backend ? '' : 'none';
+  });
+  const note = $('googleNote');
+  if (note) note.style.display = backend === 'google' ? '' : 'none';
+}
 
 // Save first so the check uses the latest values, then check.
 // 2.2.12: race the background reply against a 15s timeout — the old plain
@@ -568,8 +577,8 @@ async function refreshModels() {
     const dlErr = g.files.map(f => dlErrors[f.id]).filter(Boolean)[0];
     if (dlErr) status += `<br><span style="color:#f85149">✗ ${escapeHtml(dlErr)}</span>`;
     const label = (g.labelKey && ctMsg(g.labelKey)) || g.label;
-    const reqBadge = g.required ? ` <span style="color:#f0b429;font-size:11px;border:1px solid #f0b429;border-radius:4px;padding:0 5px">${ctMsg('required_badge') || 'required'}</span>` : '';
-    div.innerHTML = `<div><b>${escapeHtml(label)}</b>${reqBadge}<div id="model-status-${g.id}" style="color:#9a9aa0;font-size:12px">${status}</div></div>`;
+    // No "required" badge: all three model groups are required.
+    div.innerHTML = `<div><b>${escapeHtml(label)}</b><div id="model-status-${g.id}" style="color:#9a9aa0;font-size:12px">${status}</div></div>`;
     const btnBox = document.createElement('div');
     if (!g.downloaded || g.sizeMismatch) {
       const dl = document.createElement('button');
@@ -608,6 +617,13 @@ try {
   const rate = document.getElementById('rateStore');
   if (rate) rate.href = storeUrlForFirefox(navigator.userAgent.includes('Firefox'));
 } catch { /* link keeps its HTML default */ }
+// Phone "Jump to" dropdown: scroll to the picked section, then reset.
+const jumpTo = $('jumpTo');
+if (jumpTo) jumpTo.addEventListener('change', e => {
+  const t = e.target.value && document.getElementById(e.target.value);
+  if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  e.target.value = '';
+});
 // Deep link: #models or #models-download scrolls to the models section.
 // The download variant (first run) also pulses the "Download all" button.
 if (location.hash === '#models' || location.hash === '#models-download') {

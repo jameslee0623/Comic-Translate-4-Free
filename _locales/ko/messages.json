@@ -33,8 +33,16 @@
     "message": "번역 엔진"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "엔진에 실패하면 다른 엔진을 시도하세요",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "멈추는 대신 작동하는 엔진으로 자동 전환합니다.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google은 키도 설정도 필요 없습니다.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator(키 필요)"
@@ -43,7 +51,7 @@
     "message": "Google(무료, 키 불필요)"
   },
   "backend_hint": {
-    "message": "Azure 키/리전과 Gemini API 키는 이 브라우저의 확장 프로그램 저장소에만 저장됩니다. LM Studio는 OpenAI 호환 서버를 활성화한 상태로 실행해야 합니다(기본값 http://127.0.0.1:1234)."
+    "message": "LM Studio는 OpenAI 호환 서버를 활성화한 상태로 실행해야 합니다(기본값 http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio(로컬 서버)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "언어"
   },
+  "jump_to": {
+    "message": "이동…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "최소 이미지 크기(px)"
   },
+  "min_image_hint": {
+    "message": "이보다 작은 이미지는 건너뜁니다.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR(일본어 + 영어 + 중국어 간체, 만화 학습)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "모델은 Hugging Face에서 한 번 다운로드되어 브라우저(IndexedDB)에 캐시됩니다."
+  },
+  "models_downloading_auto": {
+    "message": "모델을 자동으로 다운로드하고 있습니다",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "사이트를 감지할 수 없음"
@@ -341,7 +361,7 @@
     "message": "이 페이지를 읽는 동안 다음 페이지가 백그라운드에서 번역되어, 열면 바로 준비되어 있습니다."
   },
   "rate_store": {
-    "message": "⭐ 스토어에서 별 5개 주기"
+    "message": "⭐ 스토어에서 평가하기"
   },
   "support_modal_title": {
     "message": "Comic Translate 4 Free가 마음에 드시나요?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "모든 사이트 허용",
+    "message": "묻지 않고 모든 사이트 번역",
     "description": "site access"
   },
   "allow_all_desc": {

@@ -15,7 +15,7 @@
   },
   "allow_all_sites": {
     "description": "site access",
-    "message": "السماح لكل المواقع"
+    "message": "ترجمة أي موقع دون سؤال"
   },
   "appDesc": {
     "message": "ترجم المانغا والقصص المصورة في متصفحك. يقرأ اليابانية، الإنجليزية، الصينية المبسطة والتقليدية؛ يترجم إلى 114 لغة."
@@ -45,8 +45,16 @@
     "message": "محرك الترجمة"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "إذا فشل المحرك، جرّب محركًا آخر",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "يبدّل تلقائيًا إلى محرك يعمل بدلًا من التوقف.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google لا يحتاج إلى مفتاح ولا إلى إعداد.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (يتطلب مفتاحًا)"
@@ -55,7 +63,7 @@
     "message": "Google (مجاني، بلا مفتاح)"
   },
   "backend_hint": {
-    "message": "يُخزَّن مفتاح Azure والمنطقة ومفتاح Gemini API في مخزن الإضافة في هذا المتصفح فقط. يجب تشغيل LM Studio مع تفعيل خادم OpenAI المتوافق (الافتراضي http://127.0.0.1:1234)."
+    "message": "LM Studio مع تفعيل خادم OpenAI المتوافق (الافتراضي http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (خادم محلي)"
@@ -174,6 +182,10 @@
   "languages": {
     "message": "اللغات"
   },
+  "jump_to": {
+    "message": "انتقل إلى…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -198,6 +210,10 @@
   "min_image_size": {
     "message": "أدنى حجم صورة (بكسل)"
   },
+  "min_image_hint": {
+    "message": "يتم تخطي الصور الأصغر من هذا الحجم.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (اليابانية + الإنجليزية + الصينية المبسطة، مُدرَّب على المانغا)"
   },
@@ -212,6 +228,10 @@
   },
   "models_hint": {
     "message": "تُنزَّل النماذج من Hugging Face مرة واحدة وتُخزَّن مؤقتًا في المتصفح (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "يتم تنزيل النماذج تلقائيًا",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "لم يُكتشف موقع"
@@ -371,7 +391,7 @@
     "message": "حول هذا المشروع"
   },
   "feedback_email": {
-    "message": "✉️ ملاحظات عبر البريد الإلكتروني"
+    "message": "✉️ أرسل ملاحظاتك عبر البريد الإلكتروني"
   },
   "pretranslate_next": {
     "message": "ترجمة الصفحة التالية مسبقًا"
@@ -380,7 +400,7 @@
     "message": "بينما تقرأ هذه الصفحة، تُترجم الصفحة التالية في الخلفية، فتكون جاهزة عندما تفتحها."
   },
   "rate_store": {
-    "message": "⭐ قيّم بـ 5 نجوم في المتجر"
+    "message": "⭐ قيّمه في المتجر"
   },
   "support_modal_title": {
     "message": "هل يعجبك Comic Translate 4 Free؟"

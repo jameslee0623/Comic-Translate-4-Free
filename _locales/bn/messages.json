@@ -33,8 +33,16 @@
     "message": "অনুবাদ ইঞ্জিন"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "ইঞ্জিন ব্যর্থ হলে, আরেকটি চেষ্টা করুন",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "থেমে যাওয়ার বদলে নিজে থেকেই চালু থাকা ইঞ্জিনে চলে যায়।",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google-এর জন্য কোনো কী বা সেটআপের প্রয়োজন নেই।",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (কী আবশ্যক)"
@@ -43,7 +51,7 @@
     "message": "Google (ফ্রি, কী লাগে না)"
   },
   "backend_hint": {
-    "message": "Azure কী/অঞ্চল এবং Gemini API কী শুধুমাত্র এই ব্রাউজারের এক্সটেনশন স্টোরেজে সংরক্ষিত হয়। LM Studio-এর OpenAI-সামঞ্জস্যপূর্ণ সার্ভার চালু থাকতে হবে (ডিফল্ট http://127.0.0.1:1234)।"
+    "message": "LM Studio-এর OpenAI-সামঞ্জস্যপূর্ণ সার্ভার চালু থাকতে হবে (ডিফল্ট http://127.0.0.1:1234)।"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (লোকাল সার্ভার)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "ভাষা"
   },
+  "jump_to": {
+    "message": "যান…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "ন্যূনতম ছবির মাপ (px)"
   },
+  "min_image_hint": {
+    "message": "এর চেয়ে ছোট ছবিগুলো এড়িয়ে যাওয়া হয়।",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (জাপানি + ইংরেজি + সরলীকৃত চীনা, মাঙ্গা-প্রশিক্ষিত)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "মডেলগুলো Hugging Face থেকে একবার ডাউনলোড হয়ে ব্রাউজারে (IndexedDB) ক্যাশ হয়।"
+  },
+  "models_downloading_auto": {
+    "message": "মডেলগুলো নিজে থেকেই ডাউনলোড হচ্ছে",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "কোনো সাইট পাওয়া যায়নি"
@@ -332,7 +352,7 @@
     "message": "এই প্রকল্প সম্পর্কে"
   },
   "feedback_email": {
-    "message": "✉️ ইমেইলে মতামত"
+    "message": "✉️ ইমেইলে মতামত পাঠান"
   },
   "pretranslate_next": {
     "message": "পরের পৃষ্ঠাটি আগেই অনুবাদ করুন"
@@ -341,7 +361,7 @@
     "message": "আপনি এই পৃষ্ঠাটি পড়ার সময়, পরের পৃষ্ঠাটি ব্যাকগ্রাউন্ডে অনুবাদ হয়, তাই খুললেই তা প্রস্তুত থাকে।"
   },
   "rate_store": {
-    "message": "⭐ স্টোরে ৫ স্টার দিন"
+    "message": "⭐ স্টোরে রেট করুন"
   },
   "support_modal_title": {
     "message": "Comic Translate 4 Free কি ভালো লাগছে?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "সব সাইটকে অনুমতি দিন",
+    "message": "জিজ্ঞাসা ছাড়াই যেকোনো সাইট অনুবাদ করুন",
     "description": "site access"
   },
   "allow_all_desc": {

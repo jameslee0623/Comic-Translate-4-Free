@@ -33,8 +33,16 @@
     "message": "Công cụ dịch"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "Nếu công cụ lỗi, hãy thử công cụ khác",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "Tự động chuyển sang công cụ đang hoạt động thay vì dừng lại.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google không cần khóa và không cần cài đặt.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (cần khóa)"
@@ -43,7 +51,7 @@
     "message": "Google (miễn phí, không cần khóa)"
   },
   "backend_hint": {
-    "message": "Khóa/vùng Azure và khóa API Gemini chỉ lưu trong bộ nhớ của tiện ích trên trình duyệt này. LM Studio phải đang chạy với máy chủ tương thích OpenAI đã bật (mặc định http://127.0.0.1:1234)."
+    "message": "LM Studio phải đang chạy với máy chủ tương thích OpenAI đã bật (mặc định http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (máy chủ cục bộ)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "Ngôn ngữ"
   },
+  "jump_to": {
+    "message": "Chuyển đến…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API LM Studio"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "Kích thước ảnh tối thiểu (px)"
   },
+  "min_image_hint": {
+    "message": "Ảnh nhỏ hơn mức này sẽ bị bỏ qua.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (日本語 + English + 简体中文, huấn luyện trên manga)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "Mô hình được tải xuống từ Hugging Face một lần và lưu trong bộ nhớ đệm của trình duyệt (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Mô hình đang được tải xuống tự động",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "không phát hiện trang nào"
@@ -332,7 +352,7 @@
     "message": "Về dự án này"
   },
   "feedback_email": {
-    "message": "✉️ Góp ý qua email"
+    "message": "✉️ Gửi góp ý qua email"
   },
   "pretranslate_next": {
     "message": "Dịch trước trang tiếp theo"
@@ -341,7 +361,7 @@
     "message": "Trong khi bạn đọc trang này, trang tiếp theo được dịch trong nền nên đã sẵn sàng khi bạn mở nó."
   },
   "rate_store": {
-    "message": "⭐ Đánh giá 5 sao trên cửa hàng"
+    "message": "⭐ Đánh giá trên cửa hàng"
   },
   "support_modal_title": {
     "message": "Bạn có thích Comic Translate 4 Free không?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "Cho phép mọi trang web",
+    "message": "Dịch mọi trang web mà không cần hỏi",
     "description": "site access"
   },
   "allow_all_desc": {

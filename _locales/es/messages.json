@@ -15,7 +15,7 @@
   },
   "allow_all_sites": {
     "description": "site access",
-    "message": "Permitir todos los sitios"
+    "message": "Traducir cualquier sitio sin preguntar"
   },
   "appDesc": {
     "message": "Traduce manga y cómics en tu navegador. Lee japonés, inglés, chino simplificado y tradicional; traduce a 114 idiomas."
@@ -45,8 +45,16 @@
     "message": "Motor de traducción"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "Si el motor falla, prueba con otro",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "Cambia automáticamente a un motor que funcione en lugar de detenerse.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google no necesita clave ni configuración.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (requiere clave)"
@@ -55,7 +63,7 @@
     "message": "Google (gratis, sin clave)"
   },
   "backend_hint": {
-    "message": "La clave y la región de Azure y la clave de API de Gemini se almacenan solo en el almacenamiento de la extensión de este navegador. LM Studio debe estar en ejecución con su servidor compatible con OpenAI habilitado (por defecto http://127.0.0.1:1234)."
+    "message": "LM Studio debe estar en ejecución con su servidor compatible con OpenAI habilitado (por defecto http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (servidor local)"
@@ -174,6 +182,10 @@
   "languages": {
     "message": "Idiomas"
   },
+  "jump_to": {
+    "message": "Ir a…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API de LM Studio"
   },
@@ -198,6 +210,10 @@
   "min_image_size": {
     "message": "Tamaño mínimo de imagen (px)"
   },
+  "min_image_hint": {
+    "message": "Se omiten las imágenes más pequeñas que esto.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "OCR Baberu (japonés + inglés + chino simplificado, entrenado con manga)"
   },
@@ -212,6 +228,10 @@
   },
   "models_hint": {
     "message": "Los modelos se descargan una vez desde Hugging Face y se almacenan en la caché del navegador (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Los modelos se están descargando automáticamente",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "no se detectó ningún sitio"
@@ -371,7 +391,7 @@
     "message": "Acerca de este proyecto"
   },
   "feedback_email": {
-    "message": "✉️ Comentarios por correo electrónico"
+    "message": "✉️ Enviar comentarios por correo electrónico"
   },
   "pretranslate_next": {
     "message": "Pretraducir la página siguiente"
@@ -380,7 +400,7 @@
     "message": "Mientras lees esta página, la página siguiente se traduce en segundo plano, así está lista cuando la abres."
   },
   "rate_store": {
-    "message": "⭐ 5 estrellas en la tienda"
+    "message": "⭐ Valórala en la tienda"
   },
   "support_modal_title": {
     "message": "¿Te gusta Comic Translate 4 Free?"

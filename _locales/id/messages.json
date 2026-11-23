@@ -33,8 +33,16 @@
     "message": "Mesin penerjemah"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "Jika mesin gagal, coba yang lain",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "Otomatis beralih ke mesin yang berfungsi, bukan berhenti.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google tidak butuh kunci maupun pengaturan.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (perlu kunci API)"
@@ -43,7 +51,7 @@
     "message": "Google (gratis, tanpa kunci API)"
   },
   "backend_hint": {
-    "message": "Kunci/wilayah Azure dan kunci API Gemini hanya disimpan di penyimpanan ekstensi browser ini. LM Studio harus berjalan dengan server yang kompatibel OpenAI diaktifkan (bawaan http://127.0.0.1:1234)."
+    "message": "LM Studio harus berjalan dengan server yang kompatibel OpenAI diaktifkan (bawaan http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (server lokal)"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "Bahasa"
   },
+  "jump_to": {
+    "message": "Lompat ke…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API LM Studio"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "Ukuran gambar minimum (px)"
   },
+  "min_image_hint": {
+    "message": "Gambar yang lebih kecil dari ini dilewati.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (日本語 + English + 简体中文, terlatih manga)"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "Model diunduh dari Hugging Face sekali saja lalu disimpan di browser (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Model sedang diunduh otomatis",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "tidak ada situs terdeteksi"
@@ -332,7 +352,7 @@
     "message": "Tentang proyek ini"
   },
   "feedback_email": {
-    "message": "✉️ Umpan balik melalui email"
+    "message": "✉️ Kirim umpan balik melalui email"
   },
   "pretranslate_next": {
     "message": "Terjemahkan halaman berikutnya terlebih dahulu"
@@ -341,7 +361,7 @@
     "message": "Saat Anda membaca halaman ini, halaman berikutnya diterjemahkan di latar belakang, jadi sudah siap saat Anda membukanya."
   },
   "rate_store": {
-    "message": "⭐ Beri 5 bintang di toko"
+    "message": "⭐ Beri nilai di toko"
   },
   "support_modal_title": {
     "message": "Menikmati Comic Translate 4 Free?"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "Izinkan semua situs",
+    "message": "Terjemahkan situs apa pun tanpa bertanya",
     "description": "site access"
   },
   "allow_all_desc": {

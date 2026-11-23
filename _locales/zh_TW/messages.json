@@ -33,8 +33,16 @@
     "message": "翻譯引擎"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "如果引擎失敗，請嘗試另一個",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "自動切換到可用的引擎，而不是停止。",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google 不需要金鑰，也不需要設定。",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator（需要金鑰）"
@@ -43,7 +51,7 @@
     "message": "Google（免費，無需金鑰）"
   },
   "backend_hint": {
-    "message": "Azure 金鑰/區域和 Gemini API 金鑰僅儲存在此瀏覽器的擴充功能儲存空間中。LM Studio 須啟用 OpenAI 相容伺服器並執行（預設 http://127.0.0.1:1234）。"
+    "message": "LM Studio 須啟用 OpenAI 相容伺服器並執行（預設 http://127.0.0.1:1234）。"
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio（本機伺服器）"
@@ -123,6 +131,10 @@
   "languages": {
     "message": "語言"
   },
+  "jump_to": {
+    "message": "跳到…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "LM Studio API"
   },
@@ -147,6 +159,10 @@
   "min_image_size": {
     "message": "最小圖片尺寸（px）"
   },
+  "min_image_hint": {
+    "message": "小於此尺寸的圖片會被跳過。",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR（日文＋英文＋簡體中文，漫畫訓練）"
   },
@@ -161,6 +177,10 @@
   },
   "models_hint": {
     "message": "模型從 Hugging Face 下載一次後快取在瀏覽器（IndexedDB）中。"
+  },
+  "models_downloading_auto": {
+    "message": "模型正在自動下載",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "未偵測到網站"
@@ -332,7 +352,7 @@
     "message": "關於此專案"
   },
   "feedback_email": {
-    "message": "✉️ 透過電子郵件提供意見回饋"
+    "message": "✉️ 透過電子郵件傳送意見回饋"
   },
   "pretranslate_next": {
     "message": "預先翻譯下一頁"
@@ -341,7 +361,7 @@
     "message": "在您閱讀本頁時，下一頁會在背景翻譯好，打開時即可直接查看。"
   },
   "rate_store": {
-    "message": "⭐ 在商店給 5 星好評"
+    "message": "⭐ 在商店評分"
   },
   "support_modal_title": {
     "message": "喜歡 Comic Translate 4 Free 嗎？"
@@ -387,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "允許所有網站",
+    "message": "無需詢問即可翻譯任何網站",
     "description": "site access"
   },
   "allow_all_desc": {

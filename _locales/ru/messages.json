@@ -15,7 +15,7 @@
   },
   "allow_all_sites": {
     "description": "site access",
-    "message": "Разрешить все сайты"
+    "message": "Переводить любой сайт без запроса"
   },
   "appDesc": {
     "message": "Переводите мангу и комиксы в браузере. Читает японский, английский, упрощённый и традиционный китайский; переводит на 114 языков."
@@ -45,8 +45,16 @@
     "message": "Движок перевода"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another",
+    "message": "Если движок не сработает, попробуйте другой",
     "description": "Checkbox: try another translation backend if the selected one fails"
+  },
+  "backend_failover_hint": {
+    "message": "Автоматически переключается на работающий движок вместо остановки.",
+    "description": "Hint under the failover checkbox"
+  },
+  "backend_google_note": {
+    "message": "Google не нужен ни ключ, ни настройка.",
+    "description": "Note shown only when Google is the selected engine"
   },
   "backend_azure_opt": {
     "message": "Azure Translator (требуется ключ)"
@@ -55,7 +63,7 @@
     "message": "Google (бесплатно, без ключа)"
   },
   "backend_hint": {
-    "message": "Ключ и регион Azure и ключ API Gemini хранятся только в хранилище расширения этого браузера. LM Studio должен быть запущен с включённым OpenAI-совместимым сервером (по умолчанию http://127.0.0.1:1234)."
+    "message": "LM Studio должен быть запущен с включённым OpenAI-совместимым сервером (по умолчанию http://127.0.0.1:1234)."
   },
   "backend_lmstudio_opt": {
     "message": "LM Studio (локальный сервер)"
@@ -174,6 +182,10 @@
   "languages": {
     "message": "Языки"
   },
+  "jump_to": {
+    "message": "Перейти к…",
+    "description": "Placeholder of the section jump dropdown on small screens"
+  },
   "lmstudio_api": {
     "message": "API LM Studio"
   },
@@ -198,6 +210,10 @@
   "min_image_size": {
     "message": "Минимальный размер изображения (px)"
   },
+  "min_image_hint": {
+    "message": "Изображения меньше этого пропускаются.",
+    "description": "Hint under the minimum image size field"
+  },
   "model_baberu": {
     "message": "Baberu OCR (日本語 + English + 简体中文, обучен на манге)"
   },
@@ -212,6 +228,10 @@
   },
   "models_hint": {
     "message": "Модели скачиваются с Hugging Face один раз и кэшируются в браузере (IndexedDB)."
+  },
+  "models_downloading_auto": {
+    "message": "Модели скачиваются автоматически",
+    "description": "Popup status while the required models are still downloading"
   },
   "no_site": {
     "message": "сайт не определён"
@@ -371,7 +391,7 @@
     "message": "О проекте"
   },
   "feedback_email": {
-    "message": "✉️ Отзыв по электронной почте"
+    "message": "✉️ Отправить отзыв по электронной почте"
   },
   "pretranslate_next": {
     "message": "Заранее перевести следующую страницу"
@@ -380,7 +400,7 @@
     "message": "Пока вы читаете эту страницу, следующая страница переводится в фоне, поэтому она готова, когда вы её откроете."
   },
   "rate_store": {
-    "message": "⭐ 5 звёзд в магазине"
+    "message": "⭐ Оцените в магазине"
   },
   "support_modal_title": {
     "message": "Нравится Comic Translate 4 Free?"

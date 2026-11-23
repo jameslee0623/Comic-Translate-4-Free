@@ -4,9 +4,18 @@
 <title>Comic Translate 4 Free — Settings</title>
 <style>
   :root { color-scheme: dark; }
-  body { max-width: 640px; margin: 0 auto; padding: 24px; font: 14px system-ui, sans-serif; background: #141417; color: #e8e8ea; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; padding: 0; font: 14px system-ui, sans-serif; background: #141417; color: #e8e8ea; }
+  .layout { display: flex; max-width: 920px; margin: 0 auto; align-items: flex-start; }
+  /* Desktop section nav: sticky on the left, anchor links jump to sections. */
+  #sectionNav { position: sticky; top: 24px; width: 170px; flex: none; padding: 24px 0 24px 24px; display: flex; flex-direction: column; gap: 2px; }
+  #sectionNav a { color: #9a9aa0; text-decoration: none; font-size: 13px; padding: 6px 10px; border-radius: 6px; }
+  #sectionNav a:hover { background: #232327; color: #e8e8ea; }
+  main { flex: 1; min-width: 0; padding: 24px; }
+  /* Phone "jump to" dropdown: hidden on desktop, sticky on top on phone. */
+  #jumpTo { display: none; }
   h1 { font-size: 18px; color: #fff; }
-  h2 { font-size: 12px; color: #9a9aa0; text-transform: uppercase; letter-spacing: .06em; margin: 28px 0 8px; border-bottom: 1px solid #2e2e33; padding-bottom: 6px; }
+  h2 { font-size: 12px; color: #9a9aa0; text-transform: uppercase; letter-spacing: .06em; margin: 28px 0 8px; border-bottom: 1px solid #2e2e33; padding-bottom: 6px; scroll-margin-top: 64px; }
   .row { display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
   label { min-width: 220px; color: #c9c9ce; }
   select, input[type=text], input[type=password], input[type=number] { padding: 7px; border: 1px solid #3a3a40; border-radius: 6px; font-size: 13px; background: #232327; color: #e8e8ea; }
@@ -21,69 +30,129 @@
   button.pulse { animation: ctPulse 1.2s ease-in-out infinite; border-color: #1a73e8; }
   #saved { color: #7ee787; margin-left: 10px; opacity: 0; transition: opacity .3s; }
   input[type=range] { width: 200px; accent-color: #1a73e8; }
-  input[type=checkbox] { accent-color: #1a73e8; width: 16px; height: 16px; }
+  /* Toggle switches (not bare checkboxes): the input stays the real
+     control (same id, same .checked), the slider is pure CSS. */
+  label.switch { min-width: 0; position: relative; display: inline-block; width: 40px; height: 22px; flex: none; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .switch .slider { position: absolute; inset: 0; border-radius: 11px; background: #3a3a40; transition: background .15s; }
+  .switch .slider::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .switch input:checked + .slider { background: #1a73e8; }
+  .switch input:checked + .slider::after { left: 20px; }
+  .switch input:focus-visible + .slider { outline: 2px solid #8ab4f8; outline-offset: 2px; }
   .check-result { font-size: 12px; margin-left: 8px; }
   .check-result.ok { color: #7ee787; } .check-result.err { color: #ff7b72; }
   #allowedSites { list-style: none; padding: 0; margin: 8px 0; }
   #allowedSites li { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border: 1px solid #2e2e33; border-radius: 6px; margin: 4px 0; background: #1b1b1f; }
   #allowedSites li span { flex: 1; font-family: monospace; }
   #allowedSites li button { padding: 3px 10px; font-size: 12px; }
+  /* Languages: source and target side by side on desktop. */
+  .langfields { align-items: flex-start; }
+  .langfield { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .langfield label { min-width: 0; }
+  .langfield select { width: 100%; box-sizing: border-box; }
+  /* Phone layout: stack each row (label above its control), full-width
+     inputs, hints full width, 44px tap targets. Desktop is unchanged. */
+  @media (max-width: 600px) {
+    .layout { display: block; }
+    #sectionNav { display: none; }
+    main { padding: 16px; }
+    #jumpTo { display: block; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box; min-height: 44px; margin-bottom: 8px; }
+    .row { flex-direction: column; align-items: stretch; gap: 6px; margin: 12px 0; }
+    .row.wlrow { flex-direction: row; align-items: center; }
+    .row.wlrow input { flex: 1; min-width: 0; }
+    label { min-width: 0; }
+    select, input[type=text], input[type=password], input[type=number] { width: 100%; box-sizing: border-box; min-height: 44px; font-size: 14px; }
+    input[type=range] { width: 100%; }
+    .hint { margin-left: 0; max-width: none; }
+    button { min-height: 44px; font-size: 14px; }
+    .model { flex-direction: column; align-items: stretch; gap: 8px; }
+    .model > div:last-child { display: flex; gap: 8px; }
+    .model > div:last-child button { flex: 1; }
+    .langfields { flex-direction: column; }
+    .row a { text-align: center; }
+    #diagLog { font-size: 12px; }
+  }
 </style>
 </head>
 <body>
+  <div class="layout">
+  <nav id="sectionNav" aria-label="Sections">
+    <a href="#siteSection" data-i18n="site_whitelist">Site access</a>
+    <a href="#langSection" data-i18n="languages">Languages</a>
+    <a href="#engineSection" data-i18n="translation_backend">Translating engine</a>
+    <a href="#automationSection" data-i18n="automation">Automation</a>
+    <a href="#debugSection" data-i18n="debug">Debug</a>
+    <a href="#diagSection">Diagnostic log</a>
+    <a href="#modelsSection" data-i18n="models">Models</a>
+    <a href="#cacheSection" data-i18n="pagecache_title">Translated page cache</a>
+    <a href="#aboutSection" data-i18n="support_title">About this project</a>
+  </nav>
+  <main>
+  <select id="jumpTo" aria-label="Jump to section">
+    <option value="" data-i18n="jump_to">Jump to…</option>
+    <option value="siteSection" data-i18n="site_whitelist">Site access</option>
+    <option value="langSection" data-i18n="languages">Languages</option>
+    <option value="engineSection" data-i18n="translation_backend">Translating engine</option>
+    <option value="automationSection" data-i18n="automation">Automation</option>
+    <option value="debugSection" data-i18n="debug">Debug</option>
+    <option value="diagSection">Diagnostic log</option>
+    <option value="modelsSection" data-i18n="models">Models</option>
+    <option value="cacheSection" data-i18n="pagecache_title">Translated page cache</option>
+    <option value="aboutSection" data-i18n="support_title">About this project</option>
+  </select>
   <h1><span data-i18n="appName">Comic Translate 4 Free</span> — <span data-i18n="options_title">Settings</span> <span id="saved" data-i18n="saved">Saved ✓</span></h1>
 
-  <h2 data-i18n="site_whitelist">Site access</h2>
+  <h2 data-i18n="site_whitelist" id="siteSection">Site access</h2>
   <p style="color:#8a8a90;font-size:12px" data-i18n="whitelist_desc">Translation only runs on sites you allow. Add a site from the popup or type its hostname here.</p>
-  <div class="row"><label data-i18n="allow_all_sites" style="text-transform:uppercase">Allow all sites</label><input type="checkbox" id="allowAllSites"></div>
+  <div class="row"><label data-i18n="allow_all_sites" style="text-transform:uppercase">Translate any site without asking</label><label class="switch"><input type="checkbox" id="allowAllSites"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="allow_all_desc">Translate on any website without allowing each one first. This grants the extension access to all websites.</p>
   <ul id="allowedSites"></ul>
-  <div class="row"><input type="text" id="wlAdd" data-i18n-ph="wl_placeholder" placeholder="e.g. example.com" style="width:220px"><button id="wlAddBtn" data-i18n="add">Add</button></div>
+  <div class="row wlrow"><input type="text" id="wlAdd" data-i18n-ph="wl_placeholder" placeholder="e.g. example.com" style="width:220px"><button id="wlAddBtn" data-i18n="add">Add</button></div>
 
-  <h2 data-i18n="languages">Languages</h2>
-  <div class="row"><label data-i18n="source_lang">Source language</label><select id="sourceLang"></select></div>
-  <div class="row"><label data-i18n="target_lang">Target language</label><select id="targetLang"></select></div>
+  <h2 data-i18n="languages" id="langSection">Languages</h2>
+  <div class="row langfields">
+    <div class="langfield"><label data-i18n="source_lang">Source language</label><select id="sourceLang"></select></div>
+    <div class="langfield"><label data-i18n="target_lang">Target language</label><select id="targetLang"></select></div>
+  </div>
 
-  <h2 data-i18n="translation_backend">Translating engine</h2>
+  <h2 data-i18n="translation_backend" id="engineSection">Translating engine</h2>
   <div class="row"><label data-i18n="backend">Translating engine</label><select id="backend">
     <option value="google" data-i18n="backend_google_opt">Google (free, no key)</option>
     <option value="azure" data-i18n="backend_azure_opt">Azure Translator (key required)</option>
     <option value="gemini" data-i18n="backend_gemini_opt">Gemini (free, key required)</option>
     <option value="lmstudio" data-i18n="backend_lmstudio_opt">LM Studio (local server)</option>
   </select></div>
-  <div class="row"><label for="backendFailover" data-i18n="backend_failover">If the engine fails, try another</label><input type="checkbox" id="backendFailover"></div>
-  <div class="row"><label data-i18n="azure_key">Azure API key</label><input type="password" id="azureKey" autocomplete="off"></div>
-  <div class="row"><label data-i18n="azure_region">Azure region</label><input type="text" id="azureRegion" data-i18n-ph="azure_region_ph" placeholder="e.g. japaneast" autocomplete="off"></div>
-  <div class="row"><label></label><button id="checkAzure" data-i18n="check_azure">Check Azure connection</button><span id="azureResult" class="check-result"></span></div>
-  <div class="row"><label data-i18n="gemini_key">Gemini API key</label><input type="password" id="geminiKey" autocomplete="off"></div>
-  <div class="row"><label></label><button id="checkGemini" data-i18n="check_gemini">Check Gemini connection</button><span id="geminiResult" class="check-result"></span></div>
-  <div class="row"><label data-i18n="lmstudio_url">LM Studio server URL</label><input type="text" id="lmStudioUrl" placeholder="http://127.0.0.1:1234" autocomplete="off"><button id="grantLmStudioHost" data-i18n="grant_host" title="Grant host access">Grant host access</button></div>
-  <div class="row"><label data-i18n="lmstudio_api">LM Studio API</label><select id="lmStudioApi">
+  <p class="hint" id="googleNote" data-i18n="backend_google_note">Google needs no key and no setup.</p>
+  <div class="row"><label for="backendFailover" data-i18n="backend_failover">If the engine fails, try another one</label><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="backend_failover_hint">Automatically switches to a working engine instead of stopping.</p>
+  <div class="row" data-engine="azure"><label data-i18n="azure_key">Azure API key</label><input type="password" id="azureKey" autocomplete="off"></div>
+  <div class="row" data-engine="azure"><label data-i18n="azure_region">Azure region</label><input type="text" id="azureRegion" data-i18n-ph="azure_region_ph" placeholder="e.g. japaneast" autocomplete="off"></div>
+  <div class="row" data-engine="azure"><label></label><button id="checkAzure" data-i18n="check_azure">Check Azure connection</button><span id="azureResult" class="check-result"></span></div>
+  <div class="row" data-engine="gemini"><label data-i18n="gemini_key">Gemini API key</label><input type="password" id="geminiKey" autocomplete="off"></div>
+  <div class="row" data-engine="gemini"><label></label><button id="checkGemini" data-i18n="check_gemini">Check Gemini connection</button><span id="geminiResult" class="check-result"></span></div>
+  <div class="row" data-engine="lmstudio"><label data-i18n="lmstudio_url">LM Studio server URL</label><input type="text" id="lmStudioUrl" placeholder="http://127.0.0.1:1234" autocomplete="off"><button id="grantLmStudioHost" data-i18n="grant_host" title="Grant host access">Grant host access</button></div>
+  <div class="row" data-engine="lmstudio"><label data-i18n="lmstudio_api">LM Studio API</label><select id="lmStudioApi">
     <option value="openai" data-i18n="lmstudio_api_openai">OpenAI-compatible (/v1/chat/completions)</option>
     <option value="lmstudio-v1" data-i18n="lmstudio_api_v1">LM Studio REST API v1 (/api/v1/chat)</option>
   </select></div>
-  <div class="row"><label data-i18n="lmstudio_key">LM Studio API key (optional)</label><input type="password" id="lmStudioKey" autocomplete="off"></div>
-  <div class="row"><label></label><button id="checkLmStudio" data-i18n="check_lmstudio">Check LM Studio connection</button><span id="lmStudioResult" class="check-result"></span></div>
-  <p class="hint" data-i18n="backend_hint">Azure key/region and the Gemini API key are stored only in this browser's extension storage. LM Studio must be running with its OpenAI-compatible server enabled (default http://127.0.0.1:1234).</p>
+  <div class="row" data-engine="lmstudio"><label data-i18n="lmstudio_key">LM Studio API key (optional)</label><input type="password" id="lmStudioKey" autocomplete="off"></div>
+  <div class="row" data-engine="lmstudio"><label></label><button id="checkLmStudio" data-i18n="check_lmstudio">Check LM Studio connection</button><span id="lmStudioResult" class="check-result"></span></div>
+  <p class="hint" data-i18n="backend_hint" data-engine="lmstudio">LM Studio must be running with its OpenAI-compatible server enabled (default http://127.0.0.1:1234).</p>
 
-  <h2 data-i18n="detection_rendering">Detection &amp; rendering</h2>
-  <div class="row"><label data-i18n="det_threshold">Detection confidence threshold</label><input type="range" id="threshold" min="0.05" max="0.9" step="0.05"><span id="thresholdVal"></span></div>
+  <h2 data-i18n="automation" id="automationSection">Automation</h2>
   <div class="row"><label data-i18n="min_image_size">Minimum image size (px)</label><input type="number" id="minImageSize" min="100" max="4000"></div>
-  <p class="hint" data-i18n="detection_hint">Pages smaller than the minimum image size are skipped. The render font size is auto-estimated from the original text on the page.</p>
-
-  <h2 data-i18n="automation">Automation</h2>
-  <div class="row"><label data-i18n="play_ding">Play a sound when translation finishes</label><input type="checkbox" id="playDing"></div>
-  <div class="row"><label data-i18n="auto_translate">Auto-translate on page load</label><input type="checkbox" id="autoTranslate"></div>
+  <p class="hint" data-i18n="min_image_hint">Images smaller than this are skipped.</p>
+  <div class="row"><label data-i18n="play_ding">Play a sound when translation finishes</label><label class="switch"><input type="checkbox" id="playDing"><span class="slider"></span></label></div>
+  <div class="row"><label data-i18n="auto_translate">Auto-translate on page load</label><label class="switch"><input type="checkbox" id="autoTranslate"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="auto_hint">When on, allowed pages start translating automatically as soon as they finish loading — no button click needed. (Tip: allow a site from the popup so the extension gets permission to read its images.)</p>
-  <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><input type="checkbox" id="pretranslateNext"></div>
+  <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="pretranslate_next_hint">While you read this page, the next page is translated in the background, so it is ready when you open it.</p>
 
-  <h2 data-i18n="debug">Debug</h2>
-  <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><input type="checkbox" id="debugMode"></div>
+  <h2 data-i18n="debug" id="debugSection">Debug</h2>
+  <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
 
-  <h2>Diagnostic log</h2>
-  <p class="hint">The log from before a crash lives here, even when the background is dead. Open this page after restarting the browser, then copy the log and send it.</p>
+  <h2 id="diagSection">Diagnostic log</h2>
   <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
   <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
 
@@ -92,17 +161,17 @@
   <div id="models"></div>
   <p class="hint" data-i18n="models_hint">Models are downloaded from Hugging Face once and cached in the browser (IndexedDB).</p>
 
-  <h2 data-i18n="pagecache_title">Translated page cache</h2>
+  <h2 data-i18n="pagecache_title" id="cacheSection">Translated page cache</h2>
   <p style="color:#8a8a90;font-size:12px" data-i18n="pagecache_desc">Pages you revisit in this browser session load instantly from a temporary cache. The cache is cleared automatically when the browser closes.</p>
   <div class="row"><span id="cacheStats" style="color:#9a9aa0;font-size:12px"></span><button id="clearCache" data-i18n="pagecache_clear">Clear cache</button></div>
 
-  <h2 data-i18n="support_title">About this project</h2>
+  <h2 data-i18n="support_title" id="aboutSection">About this project</h2>
   <p style="color:#8a8a90;font-size:12px;margin:0 0 4px" data-i18n="support_hint">This extension is free and open source. If you like this extension, you can support its ongoing development.</p>
   <div class="row">
     <a href="https://ko-fi.com/jameslee0623" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">❤️ Support this project</a>
-    <a id="rateStore" href="https://chromewebstore.google.com/detail/comic-translate-4-free/pndooikgcenncdohfggodonniihplppj" target="_blank" rel="noopener noreferrer" data-i18n="rate_store" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ 5 stars at store</a>
-    <a href="mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback" data-i18n="feedback_email" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">✉️ Feedback by email</a>
-    <a href="https://github.com/jameslee0623/Comic-Translate-4-Free" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ GitHub</a>
+    <a id="rateStore" href="https://chromewebstore.google.com/detail/comic-translate-4-free/pndooikgcenncdohfggodonniihplppj" target="_blank" rel="noopener noreferrer" data-i18n="rate_store" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ Rate it in the store</a>
+    <a href="mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback" data-i18n="feedback_email" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">✉️ Send feedback by email</a>
+    <a href="https://github.com/jameslee0623/Comic-Translate-4-Free" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ Star on GitHub</a>
   </div>
   <!--
     Ko-fi's embeddable widget (kofiwidget2.draw()) is a REMOTE script and cannot
@@ -113,6 +182,8 @@
   -->
 
   <div class="foot" style="margin-top:28px;color:#666;font-size:12px"><span data-i18n="appName">Comic Translate 4 Free</span> <span id="version"></span></div>
+  </main>
+  </div>
 
   <!-- Azure retirement notice (2.2.17): shown when the user checks Azure or
        picks it as the engine. The steps point at the Gemini key field above. -->
