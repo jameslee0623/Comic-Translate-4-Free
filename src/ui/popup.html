@@ -17,12 +17,14 @@
   button.remind:hover:not(:disabled) { background: #2b7de9; }
   button:disabled { opacity: .45; cursor: default; }
   .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
-  /* Actions: Translate full width on its own row, Clear cache + Cancel
-     side by side below it. */
-  .actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
-  .actions .big { width: 100%; min-height: 48px; font-size: 15px; }
-  .actions .subrow { display: flex; gap: 8px; }
-  .actions .subrow button { flex: 1; min-width: 0; }
+  /* Engine row: dropdown takes two thirds, Clear cache one third. */
+  .enginerow { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+  .enginerow select { flex: 2; min-width: 0; }
+  .enginerow button { flex: 1; min-width: 0; }
+  /* Translate row: Translate takes two thirds, Cancel one third. */
+  .actionrow { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .actionrow .primary { flex: 2; min-width: 0; min-height: 48px; font-size: 15px; }
+  .actionrow .danger { flex: 1; min-width: 0; }
   /* Language row: both dropdowns the same width, nothing between them. */
   .langrow select { flex: 1; min-width: 0; }
   .bar { height: 6px; background: #2a2a2e; border-radius: 3px; overflow: hidden; margin: 6px 0; }
@@ -77,22 +79,22 @@
     <h2 data-i18n="translation_backend" style="margin:0">Translating engine</h2>
     <span id="cacheInfo" data-i18n-title="pagecache_title" title="Translated page cache" style="font-size:12px;color:#9a9aa0;white-space:nowrap">…</span>
   </div>
-  <select id="backend">
-    <option value="google" data-i18n="backend_google_opt">Google (free, no key)</option>
-    <option value="azure" data-i18n="backend_azure_opt">Azure Translator (key required)</option>
-    <option value="gemini" data-i18n="backend_gemini_opt">Gemini (free, key required)</option>
-    <option value="lmstudio" data-i18n="backend_lmstudio_opt">LM Studio (local server)</option>
-  </select>
-  <div class="actions">
-    <button id="translateBtn" class="primary big" data-i18n="translate_page">Translate this page</button>
-    <div class="subrow">
-      <button id="clearCacheBtn" data-i18n="pagecache_clear">Clear cache</button>
-      <button id="cancelBtn" class="danger" data-i18n="cancel" disabled>Cancel</button>
-    </div>
+  <div class="enginerow">
+    <select id="backend">
+      <option value="google" data-i18n="backend_google_opt">Google (free, no key)</option>
+      <option value="azure" data-i18n="backend_azure_opt">Azure Translator (key required)</option>
+      <option value="gemini" data-i18n="backend_gemini_opt">Gemini (free, key required)</option>
+      <option value="lmstudio" data-i18n="backend_lmstudio_opt">LM Studio (local server)</option>
+    </select>
+    <button id="clearCacheBtn" data-i18n="pagecache_clear">Clear cache</button>
   </div>
   <div class="row"><span id="status"></span></div>
   <div class="bar"><div id="progress"></div></div>
   <div id="error"></div>
+  <div class="actionrow">
+    <button id="translateBtn" class="primary" data-i18n="translate_page">Translate this page</button>
+    <button id="cancelBtn" class="danger" data-i18n="cancel" disabled>Cancel</button>
+  </div>
 
   <div class="foot">
     <a href="#" id="options" data-i18n="options_settings">Settings</a>
