@@ -81,11 +81,11 @@
     <a href="#langSection" data-i18n="languages">Languages</a>
     <a href="#engineSection" data-i18n="translation_backend">Translating engine</a>
     <a href="#automationSection" data-i18n="automation">Automation</a>
-    <a href="#debugSection" data-i18n="debug">Debug</a>
-    <a href="#diagSection">Diagnostic log</a>
     <a href="#modelsSection" data-i18n="models">Models</a>
     <a href="#cacheSection" data-i18n="pagecache_title">Translated page cache</a>
     <a href="#aboutSection" data-i18n="support_title">About this project</a>
+    <a href="#debugSection" data-i18n="debug">Debug</a>
+    <a href="#diagSection">Diagnostic log</a>
   </nav>
   <main>
   <select id="jumpTo" aria-label="Jump to section">
@@ -94,13 +94,13 @@
     <option value="langSection" data-i18n="languages">Languages</option>
     <option value="engineSection" data-i18n="translation_backend">Translating engine</option>
     <option value="automationSection" data-i18n="automation">Automation</option>
-    <option value="debugSection" data-i18n="debug">Debug</option>
-    <option value="diagSection">Diagnostic log</option>
     <option value="modelsSection" data-i18n="models">Models</option>
     <option value="cacheSection" data-i18n="pagecache_title">Translated page cache</option>
     <option value="aboutSection" data-i18n="support_title">About this project</option>
+    <option value="debugSection" data-i18n="debug">Debug</option>
+    <option value="diagSection">Diagnostic log</option>
   </select>
-  <h1><span data-i18n="appName">Comic Translate 4 Free</span> — <span data-i18n="options_title">Settings</span> <span id="saved" data-i18n="saved">Saved ✓</span></h1>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 12px"><h1 style="margin:0"><span data-i18n="appName">Comic Translate 4 Free</span> — <span data-i18n="options_title">Settings</span> <span id="saved" data-i18n="saved">Saved ✓</span></h1><span id="version" style="color:#8a8a90;font-size:12px;white-space:nowrap"></span></div>
 
   <h2 data-i18n="site_whitelist" id="siteSection">Site access</h2>
   <p style="color:#8a8a90;font-size:12px" data-i18n="whitelist_desc">Translation only runs on sites you allow. Add a site from the popup or type its hostname here.</p>
@@ -148,13 +148,7 @@
   <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="pretranslate_next_hint">While you read this page, the next page is translated in the background, so it is ready when you open it.</p>
 
-  <h2 data-i18n="debug" id="debugSection">Debug</h2>
-  <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
-  <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
 
-  <h2 id="diagSection">Diagnostic log</h2>
-  <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
-  <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
 
   <h2 data-i18n="models" id="modelsSection">Models</h2>
   <div class="row"><button id="downloadAll" data-i18n="download_all">Download all models</button></div>
@@ -181,7 +175,14 @@
     remote scripts are allowed.
   -->
 
-  <div class="foot" style="margin-top:28px;color:#666;font-size:12px"><span data-i18n="appName">Comic Translate 4 Free</span> <span id="version"></span></div>
+  <h2 data-i18n="debug" id="debugSection">Debug</h2>
+  <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
+
+  <h2 id="diagSection">Diagnostic log</h2>
+  <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
+  <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
+
   </main>
   </div>
 
