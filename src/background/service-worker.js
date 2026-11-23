@@ -1222,18 +1222,20 @@ function triggerModelDownload(fileId) {
     () => callMl({ type: MSG.ML_DOWNLOAD, fileId }),
     (e) => { modelDownloadInflight.delete(fileId); throw e; },
   );
-  p.then(() => { modelDownloadInflight.delete(fileId); }, () => {
-    // A failure before the first 8 MB chunk is written must clear the
-    // in-flight mark: otherwise the wait loop skips the file (in flight)
-    // and the stall branch only restarts files that already wrote chunks,
-    // so no retry ever starts — in this SW lifetime, or the whole Firefox
-    // session (its background page never restarts). Only clear when nothing
-    // was written: a download that wrote chunks may still be progressing
-    // past the 90s callMl timeout, and its stall restart is the wait loop's
-    // job, not this handler's. A slow download that truly is still running
-    // may write its first chunk after this check and then meet a duplicate
-    // start — harmless: both fetch the same bytes and write the same chunk
-    // keys.
+  p.then(() => { modelDownloadInflight.delete(fileId); }, (e) => {
+    // 2.3.4: a hard failure (the worker replied with an error) means the
+    // download is really dead — clear the mark at once so the next run
+    // start or watchdog tick restarts it immediately. The old code only
+    // cleared when nothing was written, so a file that died after writing
+    // chunks kept its mark and no retry ever started in this lifetime —
+    // the Firefox test showed only 1 of 3 model groups auto-downloaded
+    // after a cancelled run. Only a timeout keeps the mark: the worker
+    // may still be progressing past the SW-side timer (callMl sets
+    // e.mlTimeout), and the stall branches — not this handler — own
+    // restarting those. A duplicate start is harmless: both fetch the
+    // same bytes and write the same chunk keys, and the state check
+    // re-downloads a manifest whose chunks are missing.
+    if (!e || !e.mlTimeout) { modelDownloadInflight.delete(fileId); return; }
     getModelDownloadState().then(state => {
       const f = state.files.find(x => x.id === fileId);
       if (f && !f.done && !f.started) modelDownloadInflight.delete(fileId);
@@ -1242,14 +1244,17 @@ function triggerModelDownload(fileId) {
   return p;
 }
 
-// Start downloads for every missing file that is not already in flight
-// (a file with chunks in IDB is mid-download — from the install trigger,
-// another run, or a previous SW lifetime — so it is left alone).
+// Start downloads for every missing file that is not already in flight.
+// 2.3.4: a file with chunks but no live download is dead (its run was
+// cancelled, or the background died) — restart it at once instead of
+// leaving it for the 3-minute stall branches. triggerModelDownload
+// no-ops when the file is already in flight, so a live download is
+// never duplicated.
 async function autoDownloadMissingModels() {
   let state;
   try { state = await getModelDownloadState(); } catch { return; }
   for (const f of state.missing) {
-    if (f.started) continue;
+    if (f.started && modelDownloadInflight.has(f.id)) continue;
     try { triggerModelDownload(f.id); } catch {}
   }
 }
@@ -1379,6 +1384,15 @@ async function modelWatchdogTick() {
       }
       continue;
     }
+    // 2.3.4: no live download for a started file means it died (cancel,
+    // background restart) — restart it at once, no 3-minute wait. The
+    // stall window below only applies to files that ARE in flight.
+    if (!modelDownloadInflight.has(f.id)) {
+      diagPush('model download not in flight, restarting: ' + f.id);
+      modelWatchdogProgress.delete(f.id);
+      triggerModelDownload(f.id);
+      continue;
+    }
     const prev = modelWatchdogProgress.get(f.id);
     if (!prev || prev.loaded !== f.loaded) {
       modelWatchdogProgress.set(f.id, { loaded: f.loaded, at: Date.now() });
@@ -1391,6 +1405,14 @@ async function modelWatchdogTick() {
     }
   }
 }
+
+// 2.3.4: the watchdog alarm must exist from background load, not only
+// after a download starts. A background restart with only partial files
+// left triggers nothing (their files are started, and the old code only
+// ensured the alarm inside triggerModelDownload) — so the watchdog never
+// ran and the partial files sat forever. Creating it here costs one tick
+// on a healthy install: the tick clears the alarm when nothing is missing.
+ensureModelWatchdog();
 
 // One-time support popup: after 50 translated pictures in total, offer the
 // store rating / support / feedback once, in the middle of the page.
