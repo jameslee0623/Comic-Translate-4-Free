@@ -17,14 +17,17 @@
   button.remind:hover:not(:disabled) { background: #2b7de9; }
   button:disabled { opacity: .45; cursor: default; }
   .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
-  /* Engine row: dropdown takes two thirds, Clear cache one third. */
-  .enginerow { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
-  .enginerow select { flex: 2; min-width: 0; }
-  .enginerow button { flex: 1; min-width: 0; }
+  /* Engine row and Translate row share one grid: dropdown/Translate take
+     two thirds, Clear cache/Cancel one third. Grid tracks (not flex) so
+     the two 1/3 buttons line up exactly — a <select> can keep its own
+     width in a flex row and push its button narrower. */
+  .enginerow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; align-items: center; margin: 6px 0; }
+  .enginerow select { min-width: 0; }
+  .enginerow button { min-width: 0; }
   /* Translate row: Translate takes two thirds, Cancel one third. */
-  .actionrow { display: flex; gap: 8px; margin: 10px 0 4px; }
-  .actionrow .primary { flex: 2; min-width: 0; min-height: 48px; font-size: 15px; }
-  .actionrow .danger { flex: 1; min-width: 0; }
+  .actionrow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 8px; margin: 10px 0 4px; }
+  .actionrow .primary { min-width: 0; min-height: 48px; font-size: 15px; }
+  .actionrow .danger { min-width: 0; }
   /* Language row: both dropdowns the same width, nothing between them. */
   .langrow select { flex: 1; min-width: 0; }
   .bar { height: 6px; background: #2a2a2e; border-radius: 3px; overflow: hidden; margin: 6px 0; }
