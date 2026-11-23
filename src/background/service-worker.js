@@ -3416,7 +3416,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       autoFired.set(tabId, { url, at: now });
       await cancelRunsForTab(tabId);
       const r = await runPipeline(tabId, { auto: true });
-      if (!r.ok && !r.cancelled) console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
+      if (!r.ok && !r.cancelled) {
+        console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
+        // 2.3.5: a failed auto run must not consume the dedupe window.
+        // The user may fix the cause (e.g. lower the minimum image size)
+        // and reload at once — that reload would otherwise be skipped as
+        // a dupe for 2 minutes, and auto looks dead. Only clear our own
+        // record (same url), so a newer fire's record survives.
+        const cur = autoFired.get(tabId);
+        if (cur && cur.url === url) autoFired.delete(tabId);
+      }
     } catch (e) {
       console.warn('[ct] auto-translate error:', String((e && e.message) || e).slice(0, 120));
     }
