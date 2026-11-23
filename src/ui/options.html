@@ -44,7 +44,9 @@
   #allowedSites { list-style: none; padding: 0; margin: 8px 0; }
   #allowedSites li { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border: 1px solid #2e2e33; border-radius: 6px; margin: 4px 0; background: #1b1b1f; }
   #allowedSites li span { flex: 1; font-family: monospace; }
-  #allowedSites li button { padding: 3px 10px; font-size: 12px; }
+  #allowedSites li button, #wlAddBtn { padding: 3px 10px; font-size: 12px; }
+  /* Add row: same 10px side inset as the site rows, so Add lines up with Remove. */
+  .wlrow { padding: 6px 10px; }
   /* Languages: source and target side by side on desktop. */
   .langfields { align-items: flex-start; }
   .langfield { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -107,7 +109,7 @@
   <div class="row"><label data-i18n="allow_all_sites" style="text-transform:uppercase">Translate any site</label><label class="switch"><input type="checkbox" id="allowAllSites"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="allow_all_desc">Translate on any website without allowing each one first. This grants the extension access to all websites.</p>
   <ul id="allowedSites"></ul>
-  <div class="row wlrow"><input type="text" id="wlAdd" data-i18n-ph="wl_placeholder" placeholder="e.g. example.com" style="width:220px"><button id="wlAddBtn" data-i18n="add">Add</button></div>
+  <div class="row wlrow"><input type="text" id="wlAdd" data-i18n-ph="wl_placeholder" placeholder="e.g. example.com" style="flex: 1; min-width: 0"><button id="wlAddBtn" data-i18n="add">Add</button></div>
 
   <h2 data-i18n="languages" id="langSection">Languages</h2>
   <div class="row langfields">
