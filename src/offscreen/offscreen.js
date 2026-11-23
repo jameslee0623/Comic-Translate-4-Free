@@ -1298,8 +1298,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   // 2.1.21: the keepalive ping is exempt from benchCancel (it must not
   // kill the bench it is keeping alive) and from scheduleBenchSelfStart
   // (it must not reset the idle timer, or approach B could never fire).
-  if (msg.type !== MSG.ML_BENCH_THREADS && msg.type !== MSG.ML_BENCH_KEEPALIVE) benchCancel();
-  if (msg.type !== MSG.ML_BENCH_KEEPALIVE) scheduleBenchSelfStart();
+  // 2.3.27: pre-translate (runId 'pre-...') is background work — it runs
+  // after every page, so if it cancelled the bench and reset the idle
+  // timer, the bench would never get 10s idle and never complete.
+  // Pre-translate must not cancel the bench or reset its timer; only
+  // user-visible runs do. The bench workers are separate realms, so a
+  // bench running alongside pre-translate only adds timing noise (which
+  // the bench already tolerates), not a block.
+  const isPretranslate = typeof msg.runId === 'string' && msg.runId.startsWith('pre-');
+  if (!isPretranslate && msg.type !== MSG.ML_BENCH_THREADS && msg.type !== MSG.ML_BENCH_KEEPALIVE) benchCancel();
+  if (!isPretranslate && msg.type !== MSG.ML_BENCH_KEEPALIVE) scheduleBenchSelfStart();
   (async () => {
     try {
       sendResponse(await fn(msg));
