@@ -299,6 +299,26 @@ const CONTENT_SCRIPT_FILES = (typeof window !== 'undefined' && window.document)
   ? ['../content/content.js']
   : ['src/content/content.js'];
 
+// Timeout for a content-script round trip. emitDebug already races its
+// sendMessage against 5s because "on some browsers tabs.sendMessage can
+// hang (neither resolve nor reject), which would stall the pipeline" —
+// the same hang applies to executeScript and every other content-script
+// call, so they all race against the same 5s. Data calls (list-images,
+// RENDER, get-image-pixels) carry a bigger payload and get 30s, the same
+// as the fetch-image-bytes download race.
+const MSG_TIMEOUT_MS = 5000;
+const DATA_TIMEOUT_MS = 30000;
+
+// Race a promise against a timeout so a hung browser API can never stall
+// a run silently. The timeout rejection flows into the caller's existing
+// error handling, so a hang becomes a loud failure, not a stuck run.
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(label + ' timed out after ' + (ms / 1000) + 's')), ms)),
+  ]);
+}
+
 // ---------------------------------------------------------------- site access
 
 // scripting.executeScript needs a host permission for the tab's origin. That
@@ -569,7 +589,7 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
   const minSize = settings.minImageSize || 460;
   if (manualSrc) {
     let info = null;
-    try { info = (await chrome.tabs.sendMessage(tabId, { type: 'ct/find-image-by-src', srcUrl: manualSrc }))?.image || null; }
+    try { info = (await withTimeout(chrome.tabs.sendMessage(tabId, { type: 'ct/find-image-by-src', srcUrl: manualSrc }), MSG_TIMEOUT_MS, 'find-image-by-src'))?.image || null; }
     catch { info = null; }
     if (!info || !info.src) {
       throw new Error('could not find that image on the page anymore — it may have been removed or the page reloaded');
@@ -578,7 +598,7 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
   }
   let list = [], total = 0;
   try {
-    const r = await chrome.tabs.sendMessage(tabId, { type: 'ct/list-images' });
+    const r = await withTimeout(chrome.tabs.sendMessage(tabId, { type: 'ct/list-images' }), DATA_TIMEOUT_MS, 'list-images');
     list = r?.images || [];
     total = r?.total || list.length;
     if (r?.diag) for (const l of String(r.diag).split('\n')) diagPush('inventory-diag ' + l);
@@ -1226,13 +1246,13 @@ async function sendRender(tabId, runId, mode, imageDataUrl, w, h, blocks, timing
   // the run finished inpaint and failed only at delivery.
   let renderRes;
   try {
-    renderRes = await chrome.tabs.sendMessage(tabId, {
+    renderRes = await withTimeout(chrome.tabs.sendMessage(tabId, {
       type: MSG.RENDER, runId, mode,
       imageDataUrl, width: w, height: h,
       blocks, timings, debug,
       ...(extra.srcUrl ? { srcUrl: extra.srcUrl } : {}),
       ...(extra.uid ? { uid: extra.uid } : {}),
-    });
+    }), DATA_TIMEOUT_MS, 'render');
   } catch (e) {
     diagPush('sendRender send failed run ' + runId + ' tab ' + tabId + ': ' + String((e && e.message) || e));
     throw e;
@@ -1602,7 +1622,7 @@ async function maybeShowSupportPopup(tabId, translatedCount) {
       // 2.2.12: only mark shown when the content script confirms the modal
       // actually rendered (it returns ok:true). The old code marked it on
       // delivery, so a render failure lost the one-time popup forever.
-      const resp = await chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT });
+      const resp = await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT }), MSG_TIMEOUT_MS, 'show support');
       if (resp && resp.ok) shown = true;
     } catch { /* tab gone / no content script — retry after the next run */ }
   }
@@ -1999,7 +2019,7 @@ async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
         linkRules = activeLinkTexts(nextPageRules || {}, origin);
         picLinkActive = activePicLinkRule(nextPageRules || {}, origin) !== null;
       } catch {}
-      const r = await chrome.tabs.sendMessage(sourceTabId, { type: MSG.NEXT_PAGE_URL, learnedTexts: linkRules.map(x => x.text), picLinkActive });
+      const r = await withTimeout(chrome.tabs.sendMessage(sourceTabId, { type: MSG.NEXT_PAGE_URL, learnedTexts: linkRules.map(x => x.text), picLinkActive }), MSG_TIMEOUT_MS, 'next page url');
       nextUrl = r && r.url;
       if (r && r.learnedText) {
         const hit = linkRules.find(x => x.text === r.learnedText);
@@ -2464,20 +2484,33 @@ async function runPipeline(tabId, opts = {}) {
     // went elsewhere); a manual run for another page leaves it alone.
     persistDiagStage(runId, 'pretranslate-join');
     await joinOrCancelPretranslate(runId, tabUrl, !!opts.auto);
+    // Ping the content script first: if it answers, it is already in the
+    // page and the injection is skipped — on Orion the injection can hang
+    // forever (neither resolve nor reject), so a run must never wait on it
+    // when the script is already there. The ping IS the RUN_STARTED message
+    // (it replies {ok:true}), so a successful ping has already told the
+    // page this run is the current one.
+    let contentScriptReady = false;
     try {
-      await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
-    } catch (e) {
-      const msg = String((e && e.message) || e);
-      if (/host permission/i.test(msg) && tabHost) throw hostAccessError(tabHost);
-      throw new Error('could not access this tab (extension pages and some sites block injection): ' + msg.slice(0, 100));
+      await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.RUN_STARTED, runId }), MSG_TIMEOUT_MS, 'content script ping');
+      contentScriptReady = true;
+    } catch { /* no content script yet — inject it below */ }
+    if (!contentScriptReady) {
+      try {
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+      } catch (e) {
+        const msg = String((e && e.message) || e);
+        if (/host permission/i.test(msg) && tabHost) throw hostAccessError(tabHost);
+        throw new Error('could not access this tab (extension pages and some sites block injection): ' + msg.slice(0, 100));
+      }
+      // Tell the page this run is the current one. A render from any older run
+      // (e.g. a page the user already left) is ignored by the content script.
+      // (2.1.60: the run-start marker clear now keeps markers on pictures
+      // still showing a data URL, so no resume flag is needed here.)
+      try {
+        await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.RUN_STARTED, runId }), MSG_TIMEOUT_MS, 'content script ping');
+      } catch { /* content script not there yet */ }
     }
-    // Tell the page this run is the current one. A render from any older run
-    // (e.g. a page the user already left) is ignored by the content script.
-    // (2.1.60: the run-start marker clear now keeps markers on pictures
-    // still showing a data URL, so no resume flag is needed here.)
-    try {
-      await chrome.tabs.sendMessage(tabId, { type: MSG.RUN_STARTED, runId });
-    } catch { /* content script not there yet */ }
     persistDiagStage(runId, 'inventory');
     // Auto-translate only: lazy pictures below the fold have not loaded
     // yet, so the inventory would skip them. Force the page to load
@@ -2520,10 +2553,10 @@ async function runPipeline(tabId, opts = {}) {
         timings.total = Math.round(performance.now() - pipelineT0);
         setProgress(runId, 'done', 1, { backendLabel: settings.translationBackend });
         try {
-          await chrome.tabs.sendMessage(tabId, {
+          await withTimeout(chrome.tabs.sendMessage(tabId, {
             type: 'ct/run-summary', runId, images: 0, failed: [], ignored,
             resumed: true, alreadyDone,
-          });
+          }), MSG_TIMEOUT_MS, 'run summary');
         } catch {}
         if (settings.debugMode) await sendDiagLog(tabId, runId);
         result = { runId, ok: true, images: 0, failed: [], resumed: true, alreadyDone };
@@ -2562,11 +2595,11 @@ async function runPipeline(tabId, opts = {}) {
       diagPush('permission gate: missing host permission for ' + missingHosts.join(', '));
       const label = displayHost(missingHosts[0]);
       try {
-        await chrome.tabs.sendMessage(tabId, {
+        await withTimeout(chrome.tabs.sendMessage(tabId, {
           type: MSG.PILL_NOTICE,
           text: `Pictures on ${label} need permission — open the popup and tap Grant access, then run translate again.`,
           sticky: true,
-        });
+        }), MSG_TIMEOUT_MS, 'pill notice');
       } catch { /* pill is best-effort */ }
       const gateErr = new Error(
         `Pictures on ${label} need permission — open the extension popup and tap "Grant access", then run translate again. (${missingHosts.length} host${missingHosts.length > 1 ? 's' : ''} missing permission)`,
@@ -3358,11 +3391,11 @@ async function runPipeline(tabId, opts = {}) {
     // usually closed by the time the last picture finishes, so without this a
     // partial run (skips, per-image failures, ignored tiny images) is silent.
     try {
-      await chrome.tabs.sendMessage(tabId, {
+      await withTimeout(chrome.tabs.sendMessage(tabId, {
         type: 'ct/run-summary', runId, images: doneImgs.length,
         failed: failedImgs, ignored,
         ...(opts.resume ? { resumed: true, alreadyDone } : {}),
-      });
+      }), MSG_TIMEOUT_MS, 'run summary');
     } catch { /* content script may have been removed mid-run */ }
     // One-time support popup (best-effort — a failure here must never fail
     // the run, which already succeeded).
@@ -3390,7 +3423,7 @@ async function runPipeline(tabId, opts = {}) {
       msg = String((err && err.message) || err);
       broadcastError(runId, msg, err && err.grantHost ? { host: err.grantHost, label: displayHost(err.grantHost), hosts: err.grantHosts || null } : null);
       try {
-        await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
         // Show the debug panel on failure too (emitDebug sets debug:true and
         // respects debugMode) — otherwise a capture-stage failure leaves
         // James with only the error text and no stage/tier diagnostics.
@@ -3668,7 +3701,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     // blocks auto-translate.
     if (injectFirst) {
       try {
-        await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
       } catch {}
     }
     // AUTO DIAGNOSTIC (2.3.3): log every auto decision for an allowed
@@ -3768,11 +3801,11 @@ async function handleTranslateImage(tabId, srcUrl) {
       // best-effort: surface it on the page's pill when a content script
       // can be injected (the menu click is a user gesture).
       try {
-        await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
-        await chrome.tabs.sendMessage(tabId, {
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+        await withTimeout(chrome.tabs.sendMessage(tabId, {
           type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
           error: `"${host}" is not in your site access list — allow it from the popup or Settings, or turn on "Allow all sites"`,
-        });
+        }), MSG_TIMEOUT_MS, 'run progress notice');
       } catch { /* no page access: stay silent */ }
       return;
     }
@@ -3954,8 +3987,8 @@ async function fallbackCaptureViaTab(origTabId, imageUrl) {
         e.tabUrl = tabUrl;
         throw e;
       }
-      await chrome.scripting.executeScript({ target: { tabId: newTabId }, files: CONTENT_SCRIPT_FILES });
-      const p = await chrome.tabs.sendMessage(newTabId, { type: 'ct/get-image-pixels', srcUrl: imageUrl });
+      await withTimeout(chrome.scripting.executeScript({ target: { tabId: newTabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+      const p = await withTimeout(chrome.tabs.sendMessage(newTabId, { type: 'ct/get-image-pixels', srcUrl: imageUrl }), DATA_TIMEOUT_MS, 'get-image-pixels');
       if (!p || !p.ok || typeof p.dataUrl !== 'string') {
         throw new Error((p && p.error) || 'could not read the image');
       }
@@ -4290,11 +4323,11 @@ async function failOrphanedRun(orphanRunId, rec, msg) {
   if (rec.tabId == null) return false;
   const tab = await chrome.tabs.get(rec.tabId).catch(() => null);
   if (!tab) return false;
-  try { await chrome.scripting.executeScript({ target: { tabId: rec.tabId }, files: CONTENT_SCRIPT_FILES }); } catch {}
+  try { await withTimeout(chrome.scripting.executeScript({ target: { tabId: rec.tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection'); } catch {}
   // RUN_STARTED first: it sets the tab's current run to this runId, so the
   // error + panel log below are not rejected as stale.
-  try { await chrome.tabs.sendMessage(rec.tabId, { type: MSG.RUN_STARTED, runId: orphanRunId }); } catch {}
-  try { await chrome.tabs.sendMessage(rec.tabId, { type: MSG.RUN_PROGRESS, runId: orphanRunId, stage: 'error', error: msg, direct: true }); } catch {}
+  try { await withTimeout(chrome.tabs.sendMessage(rec.tabId, { type: MSG.RUN_STARTED, runId: orphanRunId }), MSG_TIMEOUT_MS, 'content script ping'); } catch {}
+  try { await withTimeout(chrome.tabs.sendMessage(rec.tabId, { type: MSG.RUN_PROGRESS, runId: orphanRunId, stage: 'error', error: msg, direct: true }), MSG_TIMEOUT_MS, 'run progress notice'); } catch {}
   return true;
 }
 async function recoverOrphanedRuns() {
@@ -4339,8 +4372,8 @@ async function recoverOrphanedRuns() {
           try {
             const tab = await chrome.tabs.get(rec.tabId).catch(() => null);
             if (tab && tab.url === rec.url) {
-              await chrome.scripting.executeScript({ target: { tabId: rec.tabId }, files: CONTENT_SCRIPT_FILES }).catch(() => {});
-              const r = await chrome.tabs.sendMessage(rec.tabId, { type: 'ct/list-images' }).catch(() => null);
+              await withTimeout(chrome.scripting.executeScript({ target: { tabId: rec.tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection').catch(() => {});
+              const r = await withTimeout(chrome.tabs.sendMessage(rec.tabId, { type: 'ct/list-images' }), DATA_TIMEOUT_MS, 'list-images').catch(() => null);
               const list = (r && r.images) || [];
               const alreadyDone = list.filter(im => im && im.translated).length;
               if (alreadyDone > 0) {
