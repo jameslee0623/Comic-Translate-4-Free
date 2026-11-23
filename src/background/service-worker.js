@@ -529,9 +529,9 @@ async function dataUrlToRGBA(dataUrl, maxPixels = CAPTURE_MAX_PIXELS) {
 // requests on click). Full resolution, no viewport limits.
 // Referrer strategy: try WITHOUT a Referer first, then with the page origin.
 // Pages with `Referrer-Policy: same-origin` load their cross-origin images
-// with NO Referer, and some hosts/WAFs 403 anything else (example-site);
-// hosts with hotlink protection 403 requests with NO Referer. Trying both
-// covers both kinds; only a 403 falls through to the next attempt.
+// with NO Referer, and some hosts/WAFs 403 anything else; hosts with
+// hotlink protection 403 requests with NO Referer. Trying both covers both
+// kinds; only a 403 falls through to the next attempt.
 async function fetchImagePixels(url, referrer) {
   // Cookie policy: never send the user's cookies to an arbitrary image host
   // (the 403-retry path can hit attacker-controlled URLs). `credentials:
@@ -2094,7 +2094,9 @@ async function recoverPretranslateJob() {
     const attempts = (rec.attempts || 0) + 1;
     diagPush('pre-translate: resuming ' + rec.nextUrl + ' after background restart (attempt ' + attempts + ' of ' + MAX_PRETRANSLATE_RESUMES + ')');
     startPretranslateJob(rec.nextUrl, rec.sourceTabId, rec.sourceUrl, settings, rec.learnedKey, attempts, rec.startedAt);
-  } catch {}
+  } catch (e) {
+    diagPush('pre-translate: resume failed: ' + String((e && e.message) || e).slice(0, 120));
+  }
 }
 
 async function runPretranslate(job, sourceTabId, settings) {
@@ -2140,12 +2142,16 @@ async function runPretranslate(job, sourceTabId, settings) {
     let w = c.w || 0, h = c.h || 0;
     if ((!w || !h) && downloads < 8) {
       // No declared size: download to learn it. A 403 here just skips
-      // this picture (pre-translation never opens a fallback tab).
+      // this picture (the size probe never opens a fallback tab — the
+      // full capture in pretranslateImage does that if it gets this far).
       try {
         const px = await fetchImagePixels(c.url, nextUrl);
         downloads++;
         w = px.w; h = px.h;
-      } catch { continue; }
+      } catch (e) {
+        diagPush('pre-translate: size probe failed, skipping ' + c.url.slice(0, 80) + ': ' + String((e && e.message) || e).slice(0, 80));
+        continue;
+      }
       checkCancelled(runId);
     }
     withSize.push({ url: c.url, w, h });
@@ -2505,6 +2511,7 @@ async function runPipeline(tabId, opts = {}) {
       // saves when missing or changed, never blocks the run.
       saveDetectedCores(d && d.hardwareConcurrency, 'thread-info');
     } catch (e) {
+      diagPush('ML diag failed (thread info unavailable): ' + String((e && e.message) || e).slice(0, 120));
     }
     // Chrome GPU1 (2.0.7): warm the shared GPU worker NOW, at pipeline
     // start, so the ~6s LaMa load overlaps detect/OCR/translate instead
