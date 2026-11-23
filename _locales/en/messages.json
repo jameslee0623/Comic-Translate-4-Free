@@ -407,7 +407,7 @@
     }
   },
   "allow_all_sites": {
-    "message": "Translate any site without asking",
+    "message": "Translate any site",
     "description": "site access"
   },
   "allow_all_desc": {
