@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 언어: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 당신의 언어로 만화를 읽으세요!
-comic-translate-4-free는 브라우징하는 동안 만화와 코믹을 자동으로 번역합니다. 일본어, 영어, 간체/번체 중국어를 읽고(자동 감지), 114개 언어로 번역하며, 이미지를 그 자리에서 대체합니다.
+Comic Translate 4 Free는 브라우징하는 동안 만화와 코믹을 자동으로 번역합니다. 일본어, 영어, 간체/번체 중국어를 읽고(자동 감지), 114개 언어로 번역하며, 이미지를 그 자리에서 대체합니다.
 
 ### 📸 전 / 후
 
@@ -45,7 +45,7 @@ comic-translate-4-free는 브라우징하는 동안 만화와 코믹을 자동�
 - 자동 번역 — 허용된 사이트에서 만화 페이지를 열면 번역된 버전이 그 자리에 나타나며, 버튼을 누를 필요가 없습니다.
 - 페이지의 모든 이미지 — 자동 번역은 페이지의 모든 이미지를 처리합니다 (실행당 최대 50개), 메인 이미지만이 아닙니다.
 - 다음 페이지 미리 번역 — 현재 페이지를 읽는 동안 다음 페이지의 이미지가 백그라운드에서 번역되어, 열자마자 바로 준비되어 있습니다(한 장만 해당, 기본적으로 켜져 있으며 설정에서 끌 수 있습니다).
-- 모든 이미지를 마우스 오른쪽 버튼으로 클릭 — "comic-translate-4-free로 보내기"를 선택하면 특정 이미지를 번역할 수 있으며, 최소 크기보다 작은 이미지도 가능합니다.
+- 모든 이미지를 마우스 오른쪽 버튼으로 클릭 — "Comic Translate 4 Free로 보내기"를 선택하면 특정 이미지를 번역할 수 있으며, 최소 크기보다 작은 이미지도 가능합니다.
 - Google Translate, Gemini, Azure Translator 또는 자신의 로컬 LM Studio 서버를 통한 114개 대상 언어.
 - 원본 언어 자동 감지 — OCR로 읽은 텍스트에서 일본어, 영어, 간체/번체 중국어가 자동으로 식별됩니다.
 - 긴 스트립 / 웹툰 지원 — 긴 페이지는 겹치는 구간으로 처리되어 텍스트가 선명하게 유지됩니다.
@@ -85,7 +85,7 @@ Firefox:
 3. 완료 — 페이지의 이미지가 그 자리에서 번역된 버전으로 대체됩니다.
 
 팁:
-- 모든 이미지를 마우스 오른쪽 버튼으로 클릭 → comic-translate-4-free로 보내기를 선택해 해당 이미지만 번역하세요.
+- 모든 이미지를 마우스 오른쪽 버튼으로 클릭 → Comic Translate 4 Free로 보내기를 선택해 해당 이미지만 번역하세요.
 
   ![이미지 우클릭으로 전송](../docs/images/right-click.png)
 

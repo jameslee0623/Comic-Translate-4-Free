@@ -561,7 +561,7 @@ if (location.hash === '#models' || location.hash === '#models-download') {
     }
   }
 }
-document.title = `${ctMsg('appName') || 'comic-translate-4-free'} — ${ctMsg('options_title') || 'Settings'}`;
+document.title = `${ctMsg('appName') || 'Comic Translate 4 Free'} — ${ctMsg('options_title') || 'Settings'}`;
 try {
   const v = chrome.runtime.getManifest().version;
   $('version').textContent = `v${v}`;

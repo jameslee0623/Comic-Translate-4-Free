@@ -9,7 +9,7 @@ Google's free API, Gemini, Azure Translator, or a local LM Studio server.
 
 Key features:
 - Auto-translates every picture on the page (up to 50 per run) on load; right-click any image for
-  "Send to comic-translate-4-free" to translate it specifically.
+  "Send to Comic Translate 4 Free" to translate it specifically.
 - Source-language auto-detect (Japanese/English/Simplified/Traditional Chinese);
   114 target languages.
 - Long-strip support (pages split into overlapping segments for detection).

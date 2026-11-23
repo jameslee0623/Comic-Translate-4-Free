@@ -572,12 +572,12 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   const grantable = !serverRefused && !!imgHost && !staleOriginal;
   // For auto-translate 403s (not manual sends — those trigger the automatic
   // background-tab fallback), lead with the bypass: right-click the picture
-  // and use "Send to comic-translate-4-free". Localized via i18n (the menu
+  // and use "Send to Comic Translate 4 Free". Localized via i18n (the menu
   // label itself is localized), with a blank line after the tip.
   const bypassTip = (serverRefused && !opts.srcUrl)
     ? (chrome.i18n.getMessage('err_bypass_tip',
-        [chrome.i18n.getMessage('ctx_send_image') || 'Send to comic-translate-4-free'])
-        || 'Tip: right-click the picture and choose "Send to comic-translate-4-free" to bypass this block.')
+        [chrome.i18n.getMessage('ctx_send_image') || 'Send to Comic Translate 4 Free'])
+        || 'Tip: right-click the picture and choose "Send to Comic Translate 4 Free" to bypass this block.')
       + '\n\n'
     : '';
   const err = new Error(
@@ -3498,7 +3498,7 @@ async function refreshContextMenu() {
     if (patterns && !patterns.length) return; // nothing allowed: no menu item
     const props = {
       id: CTX_MENU_ID,
-      title: chrome.i18n.getMessage('ctx_send_image') || 'Send to comic-translate-4-free',
+      title: chrome.i18n.getMessage('ctx_send_image') || 'Send to Comic Translate 4 Free',
       contexts: ['image'],
     };
     if (patterns) props.documentUrlPatterns = patterns;
@@ -3552,7 +3552,7 @@ async function handleTranslateImage(tabId, srcUrl) {
   }
 }
 
-// 403 fallback for "Send to comic-translate-4-free": open the image URL in a
+// 403 fallback for "Send to Comic Translate 4 Free": open the image URL in a
 // background tab, read its pixels via the canvas tier (same-origin there —
 // no download, no bot-protection fight), close the tab, and hand the pixels
 // back so the normal pipeline runs on the original tab.

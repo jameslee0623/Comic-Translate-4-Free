@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file lists the third-party software used by the comic-translate-4-free
+This file lists the third-party software used by the Comic Translate 4 Free
 extension: libraries bundled with it, code it was ported from, and ML models
 it downloads at runtime. The extension's own code is separate from these
 components: it is licensed under the PolyForm Noncommercial License 1.0.0

@@ -1,10 +1,10 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Language: [English](README.md) · [हिन्दी](README/README.hi.md) · [日本語](README/README.ja.md) · [한국어](README/README.ko.md) · [简体中文](README/README.zh-CN.md) · [繁體中文](README/README.zh-TW.md) · [Español](README/README.es.md) · [العربية](README/README.ar.md) · [Français](README/README.fr.md) · [বাংলা](README/README.bn.md) · [Português](README/README.pt.md) · [Русский](README/README.ru.md) · [Tiếng Việt](README/README.vi.md) · [Bahasa Indonesia](README/README.id.md) · [اردو](README/README.ur.md) · [Deutsch](README/README.de.md) · [Română](README/README.ro.md)
 
 Read manga in your language — right in the browser.
 
-comic-translate-4-free translates manga and comic pages automatically as you browse. It reads Japanese, English, Simplified and Traditional Chinese (with auto-detect), and translates into 114 languages. Open a page, and the translated version replaces the original image in place — speech bubbles filled with your language.
+Comic Translate 4 Free translates manga and comic pages automatically as you browse. It reads Japanese, English, Simplified and Traditional Chinese (with auto-detect), and translates into 114 languages. Open a page, and the translated version replaces the original image in place — speech bubbles filled with your language.
 
 ### 📸 Before & After
 
@@ -46,7 +46,7 @@ comic-translate-4-free translates manga and comic pages automatically as you bro
 - Automatic translation — open a manga page on an allowed site and the translated version appears in place, no button click needed.
 - Every picture on the page — auto-translate handles all pictures on a page (up to 50 per run), not just the main image.
 - Pre-translate the next page — while you read the current page, the next page's picture is translated in the background, so it is ready the moment you open it (one picture only; on by default, turn it off in Settings).
-- Right-click any image — choose "Send to comic-translate-4-free" to translate a specific picture, even one smaller than the minimum size.
+- Right-click any image — choose "Send to Comic Translate 4 Free" to translate a specific picture, even one smaller than the minimum size.
 - 114 target languages via Google Translate, Gemini, Azure Translator, or your own local LM Studio server.
 - Source language auto-detect — Japanese, English, Simplified/Traditional Chinese identified automatically from the OCR'd text.
 - Long-strip / webtoon support — tall pages are processed in overlapping segments so text stays sharp.
@@ -86,7 +86,7 @@ After installing, the models download automatically in the background (~350 MB: 
 3. Done — the page's pictures are replaced in place with the translated versions.
 
 Tips:
-- Right-click any image → Send to comic-translate-4-free to translate just that picture.
+- Right-click any image → Send to Comic Translate 4 Free to translate just that picture.
 
   ![Right-click to send an image](docs/images/right-click.png)
 

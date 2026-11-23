@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Sprache: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 Lies Manga in deiner Sprache!
-comic-translate-4-free übersetzt Manga und Comics automatisch. Es liest Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch (Auto-Erkennung) und übersetzt in 114 Sprachen, ersetzt das Bild an Ort und Stelle.
+Comic Translate 4 Free übersetzt Manga und Comics automatisch. Es liest Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch (Auto-Erkennung) und übersetzt in 114 Sprachen, ersetzt das Bild an Ort und Stelle.
 
 ### 📸 Vorher & Nachher
 
@@ -45,7 +45,7 @@ comic-translate-4-free übersetzt Manga und Comics automatisch. Es liest Japanis
 - Automatische Übersetzung — öffne eine Mangaseite auf einer erlaubten Website, und die übersetzte Version erscheint an Ort und Stelle, ganz ohne Klick.
 - Jedes Bild auf der Seite — die automatische Übersetzung verarbeitet alle Bilder einer Seite (bis zu 50 pro Durchlauf), nicht nur das Hauptbild.
 - Nächste Seite vorab übersetzen — während du die aktuelle Seite liest, wird das Bild der nächsten Seite im Hintergrund übersetzt und ist bereit, sobald du sie öffnest (nur ein Bild; standardmäßig an, in den Einstellungen abschaltbar).
-- Rechtsklick auf ein beliebiges Bild — wähle „An comic-translate-4-free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
+- Rechtsklick auf ein beliebiges Bild — wähle „An Comic Translate 4 Free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
 - 114 Zielsprachen über Google Translate, Gemini, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
 - Automatische Quellspracherkennung — Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch werden automatisch aus dem per OCR gelesenen Text erkannt.
 - Unterstützung für lange Strips / Webtoons — hohe Seiten werden in überlappenden Abschnitten verarbeitet, damit der Text scharf bleibt.
@@ -85,7 +85,7 @@ Nach der Installation laden die Modelle automatisch im Hintergrund herunter (~35
 3. Fertig — die Bilder der Seite werden an Ort und Stelle durch die übersetzten Versionen ersetzt.
 
 Tipps:
-- Rechtsklick auf ein beliebiges Bild → An comic-translate-4-free senden, um nur dieses Bild zu übersetzen.
+- Rechtsklick auf ein beliebiges Bild → An Comic Translate 4 Free senden, um nur dieses Bild zu übersetzen.
 
   ![Rechtsklick, um ein Bild zu senden](../docs/images/right-click.png)
 

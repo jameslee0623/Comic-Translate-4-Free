@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Idioma: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 ¡Lee manga en tu idioma!
-comic-translate-4-free traduce manga y cómics automáticamente mientras navegas. Lee japonés, inglés, chino simplificado/tradicional (detección automática), y traduce a 114 idiomas, reemplazando la imagen en su lugar.
+Comic Translate 4 Free traduce manga y cómics automáticamente mientras navegas. Lee japonés, inglés, chino simplificado/tradicional (detección automática), y traduce a 114 idiomas, reemplazando la imagen en su lugar.
 
 ### 📸 Antes y después
 
@@ -45,7 +45,7 @@ comic-translate-4-free traduce manga y cómics automáticamente mientras navegas
 - Traducción automática — abre una página de manga en un sitio permitido y la versión traducida aparece en su lugar, sin necesidad de hacer clic en ningún botón.
 - Cada imagen en la página — la traducción automática gestiona todas las imágenes de una página (hasta 50 por ejecución), no solo la imagen principal.
 - Pretraducir la página siguiente — mientras lees la página actual, la imagen de la página siguiente se traduce en segundo plano, así está lista en cuanto la abres (solo una imagen; activado por defecto, se puede desactivar en Ajustes).
-- Clic derecho en cualquier imagen — elige "Enviar a comic-translate-4-free" para traducir una imagen concreta, incluso si es más pequeña que el tamaño mínimo.
+- Clic derecho en cualquier imagen — elige "Enviar a Comic Translate 4 Free" para traducir una imagen concreta, incluso si es más pequeña que el tamaño mínimo.
 - 114 idiomas de destino con Google Translate, Gemini, Azure Translator o tu propio servidor local de LM Studio.
 - Detección automática del idioma de origen — japonés, inglés, chino simplificado/tradicional se identifican automáticamente a partir del texto leído por OCR.
 - Soporte para tiras largas / webtoon — las páginas altas se procesan en segmentos superpuestos para que el texto se mantenga nítido.
@@ -85,7 +85,7 @@ Después de instalar, los modelos se descargan automáticamente en segundo plano
 3. Listo — las imágenes de la página se reemplazan en su lugar con las versiones traducidas.
 
 Consejos:
-- Clic derecho en cualquier imagen → Enviar a comic-translate-4-free para traducir solo esa imagen.
+- Clic derecho en cualquier imagen → Enviar a Comic Translate 4 Free para traducir solo esa imagen.
 
   ![Clic derecho para enviar una imagen](../docs/images/right-click.png)
 

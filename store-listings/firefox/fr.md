@@ -10,12 +10,12 @@ Traduisez mangas et BD dans votre navigateur. Lit japonais, anglais, chinois sim
 
 📖 Lisez des mangas dans votre langue !
 
-comic-translate-4-free traduit mangas et BD automatiquement. Il lit japonais, anglais, chinois simplifié/traditionnel (détection auto), et traduit vers 114 langues, remplaçant l'image sur place.
+Comic Translate 4 Free traduit mangas et BD automatiquement. Il lit japonais, anglais, chinois simplifié/traditionnel (détection auto), et traduit vers 114 langues, remplaçant l'image sur place.
 
 ✨ Fonctionnalités
 - Traduction automatique — ouvrez une page de manga sur un site autorisé et la version traduite apparaît sur place, sans avoir besoin de cliquer sur un bouton.
 - Chaque image sur la page — la traduction automatique gère toutes les images d'une page (jusqu'à 50 par exécution), pas seulement l'image principale.
-- Clic droit sur n'importe quelle image — choisissez « Envoyer vers comic-translate-4-free » pour traduire une image précise, même si elle est plus petite que la taille minimale.
+- Clic droit sur n'importe quelle image — choisissez « Envoyer vers Comic Translate 4 Free » pour traduire une image précise, même si elle est plus petite que la taille minimale.
 - 114 langues cibles via Google Translate, Gemini, Azure Translator ou votre propre serveur local LM Studio.
 - Détection automatique de la langue source — le japonais, l'anglais, le chinois simplifié/traditionnel sont identifiés automatiquement à partir du texte lu par OCR.
 - Prise en charge des longues bandes / webtoons — les pages hautes sont traitées en segments qui se chevauchent pour que le texte reste net.
@@ -33,7 +33,7 @@ comic-translate-4-free traduit mangas et BD automatiquement. Il lit japonais, an
 - Terminé — les images de la page sont remplacées sur place par les versions traduites.
 
 Conseils :
-- Clic droit sur n'importe quelle image → Envoyer vers comic-translate-4-free pour traduire juste cette image.
+- Clic droit sur n'importe quelle image → Envoyer vers Comic Translate 4 Free pour traduire juste cette image.
 
 - Si un site bloque les téléchargements (HTTP 403), l'extension réessaie automatiquement via un onglet en arrière-plan.
 - Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
@@ -52,4 +52,4 @@ Ce projet s'inspire de ogkalu2/comic-translate — le détecteur de bulles/texte
 Les bibliothèques incluses, le code porté et les modèles téléchargés à l'exécution sont listés avec leurs licences dans THIRD-PARTY-NOTICES.md.
 
 PolyForm Noncommercial License 1.0.0 — voir LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

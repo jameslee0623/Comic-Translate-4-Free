@@ -1,4 +1,4 @@
-# Chrome Web Store listing — comic-translate-4-free
+# Chrome Web Store listing — Comic Translate 4 Free
 
 ## Short description (132 chars max)
 
@@ -10,7 +10,7 @@ Translate manga & comics in your browser. Reads Japanese, English, Simplified & 
 
 **Read manga in your language — right in the browser.**
 
-comic-translate-4-free translates comic and manga pages automatically as you
+Comic Translate 4 Free translates comic and manga pages automatically as you
 browse. Open a page, and the translated version replaces the original image
 in place — speech bubbles filled with your language, nothing to click.
 
@@ -35,7 +35,7 @@ service you choose.
 
 - Automatic translation when pages load — no button pressing
 - Translates every picture on the page (up to 50 per run), not just the main image
-- Right-click any image → "Send to comic-translate-4-free" to translate it directly
+- Right-click any image → "Send to Comic Translate 4 Free" to translate it directly
 - 114 target languages via Google Translate, Gemini, Azure Translator, or your own
   local LM Studio server
 - Source language auto-detection
@@ -47,4 +47,4 @@ service you choose.
 **Free for noncommercial use**
 
 Licensed under the PolyForm Noncommercial License 1.0.0. No account, no subscription, no tracking.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

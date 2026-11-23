@@ -10,12 +10,12 @@
 
 📖 用你的语言读漫画！
 
-comic-translate-4-free 会在你浏览时自动翻译漫画和连环画。它能识别日语、英语、简体/繁体中文（自动检测），并翻译成 114 种语言，在原地替换原始图片。
+Comic Translate 4 Free 会在你浏览时自动翻译漫画和连环画。它能识别日语、英语、简体/繁体中文（自动检测），并翻译成 114 种语言，在原地替换原始图片。
 
 ✨ 功能
 - 自动翻译 — 在已允许的网站上打开漫画页面，翻译后的版本就会在原地出现，无需点击按钮。
 - 页面上的每张图片 — 自动翻译会处理页面上的所有图片（每次最多 50 张），而不仅仅是主图。
-- 右键点击任意图片 — 选择“发送到 comic-translate-4-free”来翻译特定图片，即使它小于最小尺寸也可以。
+- 右键点击任意图片 — 选择“发送到 Comic Translate 4 Free”来翻译特定图片，即使它小于最小尺寸也可以。
 - 通过 Google Translate、Gemini、Azure Translator 或你自己的本地 LM Studio 服务器，支持 114 种目标语言。
 - 源语言自动检测 — 根据 OCR 识别的文本自动识别日语、英语、简体/繁体中文。
 - 长条 / 网络漫画支持 — 高页面按重叠分段处理，文字保持清晰。
@@ -33,7 +33,7 @@ comic-translate-4-free 会在你浏览时自动翻译漫画和连环画。它能
 - 完成 — 页面图片会在原地替换为翻译后的版本。
 
 小贴士：
-- 右键点击任意图片 → 发送到 comic-translate-4-free，只翻译那张图片。
+- 右键点击任意图片 → 发送到 Comic Translate 4 Free，只翻译那张图片。
 
 - 如果某个网站阻止下载（HTTP 403），扩展会通过后台标签页自动重试。
 - 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Gemini（免费 API 密钥 — 漫画翻译效果更好，推荐使用）、Azure Translator（即将停用 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
@@ -52,4 +52,4 @@ comic-translate-4-free 会在你浏览时自动翻译漫画和连环画。它能
 捆绑的库、移植的代码和运行时下载的模型及其许可证列在 THIRD-PARTY-NOTICES.md 中。
 
 PolyForm Noncommercial License 1.0.0 — 见 LICENSE。
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

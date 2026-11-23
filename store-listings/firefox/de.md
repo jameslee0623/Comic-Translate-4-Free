@@ -10,12 +10,12 @@
 
 📖 Lies Manga in deiner Sprache!
 
-comic-translate-4-free übersetzt Manga und Comics automatisch. Es liest Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch (Auto-Erkennung) und übersetzt in 114 Sprachen, ersetzt das Bild an Ort und Stelle.
+Comic Translate 4 Free übersetzt Manga und Comics automatisch. Es liest Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch (Auto-Erkennung) und übersetzt in 114 Sprachen, ersetzt das Bild an Ort und Stelle.
 
 ✨ Funktionen
 - Automatische Übersetzung — öffne eine Mangaseite auf einer erlaubten Website, und die übersetzte Version erscheint an Ort und Stelle, ganz ohne Klick.
 - Jedes Bild auf der Seite — die automatische Übersetzung verarbeitet alle Bilder einer Seite (bis zu 50 pro Durchlauf), nicht nur das Hauptbild.
-- Rechtsklick auf ein beliebiges Bild — wähle „An comic-translate-4-free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
+- Rechtsklick auf ein beliebiges Bild — wähle „An Comic Translate 4 Free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
 - 114 Zielsprachen über Google Translate, Gemini, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
 - Automatische Quellspracherkennung — Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch werden automatisch aus dem per OCR gelesenen Text erkannt.
 - Unterstützung für lange Strips / Webtoons — hohe Seiten werden in überlappenden Abschnitten verarbeitet, damit der Text scharf bleibt.
@@ -33,7 +33,7 @@ comic-translate-4-free übersetzt Manga und Comics automatisch. Es liest Japanis
 - Fertig — die Bilder der Seite werden an Ort und Stelle durch die übersetzten Versionen ersetzt.
 
 Tipps:
-- Rechtsklick auf ein beliebiges Bild → An comic-translate-4-free senden, um nur dieses Bild zu übersetzen.
+- Rechtsklick auf ein beliebiges Bild → An Comic Translate 4 Free senden, um nur dieses Bild zu übersetzen.
 
 - Wenn eine Website Downloads blockiert (HTTP 403), versucht es die Erweiterung automatisch über einen Hintergrund-Tab erneut.
 - Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
@@ -52,4 +52,4 @@ Dieses Projekt ist inspiriert von ogkalu2/comic-translate — der Blasen-/Textde
 Gebündelte Bibliotheken, portierter Code und zur Laufzeit heruntergeladene Modelle sind mit ihren Lizenzen in THIRD-PARTY-NOTICES.md aufgeführt.
 
 PolyForm Noncommercial License 1.0.0 — siehe LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

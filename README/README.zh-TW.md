@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 語言： [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 用你的語言讀漫畫！
-comic-translate-4-free 會在你瀏覽時自動翻譯漫畫和連環畫。它能辨識日語、英語、簡體/繁體中文（自動偵測），並翻譯成 114 種語言，在原地取代原始圖片。
+Comic Translate 4 Free 會在你瀏覽時自動翻譯漫畫和連環畫。它能辨識日語、英語、簡體/繁體中文（自動偵測），並翻譯成 114 種語言，在原地取代原始圖片。
 
 ### 📸 翻譯前後對比
 
@@ -45,7 +45,7 @@ comic-translate-4-free 會在你瀏覽時自動翻譯漫畫和連環畫。它能
 - 自動翻譯 — 在已允許的網站上開啟漫畫頁面，翻譯後的版本就會在原地出現，無需點擊按鈕。
 - 頁面上的每張圖片 — 自動翻譯會處理頁面上的所有圖片（每次最多 50 張），而不只是主圖。
 - 預先翻譯下一頁 — 在您閱讀目前頁面時，下一頁的圖片會在背景翻譯好，打開時即可直接查看（僅限一幅圖片；預設開啟，可在設定中關閉）。
-- 在任意圖片上按右鍵 — 選擇「傳送到 comic-translate-4-free」來翻譯特定圖片，即使它小於最小尺寸也可以。
+- 在任意圖片上按右鍵 — 選擇「傳送到 Comic Translate 4 Free」來翻譯特定圖片，即使它小於最小尺寸也可以。
 - 透過 Google Translate、Gemini、Azure Translator 或你自己的本機 LM Studio 伺服器，支援 114 種目標語言。
 - 來源語言自動偵測 — 根據 OCR 辨識的文字自動辨識日語、英語、簡體/繁體中文。
 - 長條 / 網路漫畫支援 — 高頁面按重疊分段處理，文字保持清晰。
@@ -85,7 +85,7 @@ Firefox:
 3. 完成 — 頁面圖片會在原地取代為翻譯後的版本。
 
 小提示：
-- 在任意圖片上按右鍵 → 傳送到 comic-translate-4-free，只翻譯那張圖片。
+- 在任意圖片上按右鍵 → 傳送到 Comic Translate 4 Free，只翻譯那張圖片。
 
   ![按右鍵傳送圖片](../docs/images/right-click.png)
 

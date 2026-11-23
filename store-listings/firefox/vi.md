@@ -10,12 +10,12 @@ Dịch manga & truyện tranh trên trình duyệt. Đọc tiếng Nhật, tiế
 
 📖 Đọc manga bằng ngôn ngữ của bạn!
 
-comic-translate-4-free tự động dịch manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ, thay thế hình ảnh ngay tại chỗ.
+Comic Translate 4 Free tự động dịch manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ, thay thế hình ảnh ngay tại chỗ.
 
 ✨ Tính năng
 - Dịch tự động — mở một trang manga trên một trang web được phép và bản dịch sẽ xuất hiện ngay tại chỗ, không cần bấm nút.
 - Mỗi hình ảnh trên trang — dịch tự động xử lý tất cả hình ảnh trên một trang (tối đa 50 hình mỗi lần chạy), không chỉ hình ảnh chính.
-- Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến comic-translate-4-free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
+- Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến Comic Translate 4 Free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
 - 114 ngôn ngữ đích qua Google Translate, Gemini, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
 - Tự động phát hiện ngôn ngữ nguồn — tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể được xác định tự động từ văn bản đã OCR.
 - Hỗ trợ truyện dài / webtoon — các trang cao được xử lý thành các đoạn chồng lên nhau để chữ vẫn sắc nét.
@@ -33,7 +33,7 @@ comic-translate-4-free tự động dịch manga và truyện tranh khi bạn du
 - Xong — các hình ảnh của trang được thay thế ngay tại chỗ bằng bản dịch.
 
 Mẹo:
-- Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến comic-translate-4-free để chỉ dịch hình ảnh đó.
+- Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến Comic Translate 4 Free để chỉ dịch hình ảnh đó.
 
 - Nếu một trang web chặn tải xuống (HTTP 403), tiện ích mở rộng sẽ tự động thử lại qua một tab nền.
 - Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
@@ -52,4 +52,4 @@ Dự án này lấy cảm hứng từ ogkalu2/comic-translate — trình phát h
 Các thư viện đi kèm, mã đã chuyển và các mô hình tải xuống trong thời gian chạy được liệt kê cùng với giấy phép của chúng trong THIRD-PARTY-NOTICES.md.
 
 PolyForm Noncommercial License 1.0.0 — xem LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

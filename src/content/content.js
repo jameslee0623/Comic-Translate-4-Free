@@ -9,7 +9,7 @@
 
   // Anti-right-click override: some sites block the context menu
   // (document.addEventListener('contextmenu', e => e.preventDefault())),
-  // which also blocks the extension's "Send to comic-translate-4-free"
+  // which also blocks the extension's "Send to Comic Translate 4 Free"
   // item. When the user right-clicks a picture, stop the event in the
   // capture phase — before the page's bubble-phase blocker runs — so
   // the browser still shows its menu. stopPropagation() does NOT call
@@ -570,7 +570,7 @@
     return imgs.map(describeImage);
   }
 
-  // The image the user right-clicked ("Send to comic-translate-4-free"): match
+  // The image the user right-clicked ("Send to Comic Translate 4 Free"): match
   // by live src, by the translated data URL now shown, or by the stashed
   // original (re-send of an already-translated image). No size filter — the
   // manual send bypasses the minimum image size on purpose.
@@ -817,7 +817,7 @@
   function showPillError(text, grant) {
     const p = ensurePill();
     const errLabel = stageLabel('error');
-    let html = 'comic-translate-4-free — ' + esc(errLabel) + ': ' + esc(text);
+    let html = 'Comic Translate 4 Free — ' + esc(errLabel) + ': ' + esc(text);
     if (grant && grant.host) {
       html += ' <button id="ct-pill-grant" style="margin-left:8px;padding:4px 10px;border:1px solid #1a73e8;border-radius:6px;' +
         'background:#1a73e8;color:#fff;font:600 12px sans-serif;cursor:pointer">' +
@@ -930,7 +930,7 @@
     x.style.cssText = 'position:absolute;top:10px;right:14px;color:#9a9aa0;font-size:18px;cursor:pointer;';
     x.onclick = () => closeSupportModal();
     const title = document.createElement('div');
-    title.textContent = supportMsg('support_modal_title', 'Enjoying comic-translate-4-free?');
+    title.textContent = supportMsg('support_modal_title', 'Enjoying Comic Translate 4 Free?');
     title.style.cssText = 'font-size:16px;color:#fff;margin-bottom:8px;';
     const text = document.createElement('p');
     text.textContent = supportMsg('support_modal_text', 'If you like it, please support it — it helps a lot.');
@@ -950,7 +950,7 @@
     };
     btns.appendChild(mkBtn('rate_store', '⭐ 5 stars at store', supportStoreUrl()));
     btns.appendChild(mkBtn('support_project', '❤️ Support this project', 'https://ko-fi.com/jameslee0623'));
-    btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:ucimjuocb@mozmail.com?subject=comic-translate-4-free%20feedback'));
+    btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback'));
     card.appendChild(x);
     card.appendChild(title);
     card.appendChild(text);
@@ -1135,7 +1135,7 @@
     // on every update, so long stages (inpaint, translate) left the page with
     // no visible progress between updates. done/cancelled still auto-hide;
     // errors stay until dismissed.
-    showPill('comic-translate-4-free — ' + esc(stageLabel(stage)) +
+    showPill('Comic Translate 4 Free — ' + esc(stageLabel(stage)) +
       ' ' + Math.round((progress || 0) * 100) + '%', true);
   }
 
@@ -1251,7 +1251,7 @@
       return b;
     };
     const title = document.createElement('span');
-    title.textContent = 'comic-translate-4-free';
+    title.textContent = 'Comic Translate 4 Free';
     title.style.cssText = 'font-weight:600;margin-right:8px;';
     bar.appendChild(title);
     const dbgBtnEl = mkBtn('Debug: off', () => {
@@ -1496,9 +1496,9 @@
           failed.slice(0, 2).join('; ') + (failed.length > 2 ? ' …' : '') +
           ' — full list in the popup');
       } else if (resumed) {
-        showPill(`comic-translate-4-free — resumed ✓ (${n} more translated, ${alreadyDone} already done)`);
+        showPill(`Comic Translate 4 Free — resumed ✓ (${n} more translated, ${alreadyDone} already done)`);
       } else if (n > 1 || ignored) {
-        showPill(`comic-translate-4-free — done ✓ (${n} translated` +
+        showPill(`Comic Translate 4 Free — done ✓ (${n} translated` +
           (ignored ? `, ${ignored} tiny/hidden images skipped` : '') + ')');
       }
       return false;
@@ -1535,7 +1535,7 @@
     if (msg.type === 'ct/pill-notice') {
       // Custom pill message from the SW (e.g. 403-fallback status). Sticky
       // keeps it visible while the background work runs.
-      showPill('comic-translate-4-free — ' + esc(msg.text || ''), !!msg.sticky);
+      showPill('Comic Translate 4 Free — ' + esc(msg.text || ''), !!msg.sticky);
       return false;
     }
     if (msg.type === 'ct/show-support') {
@@ -1577,8 +1577,8 @@
       if (msg.runId && latestRunId && msg.runId !== latestRunId) return false;
       if (st === 'error') showPillError(msg.error || stageLabel('error'),
         msg.grantHost ? { host: msg.grantHost, label: msg.grantLabel } : null);
-      else if (st === 'done') { showPill('comic-translate-4-free — ' + esc(stageLabel('done')) + ' ✓' + (msg.cached ? ' (from cache)' : msg.backendLabel ? ' (' + esc(msg.backendLabel) + ')' : '')); maybeDing(); }
-      else if (st === 'cancelled') showPill('comic-translate-4-free — ' + esc(stageLabel('cancelled')));
+      else if (st === 'done') { showPill('Comic Translate 4 Free — ' + esc(stageLabel('done')) + ' ✓' + (msg.cached ? ' (from cache)' : msg.backendLabel ? ' (' + esc(msg.backendLabel) + ')' : '')); maybeDing(); }
+      else if (st === 'cancelled') showPill('Comic Translate 4 Free — ' + esc(stageLabel('cancelled')));
       else if (st && st !== 'idle') pillProgress(st, msg.progress);
       return false;
     }

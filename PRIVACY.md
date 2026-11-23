@@ -1,8 +1,8 @@
-# Privacy Policy — comic-translate-4-free
+# Privacy Policy — Comic Translate 4 Free
 
 Last updated: September 30, 2026
 
-comic-translate-4-free is a browser extension that translates text inside comic
+Comic Translate 4 Free is a browser extension that translates text inside comic
 and manga page images. This policy explains what data the extension handles and
 where that data goes.
 
@@ -81,5 +81,5 @@ change constitutes acceptance of the updated policy.
 
 ## Contact
 
-comic-translate-4-free is licensed under the PolyForm Noncommercial License 1.0.0. For questions about this policy,
-open an issue at https://github.com/jameslee0623/comic-translate-4-free.
+Comic Translate 4 Free is licensed under the PolyForm Noncommercial License 1.0.0. For questions about this policy,
+open an issue at https://github.com/jameslee0623/Comic-Translate-4-Free.

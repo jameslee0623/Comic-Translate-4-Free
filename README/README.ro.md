@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Limba: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 Citește manga în limba ta!
-comic-translate-4-free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi, înlocuind imaginea chiar acolo.
+Comic Translate 4 Free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi, înlocuind imaginea chiar acolo.
 
 ### 📸 Înainte și după
 
@@ -45,7 +45,7 @@ comic-translate-4-free traduce automat manga și benzi desenate în timp ce navi
 - Traducere automată — deschide o pagină de manga pe un site permis, iar versiunea tradusă apare chiar acolo, fără să fie nevoie să apeși vreun buton.
 - Fiecare imagine de pe pagină — traducerea automată gestionează toate imaginile de pe o pagină (până la 50 pe rulare), nu doar imaginea principală.
 - Pretradu pagina următoare — în timp ce citești pagina curentă, imaginea paginii următoare este tradusă în fundal, așa că e gata în momentul în care o deschizi (o singură imagine; activat implicit, se poate opri din Setări).
-- Clic dreapta pe orice imagine — alege „Trimite la comic-translate-4-free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
+- Clic dreapta pe orice imagine — alege „Trimite la Comic Translate 4 Free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
 - 114 limbi țintă prin Google Translate, Gemini, Azure Translator sau propriul tău server local LM Studio.
 - Detectare automată a limbii sursă — japoneza, engleza, chineza simplificată/tradițională sunt identificate automat din textul recunoscut prin OCR.
 - Suport pentru benzi lungi / webtoon — paginile înalte sunt procesate în segmente care se suprapun, astfel încât textul rămâne clar.
@@ -85,7 +85,7 @@ După instalare, modelele se descarcă automat în fundal (~350 MB: detector, OC
 3. Gata — imaginile paginii sunt înlocuite chiar acolo cu versiunile traduse.
 
 Sfaturi:
-- Clic dreapta pe orice imagine → Trimite la comic-translate-4-free pentru a traduce doar acea imagine.
+- Clic dreapta pe orice imagine → Trimite la Comic Translate 4 Free pentru a traduce doar acea imagine.
 
   ![Right-click to send an image](../docs/images/right-click.png)
 

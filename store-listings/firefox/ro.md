@@ -10,12 +10,12 @@ Tradu manga și benzi desenate în browser. Citește japoneză, engleză, chinez
 
 📖 Citește manga în limba ta!
 
-comic-translate-4-free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi, înlocuind imaginea chiar acolo.
+Comic Translate 4 Free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi, înlocuind imaginea chiar acolo.
 
 ✨ Funcții
 - Traducere automată — deschide o pagină de manga pe un site permis, iar versiunea tradusă apare chiar acolo, fără să fie nevoie să apeși vreun buton.
 - Fiecare imagine de pe pagină — traducerea automată gestionează toate imaginile de pe o pagină (până la 50 pe rulare), nu doar imaginea principală.
-- Clic dreapta pe orice imagine — alege „Trimite la comic-translate-4-free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
+- Clic dreapta pe orice imagine — alege „Trimite la Comic Translate 4 Free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
 - 114 limbi țintă prin Google Translate, Gemini, Azure Translator sau propriul tău server local LM Studio.
 - Detectare automată a limbii sursă — japoneza, engleza, chineza simplificată/tradițională sunt identificate automat din textul recunoscut prin OCR.
 - Suport pentru benzi lungi / webtoon — paginile înalte sunt procesate în segmente care se suprapun, astfel încât textul rămâne clar.
@@ -33,7 +33,7 @@ comic-translate-4-free traduce automat manga și benzi desenate în timp ce navi
 - Gata — imaginile paginii sunt înlocuite chiar acolo cu versiunile traduse.
 
 Sfaturi:
-- Clic dreapta pe orice imagine → Trimite la comic-translate-4-free pentru a traduce doar acea imagine.
+- Clic dreapta pe orice imagine → Trimite la Comic Translate 4 Free pentru a traduce doar acea imagine.
 
 - Dacă un site blochează descărcările (HTTP 403), extensia încearcă din nou automat printr-o filă de fundal.
 - Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
@@ -52,4 +52,4 @@ Acest proiect este inspirat de ogkalu2/comic-translate — detectorul de bule/te
 Bibliotecile incluse, codul portat și modelele descărcate la rulare sunt listate cu licențele lor în THIRD-PARTY-NOTICES.md.
 
 PolyForm Noncommercial License 1.0.0 — vezi LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

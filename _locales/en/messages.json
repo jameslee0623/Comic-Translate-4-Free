@@ -6,7 +6,7 @@
     "message": "Translate manga & comics in your browser. Reads Japanese, English, Simplified & Traditional Chinese; translates into 114 languages."
   },
   "appName": {
-    "message": "comic-translate-4-free"
+    "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
     "message": "When on, allowed pages start translating automatically as soon as they finish loading — no button click needed. (Tip: allow a site from the popup so the extension gets permission to read its images.)"
@@ -58,16 +58,16 @@
     "message": "Check LM Studio connection"
   },
   "ctx_send_image": {
-    "message": "Send to comic-translate-4-free",
+    "message": "Send to Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"
   },
   "err_bypass_tip": {
     "message": "Tip: right-click the picture and choose \"$1\" to bypass this block.",
-    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to comic-translate-4-free\" menu label.",
+    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to Comic Translate 4 Free\" menu label.",
     "placeholders": {
       "menu_label": {
         "content": "$1",
-        "example": "Send to comic-translate-4-free"
+        "example": "Send to Comic Translate 4 Free"
       }
     }
   },
@@ -344,7 +344,7 @@
     "message": "⭐ 5 stars at store"
   },
   "support_modal_title": {
-    "message": "Enjoying comic-translate-4-free?"
+    "message": "Enjoying Comic Translate 4 Free?"
   },
   "support_modal_text": {
     "message": "If you like it, please support it — it helps a lot."

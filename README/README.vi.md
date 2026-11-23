@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Ngôn ngữ: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 Đọc manga bằng ngôn ngữ của bạn!
-comic-translate-4-free tự động dịch manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ, thay thế hình ảnh ngay tại chỗ.
+Comic Translate 4 Free tự động dịch manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ, thay thế hình ảnh ngay tại chỗ.
 
 ### 📸 Trước & Sau
 
@@ -45,7 +45,7 @@ comic-translate-4-free tự động dịch manga và truyện tranh khi bạn du
 - Dịch tự động — mở một trang manga trên một trang web được phép và bản dịch sẽ xuất hiện ngay tại chỗ, không cần bấm nút.
 - Mỗi hình ảnh trên trang — dịch tự động xử lý tất cả hình ảnh trên một trang (tối đa 50 hình mỗi lần chạy), không chỉ hình ảnh chính.
 - Dịch trước trang tiếp theo — trong khi bạn đọc trang hiện tại, hình ảnh của trang tiếp theo được dịch trong nền nên đã sẵn sàng ngay khi bạn mở nó (chỉ một hình; bật theo mặc định, tắt được trong Cài đặt).
-- Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến comic-translate-4-free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
+- Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến Comic Translate 4 Free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
 - 114 ngôn ngữ đích qua Google Translate, Gemini, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
 - Tự động phát hiện ngôn ngữ nguồn — tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể được xác định tự động từ văn bản đã OCR.
 - Hỗ trợ truyện dài / webtoon — các trang cao được xử lý thành các đoạn chồng lên nhau để chữ vẫn sắc nét.
@@ -85,7 +85,7 @@ Sau khi cài đặt, các mô hình sẽ tự động tải xuống ở chế đ
 3. Xong — các hình ảnh của trang được thay thế ngay tại chỗ bằng bản dịch.
 
 Mẹo:
-- Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến comic-translate-4-free để chỉ dịch hình ảnh đó.
+- Nhấp chuột phải vào bất kỳ hình ảnh nào → Gửi đến Comic Translate 4 Free để chỉ dịch hình ảnh đó.
 
   ![Nhấp chuột phải để gửi một ảnh](../docs/images/right-click.png)
 

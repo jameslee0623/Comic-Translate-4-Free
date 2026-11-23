@@ -10,12 +10,12 @@ Terjemahkan manga & komik di browser Anda. Membaca Jepang, Inggris, Tionghoa Sed
 
 📖 Baca manga dalam bahasamu!
 
-comic-translate-4-free menerjemahkan manga dan komik otomatis saat menjelajah. Membaca Jepang, Inggris, Tionghoa Sederhana/Tradisional (deteksi otomatis), dan menerjemahkan ke 114 bahasa, mengganti gambar di tempatnya.
+Comic Translate 4 Free menerjemahkan manga dan komik otomatis saat menjelajah. Membaca Jepang, Inggris, Tionghoa Sederhana/Tradisional (deteksi otomatis), dan menerjemahkan ke 114 bahasa, mengganti gambar di tempatnya.
 
 ✨ Fitur
 - Terjemahan otomatis — buka halaman manga di situs yang diizinkan dan versi terjemahannya akan muncul di tempatnya, tanpa perlu mengeklik tombol.
 - Setiap gambar di halaman — terjemahan otomatis menangani semua gambar di sebuah halaman (hingga 50 per proses), bukan hanya gambar utama.
-- Klik kanan pada gambar apa pun — pilih "Kirim ke comic-translate-4-free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
+- Klik kanan pada gambar apa pun — pilih "Kirim ke Comic Translate 4 Free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
 - 114 bahasa target melalui Google Translate, Gemini, Azure Translator, atau server LM Studio lokal Anda sendiri.
 - Deteksi otomatis bahasa sumber — bahasa Jepang, Inggris, Tionghoa Sederhana/Tradisional dikenali secara otomatis dari teks hasil OCR.
 - Dukungan strip panjang / webtoon — halaman tinggi diproses dalam segmen yang tumpang tindih sehingga teks tetap tajam.
@@ -33,7 +33,7 @@ comic-translate-4-free menerjemahkan manga dan komik otomatis saat menjelajah. M
 - Selesai — gambar-gambar halaman diganti di tempatnya dengan versi terjemahan.
 
 Tips:
-- Klik kanan pada gambar apa pun → Kirim ke comic-translate-4-free untuk menerjemahkan hanya gambar itu.
+- Klik kanan pada gambar apa pun → Kirim ke Comic Translate 4 Free untuk menerjemahkan hanya gambar itu.
 
 - Jika sebuah situs memblokir unduhan (HTTP 403), ekstensi akan otomatis mencoba lagi melalui tab latar belakang.
 - Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
@@ -52,4 +52,4 @@ Proyek ini terinspirasi oleh ogkalu2/comic-translate — detektor gelembung/teks
 Pustaka yang dibundel, kode yang diporting, dan model yang diunduh saat runtime dicantumkan beserta lisensinya di THIRD-PARTY-NOTICES.md.
 
 PolyForm Noncommercial License 1.0.0 — lihat LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

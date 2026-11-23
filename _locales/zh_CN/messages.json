@@ -6,7 +6,7 @@
     "message": "在浏览器中翻译漫画。识别日语、英语、简体和繁体中文，翻译成 114 种语言。"
   },
   "appName": {
-    "message": "comic-translate-4-free"
+    "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
     "message": "开启后，允许的页面将在加载完成后立即自动开始翻译 — 无需点击按钮。（提示：从弹出窗口允许网站，扩展程序即可获得读取其图片的权限。）"
@@ -58,16 +58,16 @@
     "message": "检查 LM Studio 连接"
   },
   "ctx_send_image": {
-    "message": "发送到 comic-translate-4-free",
+    "message": "发送到 Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"
   },
   "err_bypass_tip": {
     "message": "提示：右键点击图片并选择“$1”以绕过此阻止。",
-    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to comic-translate-4-free\" menu label.",
+    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to Comic Translate 4 Free\" menu label.",
     "placeholders": {
       "menu_label": {
         "content": "$1",
-        "example": "Send to comic-translate-4-free"
+        "example": "Send to Comic Translate 4 Free"
       }
     }
   },
@@ -344,7 +344,7 @@
     "message": "⭐ 在商店给 5 星好评"
   },
   "support_modal_title": {
-    "message": "喜欢 comic-translate-4-free 吗？"
+    "message": "喜欢 Comic Translate 4 Free 吗？"
   },
   "support_modal_text": {
     "message": "如果你喜欢它，请支持一下——这很有帮助。"

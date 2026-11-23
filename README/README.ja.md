@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 言語： [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 あなたの言語でマンガを読もう！
-comic-translate-4-free はブラウジング中にマンガやコミックを自動で翻訳します。日本語、英語、簡体字/繁体字中国語を読み取り（自動検出）、114言語に翻訳し、画像をその場で置き換えます。
+Comic Translate 4 Free はブラウジング中にマンガやコミックを自動で翻訳します。日本語、英語、簡体字/繁体字中国語を読み取り（自動検出）、114言語に翻訳し、画像をその場で置き換えます。
 
 ### 📸 ビフォア & アフター
 
@@ -45,7 +45,7 @@ comic-translate-4-free はブラウジング中にマンガやコミックを自
 - 自動翻訳 — 許可したサイトでマンガのページを開くと、翻訳版がその場に表示されます。ボタンを押す必要はありません。
 - ページのすべての画像 — 自動翻訳はページ上のすべての画像を処理します（1 回の実行で最大 50 枚まで）。メイン画像だけではありません。
 - 次のページを事前に翻訳 — 現在のページを読んでいる間に、次のページの画像がバックグラウンドで翻訳され、開いた瞬間に準備ができています（画像は 1 枚のみ。デフォルトでオン、設定でオフにできます）。
-- 任意の画像を右クリック — 「comic-translate-4-free に送信」を選ぶと、特定の画像を翻訳できます。最小サイズより小さい画像でも翻訳できます。
+- 任意の画像を右クリック — 「Comic Translate 4 Free に送信」を選ぶと、特定の画像を翻訳できます。最小サイズより小さい画像でも翻訳できます。
 - 114 の対象言語 — Google Translate、Gemini、Azure Translator、または自分のローカル LM Studio サーバーで 114 の対象言語に対応。
 - ソース言語の自動検出 — OCR で読み取ったテキストから、日本語、英語、簡体字/繁体字中国語を自動で識別します。
 - 縦長ストリップ / ウェブトゥーン対応 — 縦長のページは重なり合うセグメントで処理されるため、テキストがシャープなままです。
@@ -85,7 +85,7 @@ Firefox:
 3. 完了 — ページの画像がその場で翻訳版に置き換わります。
 
 ヒント：
-- 任意の画像を右クリック → comic-translate-4-free に送信で、その画像だけを翻訳します。
+- 任意の画像を右クリック → Comic Translate 4 Free に送信で、その画像だけを翻訳します。
 
   ![画像を右クリックして送信](../docs/images/right-click.png)
 

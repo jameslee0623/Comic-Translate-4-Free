@@ -6,7 +6,7 @@
     "message": "Terjemahkan manga & komik di browser Anda. Membaca Jepang, Inggris, Tionghoa Sederhana & Tradisional; menerjemahkan ke 114 bahasa."
   },
   "appName": {
-    "message": "comic-translate-4-free"
+    "message": "Comic Translate 4 Free"
   },
   "auto_hint": {
     "message": "Saat aktif, halaman yang diizinkan mulai diterjemahkan otomatis begitu selesai dimuat — tanpa perlu klik tombol. (Tip: izinkan situs dari popup agar ekstensi mendapat izin membaca gambarnya.)"
@@ -58,16 +58,16 @@
     "message": "Periksa koneksi LM Studio"
   },
   "ctx_send_image": {
-    "message": "Kirim ke comic-translate-4-free",
+    "message": "Kirim ke Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"
   },
   "err_bypass_tip": {
     "message": "Tips: klik kanan pada gambar dan pilih \"$1\" untuk melewati blokir ini.",
-    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to comic-translate-4-free\" menu label.",
+    "description": "Tip shown before a 403 download error: right-click the image to bypass the block. $1 = localized \"Send to Comic Translate 4 Free\" menu label.",
     "placeholders": {
       "menu_label": {
         "content": "$1",
-        "example": "Send to comic-translate-4-free"
+        "example": "Send to Comic Translate 4 Free"
       }
     }
   },
@@ -344,7 +344,7 @@
     "message": "⭐ Beri 5 bintang di toko"
   },
   "support_modal_title": {
-    "message": "Menikmati comic-translate-4-free?"
+    "message": "Menikmati Comic Translate 4 Free?"
   },
   "support_modal_text": {
     "message": "Jika Anda menyukainya, mohon dukung — itu sangat membantu."

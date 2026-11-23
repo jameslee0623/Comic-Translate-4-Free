@@ -10,12 +10,12 @@ Traduza mangás e quadrinhos no seu navegador. Lê japonês, inglês, chinês si
 
 📖 Leia mangá no seu idioma!
 
-comic-translate-4-free traduz mangá e quadrinhos automaticamente enquanto você navega. Ele lê japonês, inglês, chinês simplificado/tradicional (detecção automática) e traduz para 114 idiomas, substituindo a imagem no lugar.
+Comic Translate 4 Free traduz mangá e quadrinhos automaticamente enquanto você navega. Ele lê japonês, inglês, chinês simplificado/tradicional (detecção automática) e traduz para 114 idiomas, substituindo a imagem no lugar.
 
 ✨ Recursos
 - Tradução automática — abra uma página de mangá em um site permitido e a versão traduzida aparece no lugar, sem precisar clicar em nenhum botão.
 - Cada imagem na página — a tradução automática cuida de todas as imagens da página (até 50 por execução), não apenas a imagem principal.
-- Clique com o botão direito em qualquer imagem — escolha "Enviar para comic-translate-4-free" para traduzir uma imagem específica, mesmo que seja menor que o tamanho mínimo.
+- Clique com o botão direito em qualquer imagem — escolha "Enviar para Comic Translate 4 Free" para traduzir uma imagem específica, mesmo que seja menor que o tamanho mínimo.
 - 114 idiomas de destino via Google Translate, Gemini, Azure Translator ou o seu próprio servidor local LM Studio.
 - Detecção automática do idioma de origem — japonês, inglês, chinês simplificado/tradicional identificados automaticamente a partir do texto lido por OCR.
 - Suporte a tiras longas / webtoon — páginas altas são processadas em segmentos sobrepostos para que o texto fique nítido.
@@ -33,7 +33,7 @@ comic-translate-4-free traduz mangá e quadrinhos automaticamente enquanto você
 - Pronto — as imagens da página são substituídas no lugar pelas versões traduzidas.
 
 Dicas:
-- Clique com o botão direito em qualquer imagem → Enviar para comic-translate-4-free para traduzir só aquela imagem.
+- Clique com o botão direito em qualquer imagem → Enviar para Comic Translate 4 Free para traduzir só aquela imagem.
 
 - Se um site bloquear downloads (HTTP 403), a extensão tenta novamente automaticamente por meio de uma aba em segundo plano.
 - Escolha seu mecanismo de tradução em Configurações: Google (grátis, sem chave), Gemini (chave de API grátis — melhor tradução de mangá, recomendada), Azure Translator (sendo descontinuado — 2 milhões de caracteres/mês grátis) ou LM Studio (servidor local).
@@ -52,4 +52,4 @@ Este projeto é inspirado em ogkalu2/comic-translate — o detector de balões/t
 As bibliotecas incluídas, o código portado e os modelos baixados em tempo de execução estão listados com suas licenças em THIRD-PARTY-NOTICES.md.
 
 PolyForm Noncommercial License 1.0.0 — ver LICENSE.
-https://github.com/jameslee0623/comic-translate-4-free
+https://github.com/jameslee0623/Comic-Translate-4-Free

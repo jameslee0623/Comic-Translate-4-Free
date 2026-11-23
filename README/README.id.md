@@ -1,9 +1,9 @@
-# comic-translate-4-free
+# Comic Translate 4 Free
 
 Bahasa: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
 Baca manga dalam bahasamu!
-comic-translate-4-free menerjemahkan manga dan komik otomatis saat menjelajah. Membaca Jepang, Inggris, Tionghoa Sederhana/Tradisional (deteksi otomatis), dan menerjemahkan ke 114 bahasa, mengganti gambar di tempatnya.
+Comic Translate 4 Free menerjemahkan manga dan komik otomatis saat menjelajah. Membaca Jepang, Inggris, Tionghoa Sederhana/Tradisional (deteksi otomatis), dan menerjemahkan ke 114 bahasa, mengganti gambar di tempatnya.
 
 ### 📸 Sebelum & Sesudah
 
@@ -45,7 +45,7 @@ comic-translate-4-free menerjemahkan manga dan komik otomatis saat menjelajah. M
 - Terjemahan otomatis — buka halaman manga di situs yang diizinkan dan versi terjemahannya akan muncul di tempatnya, tanpa perlu mengeklik tombol.
 - Setiap gambar di halaman — terjemahan otomatis menangani semua gambar di sebuah halaman (hingga 50 per proses), bukan hanya gambar utama.
 - Terjemahkan halaman berikutnya terlebih dahulu — saat Anda membaca halaman ini, gambar halaman berikutnya diterjemahkan di latar belakang, jadi sudah siap begitu Anda membukanya (hanya satu gambar; aktif secara default, bisa dimatikan di Pengaturan).
-- Klik kanan pada gambar apa pun — pilih "Kirim ke comic-translate-4-free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
+- Klik kanan pada gambar apa pun — pilih "Kirim ke Comic Translate 4 Free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
 - 114 bahasa target melalui Google Translate, Gemini, Azure Translator, atau server LM Studio lokal Anda sendiri.
 - Deteksi otomatis bahasa sumber — bahasa Jepang, Inggris, Tionghoa Sederhana/Tradisional dikenali secara otomatis dari teks hasil OCR.
 - Dukungan strip panjang / webtoon — halaman tinggi diproses dalam segmen yang tumpang tindih sehingga teks tetap tajam.
@@ -85,7 +85,7 @@ Setelah menginstal, model diunduh secara otomatis di latar belakang (~350 MB: de
 3. Selesai — gambar-gambar halaman diganti di tempatnya dengan versi terjemahan.
 
 Tips:
-- Klik kanan pada gambar apa pun → Kirim ke comic-translate-4-free untuk menerjemahkan hanya gambar itu.
+- Klik kanan pada gambar apa pun → Kirim ke Comic Translate 4 Free untuk menerjemahkan hanya gambar itu.
 
   ![Right-click to send an image](../docs/images/right-click.png)
 
