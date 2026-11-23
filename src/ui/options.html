@@ -60,6 +60,8 @@
     main { padding: 16px; }
     #jumpTo { display: block; position: sticky; top: 0; z-index: 10; width: 100%; box-sizing: border-box; min-height: 44px; margin-bottom: 8px; }
     .row { flex-direction: column; align-items: stretch; gap: 6px; margin: 12px 0; }
+    /* Toggle rows stay on one line: title left, switch at the far right. */
+    .row:has(> label.switch) { flex-direction: row; justify-content: space-between; align-items: center; }
     .row.wlrow { flex-direction: row; align-items: center; }
     .row.wlrow input { flex: 1; min-width: 0; }
     label { min-width: 0; }
