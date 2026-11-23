@@ -1150,11 +1150,15 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
   // Store Tier-2 entry for next time.
   try {
     if (!(await isIncognitoTab(tabId))) {
-      await pageCachePut(tier2Key, {
-        translations: translated,
-        targetLang: settings.targetLang,
-        backend: settings.translationBackend,
-      });
+      // 2.3.6: never store an all-empty tier-2 entry — it would count
+      // as a hit (an empty array is truthy) and re-render the original.
+      if (Array.isArray(translated) && translated.some(t => typeof t === 'string' && t.trim())) {
+        await pageCachePut(tier2Key, {
+          translations: translated,
+          targetLang: settings.targetLang,
+          backend: settings.translationBackend,
+        });
+      }
     }
   } catch (e) {
     console.warn('[ct] tier-2 cache write failed:', String((e && e.message) || e).slice(0, 120));
@@ -1472,7 +1476,17 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
     if (tier1Entry) {
       const tier2Key = buildCacheKeyTier2(tier1Key, settings);
       const tier2Entry = await pageCacheGet(tier2Key);
-      if (tier2Entry && tier2Entry.translations) {
+      const translations = tier2Entry && tier2Entry.translations;
+      // 2.3.6: an entry is only a full hit when it has a usable
+      // translation — at least one non-empty string — and Tier-1
+      // actually has blocks. An empty array is truthy, and all-empty
+      // translations render as the original, so both used to count as
+      // a hit and the page looked untranslated forever (a transient
+      // OCR/translate failure saved as "no text").
+      const usableTranslations = Array.isArray(translations) &&
+        translations.some(t => typeof t === 'string' && t.trim());
+      const hasBlocks = Array.isArray(tier1Entry.blocks) && tier1Entry.blocks.length > 0;
+      if (usableTranslations && hasBlocks) {
         // Full hit: apply cached translations to the Tier-1 blocks.
         diagPush(`page-cache HIT tier1+2 ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
         const blocks = tier1Entry.blocks.map((b, i) => ({
@@ -1480,15 +1494,30 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
         }));
         return { ...tier1Entry, blocks };
       }
-      // Tier-1 hit, Tier-2 miss: translate the OCR'd blocks only.
-      diagPush(`page-cache HIT tier1 only ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
-      return { tier1Only: true, entry: tier1Entry, tier2Key };
+      // Tier-1 hit, Tier-2 miss (or unusable): translate the OCR'd
+      // blocks only — but only when Tier-1 actually has blocks. A
+      // Tier-1 entry with no blocks is the same poison; fall through
+      // to a full miss so the pipeline re-detects instead of
+      // re-rendering the original forever.
+      if (hasBlocks) {
+        diagPush(`page-cache HIT tier1 only ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
+        return { tier1Only: true, entry: tier1Entry, tier2Key };
+      }
+      diagPush(`page-cache MISS tier1 ${tier1Key.split('~')[1]?.slice(0, 12)} empty entry (tier ${tier})`);
+      tier1Entry = null;
     }
     // No Tier 1: try the legacy v1 key for backward compatibility.
     diagPush(`page-cache MISS tier1 ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
     const legacy = await pageCacheGet(await buildCacheKey(rgba, w, h, settings));
-    if (legacy) diagPush(`page-cache HIT legacy v1 image ${w}x${h} (tier ${tier})`);
-    return legacy || null;
+    // 2.3.6: same usable check for legacy entries — blocks with no
+    // non-empty translation render as the original.
+    if (legacy && Array.isArray(legacy.blocks) &&
+        legacy.blocks.some(b => b && typeof b.translation === 'string' && b.translation.trim())) {
+      diagPush(`page-cache HIT legacy v1 image ${w}x${h} (tier ${tier})`);
+      return legacy;
+    }
+    if (legacy) diagPush(`page-cache MISS legacy v1 image ${w}x${h} (tier ${tier}) empty entry`);
+    return null;
   } catch (e) {
     console.warn('[ct] page-cache lookup failed:', String((e && e.message) || e).slice(0, 120));
     return null;
@@ -1502,6 +1531,12 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
 async function writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, settings, tabId, mode) {
   try {
     if (await isIncognitoTab(tabId)) return;
+    // 2.3.6: never cache an empty result. Zero blocks (a transient
+    // detect failure saved as "no text") writes nothing at all, so the
+    // next visit re-detects. Blocks with all-empty translations keep
+    // Tier-1 (blocks + base are valid) but skip Tier-2, so the next
+    // visit re-translates only instead of re-rendering the original.
+    if (!Array.isArray(blocks) || !blocks.length) return;
     const t1Key = await buildCacheKeyTier1(rgba, w, h, settings);
     const blocksNoTrans = blocks.map(b => {
       const { translation, ...rest } = b;
@@ -1514,9 +1549,11 @@ async function writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, set
       // verbatim on Tier-1 hits instead of re-detecting (G10).
       sourceLang: effSettings.sourceLang,
     });
+    const translations = blocks.map(b => b.translation || '');
+    if (!translations.some(t => t.trim())) return;
     const t2Key = buildCacheKeyTier2(t1Key, settings);
     await pageCachePut(t2Key, {
-      translations: blocks.map(b => b.translation || ''),
+      translations,
       targetLang: settings.targetLang,
       backend: settings.translationBackend,
     });
@@ -2073,11 +2110,15 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
   }
   checkCancelled(runId);
   try {
-    await pageCachePut(tier2Key, {
-      translations: translated,
-      targetLang: settings.targetLang,
-      backend: settings.translationBackend,
-    });
+    // 2.3.6: never store an all-empty tier-2 entry — it would count as
+    // a hit (an empty array is truthy) and re-render the original.
+    if (Array.isArray(translated) && translated.some(t => typeof t === 'string' && t.trim())) {
+      await pageCachePut(tier2Key, {
+        translations: translated,
+        targetLang: settings.targetLang,
+        backend: settings.translationBackend,
+      });
+    }
   } catch (e) {
     console.warn('[ct] pre-translate tier-2 cache write failed:', String((e && e.message) || e).slice(0, 120));
   }
