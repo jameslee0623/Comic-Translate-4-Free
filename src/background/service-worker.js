@@ -23,6 +23,13 @@ import {
 import { baseDomain, displayHost, hostOf, isSiteAllowed, imageHostOrigins, originAccessPatterns } from '../shared/site-access.js';
 import { urlShape, applyPattern, patternNumber, observeRules, observeLinkRules, observePicLinkRules, activeRuleFor, activeLinkTexts, activePicLinkRule, noteLearnResult } from '../shared/next-page-learn.js';
 
+// NO-INPAINT test build (Orion): when true, LaMa is never loaded and the
+// translated text renders over the original image. Default false — a
+// release build never sets this. The test XPI flips it to true in the
+// dist copy only (src stays false), so the flag can never leak into a
+// release by accident.
+const NO_INPAINT = false;
+
 // Translated-page cache is session-scoped: initPageCache() wipes the store on
 // every browser startup (via a chrome.storage.session marker) and the
 // get/put/stats helpers await that check before touching the store.
@@ -139,6 +146,8 @@ try {
   const _m = chrome.runtime.getManifest();
   diagPush('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')');
 } catch {}
+// NO-INPAINT test build marker: the pasted log must say which build it is.
+if (NO_INPAINT) diagPush('NO-INPAINT test build — LaMa inpaint disabled, text renders over the original');
 
 // 2.3.15/1.7.15: device + browser line in the diag log, so a pasted log
 // says which device and browser it came from — no need to ask the user
@@ -2211,6 +2220,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     };
     const runMaskInpaint = async () => {
       checkCancelled(runId);
+      // NO-INPAINT test build: skip LaMa entirely — the page cache gets
+      // the original image, and the text renders over it.
+      if (NO_INPAINT) return new Uint8ClampedArray(rgba);
       const pageGray = toGrayU8(rgba, w, h);
       const { mask: fullMask, entries } = generateMask(rgba, w, h, pageGray, blocks, 5);
       const spreadMap = await readInpaintSpread();
@@ -2399,7 +2411,8 @@ async function runPipeline(tabId, opts = {}) {
     // WASM heap. A fragmented heap can't provide the contiguous block LaMa needs.
     // (2.2.19: moved after the model gate — the preload is an ML call, and
     // no ML runs before the models are ready.)
-    if (directHandlers()) {
+    // NO-INPAINT test build: never load LaMa at all.
+    if (directHandlers() && !NO_INPAINT) {
       persistDiagStage(runId, 'lama-preload');
       try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
     }
@@ -2893,6 +2906,13 @@ async function runPipeline(tabId, opts = {}) {
       };
       const runInpaint = async ({ fullMask, entries, maskMs }) => {
         checkCancelled(runId);
+        // NO-INPAINT test build: skip LaMa entirely — the translated text
+        // renders over the original image. The model is never loaded, so
+        // a device that dies loading LaMa stays alive.
+        if (NO_INPAINT) {
+          parProgress('inpaint', 1);
+          return { inpainted: new Uint8ClampedArray(rgba), inpaintMs: 0, maskMs, totalInpaintMs: 0 };
+        }
         parProgress('inpaint', 0);
         const t0i = performance.now();
         // DIAG (2.0.5): phase split of the inpaint stage, so one Mac run
