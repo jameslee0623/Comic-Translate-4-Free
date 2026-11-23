@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS = {
   localLlmModel: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
   debugMode: false,
   detectionThreshold: 0.3,
-  minImageSize: 500, // skip images smaller than this (max dimension, px)
+  minImageSize: 460, // skip images smaller than this (max dimension, px)
   siteWhitelist: [], // hostnames with site access, e.g. ['example.com']
   allowAllSites: false, // site access: translate on any site (requests <all_urls> when enabled)
   autoTranslateOnLoad: true, // start the pipeline automatically on allowed page loads
@@ -247,11 +247,12 @@ export async function getSettings() {
   // language, same as readSettingsRaw. Not persisted — a stored value,
   // once the user picks one, always wins.
   if (!stored.settings || !stored.settings.targetLang) s.targetLang = browserTargetLang();
-  // One-time migration: the default minimum image size dropped 600 -> 500.
-  // Installs still sitting on the old default follow it; a value the user
-  // deliberately chose is left alone.
-  if (stored.settings && stored.settings.minImageSize === 600) {
-    s.minImageSize = 500;
+  // One-time migration: the default minimum image size dropped 600 -> 500
+  // -> 460 (460 fits a 360px-wide phone page, whose picture displays at
+  // 465px). Installs still sitting on an old default follow it; a value
+  // the user deliberately chose is left alone.
+  if (stored.settings && (stored.settings.minImageSize === 600 || stored.settings.minImageSize === 500)) {
+    s.minImageSize = 460;
     chrome.storage.local.set({ settings: s }).catch(() => {});
   }
   // One-time migration (2026-09-28): Latin/Russian source languages were

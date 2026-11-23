@@ -425,7 +425,7 @@ const MAX_IMAGES_PER_PAGE = 50;
 // order), capped at MAX_IMAGES_PER_PAGE. Returns {images, skipped, ignored}.
 async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
   const manualSrc = opts.srcUrl || null;
-  const minSize = settings.minImageSize || 500;
+  const minSize = settings.minImageSize || 460;
   if (manualSrc) {
     let info = null;
     try { info = (await chrome.tabs.sendMessage(tabId, { type: 'ct/find-image-by-src', srcUrl: manualSrc }))?.image || null; }
@@ -1872,7 +1872,7 @@ async function runPretranslate(job, sourceTabId, settings) {
   if (!candidates.length) { diagPush('pre-translate: no pictures on ' + nextUrl); return; }
   // ---- resolve sizes: declared dims first; download the rest (cap 8) until
   // 2 qualify — then there is no single picture to translate, stop early.
-  const minSize = settings.minImageSize || 500;
+  const minSize = settings.minImageSize || 460;
   const withSize = [];
   let downloads = 0;
   const ordered = [...candidates].sort((a, b) => Math.max(b.w || 0, b.h || 0) - Math.max(a.w || 0, a.h || 0));
