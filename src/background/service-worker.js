@@ -427,6 +427,21 @@ async function callMlChecked(runId, msg) {
     return await callMl(msg, { tabId: runs.get(runId)?.tabId });
   } catch (e) {
     checkCancelled(runId);
+    // Retry once on an ML timeout: the host was restarted automatically,
+    // so a transient stall (hung WASM session) can succeed on a second
+    // attempt. The retry gets attempt 2, so its output keys are namespaced
+    // and cannot clobber the timed-out call's late completion. Other
+    // errors are not retried — they are likely persistent, and a retry
+    // would only double the wait.
+    if (e && e.mlTimeout) {
+      diagPush(`ML timeout on ${msg.type}, retrying once (run ${runId})`);
+      try {
+        return await callMl(msg, { tabId: runs.get(runId)?.tabId });
+      } catch (e2) {
+        checkCancelled(runId);
+        throw e2;
+      }
+    }
     throw e;
   }
 }
@@ -2152,13 +2167,21 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
   const runId = job.runId;
   const pxKeys = [];
   try {
-    // ---- capture: worker-fetch only. A 403 skips the picture.
+    // ---- capture: worker-fetch first, background tab on 403/blocked.
+    // The background tab is a real tab the host serves, so it reads
+    // pictures worker-fetch cannot. Quiet: pre-translate runs in the
+    // background, so no pill notice on the user's current page.
     let rgba, w, h;
     try {
       ({ rgba, w, h } = await fetchImagePixels(imageUrl, pageUrl));
     } catch (e) {
-      diagPush('pre-translate: picture download failed, skipping: ' + String((e && e.message) || e).slice(0, 120));
-      return;
+      try {
+        ({ rgba, w, h } = await fallbackCaptureViaTab(sourceTabId, imageUrl, true));
+        diagPush('pre-translate: worker-fetch blocked, read via background tab');
+      } catch (e2) {
+        diagPush('pre-translate: picture download failed, skipping: ' + String((e2 && e2.message) || e2).slice(0, 120));
+        return;
+      }
     }
     checkCancelled(runId);
     if (meanBrightness(rgba) < 0.004) { diagPush('pre-translate: blank picture, skipping'); return; }
@@ -3932,10 +3955,12 @@ async function checkImageHostPermissions(images) {
   }
   return missing;
 }
-async function fallbackCaptureViaTab(origTabId, imageUrl) {
+async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
   const notice = (text, sticky) =>
     chrome.tabs.sendMessage(origTabId, { type: MSG.PILL_NOTICE, text, sticky }).catch(() => {});
-  await notice('Direct download blocked — reading the image in a background tab…', true);
+  // Quiet mode (pre-translate): the job runs in the background, so no pill
+  // notice on the user's current page — the failure is in the diag log.
+  if (!quiet) await notice('Direct download blocked — reading the image in a background tab…', true);
   // Parse the image URL once for the failure log (host + path).
   let imgHost = '', imgPath = '';
   try { const u = new URL(imageUrl); imgHost = u.host; imgPath = u.pathname; } catch {}
