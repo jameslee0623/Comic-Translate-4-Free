@@ -343,7 +343,13 @@ async function runThreadBenchmark() {
     }
     const benchCounts = (c) => {
       if (c === 2) return [1, 2];
-      const start = Math.max(3, Math.ceil(c / 4));
+      // 2.3.29: floor is 2, not 3 — 2-big-core CPUs exist and are still
+      // sold (Intel Core Ultra 5 115U, Dec 2023, 2P+4E+2LP-E = 8 cores).
+      // On a 2-big-core chip 2 threads can be the best, so the bench
+      // must test it. ceil(c/4) is <= 2 only when c <= 8, so lowering
+      // the floor only adds 2 on small-core machines, where a
+      // 2-big-core chip is plausible; 10+ core machines are unchanged.
+      const start = Math.max(2, Math.ceil(c / 4));
       const list = [];
       let n = start;
       while (n <= 6 && n <= c) { list.push(n); n++; }
