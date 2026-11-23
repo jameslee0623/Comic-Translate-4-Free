@@ -3359,12 +3359,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       try {
         await chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
       } catch {}
-      if (!settings.autoTranslateOnLoad) return;
-      if (!tab || !tab.active) return; // translate what you're looking at
-      const url = tab.url;
+      // AUTO DIAGNOSTIC (2.3.3): log every auto decision for an allowed
+      // site — on Vivaldi the page-load signal may never arrive (the
+      // worker wakes after the page loaded) or a gate may stop it, and
+      // the log then shows which. Silent for disallowed sites (chrome://
+      // tabs would flood the log). One line per 'complete'.
+      const url = tab.url || '';
+      if (!settings.autoTranslateOnLoad) { diagPush('auto diag skip: auto off ' + url.slice(0, 120)); return; }
+      if (!tab || !tab.active) { diagPush('auto diag skip: tab not active ' + url.slice(0, 120)); return; }
       const prev = autoFired.get(tabId);
       const now = Date.now();
-      if (prev && prev.url === url && now - prev.at < 120000) return; // same load, don't double-fire
+      if (prev && prev.url === url && now - prev.at < 120000) { diagPush('auto diag skip: dedupe 2min ' + url.slice(0, 120)); return; } // same load, don't double-fire
       // Same page and a run for this tab is still working: a late 'complete'
       // (slow iframe, ad slot, …) is not a new page and must not kill the run
       // and restart it from scratch. This matters more now that tiled inpaint
@@ -3374,9 +3379,10 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       // guard works while the run is in flight, which is when it matters.)
       if (prev && prev.url === url && now - prev.at < 900000) {
         for (const [, r] of runs) {
-          if (r.tabId === tabId && !r.cancelled) return;
+          if (r.tabId === tabId && !r.cancelled) { diagPush('auto diag skip: run in flight ' + url.slice(0, 120)); return; }
         }
       }
+      diagPush('auto diag start: ' + url.slice(0, 120));
       // New page: drop whatever the tab was doing and start fresh immediately.
       // A stale run must never finish on top of the new page.
       // Record the fire SYNCHRONOUSLY here, before the await below: two
