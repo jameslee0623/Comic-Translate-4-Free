@@ -74,6 +74,7 @@ else:
     assert m['background']['page'] == 'src/background/background.html'
     assert 'offscreen' not in m['permissions']
     assert m['browser_specific_settings']['gecko']['id']
+    assert m['browser_specific_settings']['gecko_android']['strict_min_version'] == '142.0', 'gecko_android floor must stay 142.0 (data_collection_permissions needs Android 142)'
 print('manifest OK ($browser):', m['version'])
 EOF
   for f in src/background/ml-bridge.js src/background/background.html src/background/background-ff.js src/shared/pixel-bus.js; do
