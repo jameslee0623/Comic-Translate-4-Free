@@ -150,6 +150,43 @@ try {
   const _m = chrome.runtime.getManifest();
   diagPush('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')');
 } catch {}
+// GPU inpaint kill-switch (2.3.27): once WebGPU inpaint fails, it is a
+// deterministic failure on this setup (e.g. a Metal shader that never
+// compiles), so retrying it on every page only wastes time and spams
+// the log. Remember the failure in storage.local (survives a background
+// restart) and skip GPU for inpaint from then on, going straight to
+// WASM. A new extension version clears the flag, so a fixed driver or
+// a new onnxruntime gets one retry.
+let gpuInpaintDead = false;
+let gpuInpaintDeadLogged = false;
+function gpuInpaintAllowed() { return !gpuInpaintDead; }
+async function markGpuInpaintDead() {
+  if (gpuInpaintDead) return;
+  gpuInpaintDead = true;
+  try {
+    const v = (() => { try { return chrome.runtime.getManifest().version; } catch { return ''; } })();
+    await chrome.storage.local.set({ gpuInpaintDead: { version: v, at: new Date().toISOString() } });
+  } catch {}
+}
+async function loadGpuInpaintDead() {
+  try {
+    const saved = await chrome.storage.local.get('gpuInpaintDead');
+    const rec = saved && saved.gpuInpaintDead;
+    if (!rec) return;
+    const cur = (() => { try { return chrome.runtime.getManifest().version; } catch { return ''; } })();
+    if (rec.version && cur && rec.version !== cur) {
+      // New extension version: give GPU one retry.
+      try { await chrome.storage.local.remove('gpuInpaintDead'); } catch {}
+      return;
+    }
+    gpuInpaintDead = true;
+    if (!gpuInpaintDeadLogged) {
+      gpuInpaintDeadLogged = true;
+      diagPush('inpaint gpu disabled (known failure — using WASM)');
+    }
+  } catch {}
+}
+loadGpuInpaintDead().catch(() => {});
 // NO-INPAINT test build marker: the pasted log must say which build it is.
 if (NO_INPAINT) diagPush('NO-INPAINT test build — LaMa inpaint disabled, text renders over the original');
 
@@ -2315,7 +2352,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
         const wirePatches = patches.map(({ id, key, maskKey, width, height }) => ({ id, key, maskKey, width, height }));
         let r;
         let gpuDowngraded = false;
-        if (directHandlers() && !gpuDowngraded && typeof navigator !== 'undefined' && navigator.gpu) {
+        if (directHandlers() && !gpuDowngraded && gpuInpaintAllowed() && typeof navigator !== 'undefined' && navigator.gpu) {
           try {
             r = await runGpuInpaint({
               runId, patches: wirePatches,
@@ -2326,10 +2363,11 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
           } catch (e) {
             checkCancelled(runId);
             gpuDowngraded = true;
-            diagPush('pre-translate inpaint gpu failed, downgrading to WASM: ' + String((e && e.message) || e));
+            diagPush('pre-translate inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+            markGpuInpaintDead().catch(() => {});
             r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
           }
-        } else if (!directHandlers() && !gpuDowngraded) {
+        } else if (!directHandlers() && !gpuDowngraded && gpuInpaintAllowed()) {
           try {
             r = await runChromeGpuInpaint({
               runId, patches: wirePatches,
@@ -2344,7 +2382,8 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             } else {
               gpuDowngraded = true;
-              diagPush('pre-translate inpaint gpu failed, downgrading to WASM: ' + String((e && e.message) || e));
+              diagPush('pre-translate inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+              markGpuInpaintDead().catch(() => {});
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             }
           }
@@ -3083,7 +3122,7 @@ async function runPipeline(tabId, opts = {}) {
           const callT0 = performance.now();
           if (directHandlers() && !gpuDowngradedThisRun && !(typeof navigator !== 'undefined' && navigator.gpu)) {
           }
-          if (directHandlers() && !gpuDowngradedThisRun && typeof navigator !== 'undefined' && navigator.gpu) {
+          if (directHandlers() && !gpuDowngradedThisRun && gpuInpaintAllowed() && typeof navigator !== 'undefined' && navigator.gpu) {
             try {
               r = await runGpuInpaint({
                 runId, patches: wirePatches,
@@ -3096,10 +3135,11 @@ async function runPipeline(tabId, opts = {}) {
               checkCancelled(runId);
               gpuDowngradedThisRun = true;
               inpaintPath = 'gpu-failed-wasm';
-              diagPush('inpaint gpu failed, downgrading to WASM for this run: ' + String((e && e.message) || e));
+              diagPush('inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+              markGpuInpaintDead().catch(() => {});
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             }
-          } else if (!directHandlers() && !gpuDowngradedThisRun) {
+          } else if (!directHandlers() && !gpuDowngradedThisRun && gpuInpaintAllowed()) {
           // GPU1-Chrome: LaMa on WebGPU in a dedicated worker spawned by
           // the offscreen document (the SW cannot spawn workers). Tried
           // first on Chrome; the document decides GPU availability in its
@@ -3129,7 +3169,8 @@ async function runPipeline(tabId, opts = {}) {
               } else {
                 gpuDowngradedThisRun = true;
                 inpaintPath = 'gpu-failed-wasm';
-                diagPush('inpaint gpu failed, downgrading to WASM for this run: ' + String((e && e.message) || e));
+                diagPush('inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+                markGpuInpaintDead().catch(() => {});
                 r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
               }
             }
