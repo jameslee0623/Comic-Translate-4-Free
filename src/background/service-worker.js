@@ -2533,19 +2533,24 @@ async function runPipeline(tabId, opts = {}) {
     // its slice of the overall run, debug titles carry the image index, and one
     // bad picture never kills the rest of the run.
     let { images, skipped, skippedDetail, ignored } = await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc });
-    // Auto-resume: skip pictures the dead run already finished (they show
-    // the translated render). Only the remaining pictures run, so the
-    // resumed run finishes from where the old one left instead of redoing
-    // the whole page.
+    // Skip pictures already translated (they show the translated render).
+    // Resumed runs: the dead run already finished them, so the resumed run
+    // finishes from where the old one left instead of redoing the page.
+    // Auto runs: a late page-load signal can fire after the page is already
+    // translated (the 2-min dedupe has expired), and re-translating them
+    // wastes time and API calls. Manual runs never skip — the user tapped
+    // Translate, so they want a fresh translation (e.g. after changing the
+    // target language).
     let alreadyDone = 0;
-    if (opts.resume && !manualSrc) {
+    if ((opts.resume || opts.auto) && !manualSrc) {
       alreadyDone = images.filter(im => im.translated).length;
       // 2.1.57: always log the count, even when 0 — a resumed run that
       // finds nothing already done is the clue that the inventory disagrees
       // with the recovery check (e.g. the page reloaded between the two).
-      diagPush(`auto-resume: inventory ${images.length} picture(s), ${alreadyDone} already translated`);
+      const skipTag = opts.resume ? 'auto-resume' : 'auto-skip';
+      diagPush(`${skipTag}: inventory ${images.length} picture(s), ${alreadyDone} already translated`);
       if (alreadyDone) {
-        diagPush(`auto-resume: skipping ${alreadyDone} already-translated picture(s), ${images.length - alreadyDone} left`);
+        diagPush(`${skipTag}: skipping ${alreadyDone} already-translated picture(s), ${images.length - alreadyDone} left`);
         images = images.filter(im => !im.translated);
       }
       if (!images.length) {
@@ -2555,11 +2560,11 @@ async function runPipeline(tabId, opts = {}) {
         try {
           await withTimeout(chrome.tabs.sendMessage(tabId, {
             type: 'ct/run-summary', runId, images: 0, failed: [], ignored,
-            resumed: true, alreadyDone,
+            resumed: !!opts.resume, alreadyDone,
           }), MSG_TIMEOUT_MS, 'run summary');
         } catch {}
         if (settings.debugMode) await sendDiagLog(tabId, runId);
-        result = { runId, ok: true, images: 0, failed: [], resumed: true, alreadyDone };
+        result = { runId, ok: true, images: 0, failed: [], resumed: !!opts.resume, alreadyDone };
         return result;
       }
     }
