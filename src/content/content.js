@@ -16,6 +16,30 @@
   // page. Top frame only: iframes must not start runs.
   if (window.top === window.self) {
     try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+    // Same-document URL change (reader "next" via history.pushState):
+    // the URL changes but the document never reloads, so there is no
+    // tabs.onUpdated 'complete' and no fresh content-script injection.
+    // On Vivaldi Android that means auto-translate never starts for
+    // the new page. Watch for URL changes and re-send AUTO_START.
+    // Only the path matters (a hash change is the same page).
+    let lastUrl = location.href.split('#')[0];
+    const onUrlChange = () => {
+      let u;
+      try { u = location.href.split('#')[0]; } catch { return; }
+      if (u === lastUrl) return;
+      lastUrl = u;
+      try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+    };
+    const wrapHistory = (fn) => function (...args) {
+      const r = fn.apply(this, args);
+      try { onUrlChange(); } catch {}
+      return r;
+    };
+    try {
+      history.pushState = wrapHistory(history.pushState);
+      history.replaceState = wrapHistory(history.replaceState);
+    } catch {}
+    window.addEventListener('popstate', onUrlChange);
   }
 
   const FONT_STACK = '"Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans",sans-serif';
