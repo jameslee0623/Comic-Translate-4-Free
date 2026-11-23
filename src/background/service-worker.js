@@ -129,6 +129,17 @@ async function replayDiagTrace() {
 // and is ready well before the next run's sendDiagLog.
 replayDiagTrace().catch(() => {});
 
+// 2.3.12/1.7.12: stamp the version into the diag log at background start,
+// so a pasted log says which build it came from — no need to ask the user.
+// diagPush persists the line (diagTrace, last 200), so it survives a
+// restart and shows in the recovered log too. The Firefox build's manifest
+// carries browser_specific_settings; Chrome's does not. Wrapped: a
+// missing getManifest must never break background load.
+try {
+  const _m = chrome.runtime.getManifest();
+  diagPush('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')');
+} catch {}
+
 // 2.1.29: retired bench lines. 2.1.25 removed these from live code, but
 // they live on in the persisted benchTrace and replay into every run's
 // log. Filter them out of the replay (and purge them at run start).
