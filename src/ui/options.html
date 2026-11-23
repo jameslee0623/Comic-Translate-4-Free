@@ -82,6 +82,11 @@
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><input type="checkbox" id="debugMode"></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
 
+  <h2>Diagnostic log</h2>
+  <p class="hint">The log from before a crash lives here, even when the background is dead. Open this page after restarting the browser, then copy the log and send it.</p>
+  <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
+  <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
+
   <h2 data-i18n="models" id="modelsSection">Models</h2>
   <div class="row"><button id="downloadAll" data-i18n="download_all">Download all models</button></div>
   <div id="models"></div>

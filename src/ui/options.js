@@ -176,6 +176,9 @@ async function load() {
   applyToForm(s);
   formLoaded = true;
   refreshModels();
+  refreshDiagLog();
+  $('refreshDiagLog').onclick = refreshDiagLog;
+  $('copyDiagLog').onclick = copyDiagLog;
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();
   // Azure retirement notice (2.3.1): same once-after-update nudge as the
@@ -455,6 +458,64 @@ async function onClearCacheClick() {
   }
   btn.textContent = old;
   btn.disabled = false;
+}
+
+// 2.3.13/1.7.13: the diagnostic log, read straight from storage — NO
+// background needed. After a Translate crash the background is dead, so
+// the on-page panel can never appear and the log was unreachable. This
+// reads the persisted diagTrace (last 200 lines, survives a process kill)
+// and the active-run records (which hold the fine stage each run died
+// at) directly from chrome.storage.local, so the log is here even when
+// the background is dead. No sendMessage anywhere in this path.
+function formatDiagLog(trace, runs) {
+  const lines = [];
+  const runIds = runs ? Object.keys(runs) : [];
+  if (runIds.length) {
+    lines.push('--- runs in storage (stage = where each run died or stopped) ---');
+    for (const id of runIds) {
+      const r = runs[id] || {};
+      const started = r.startedAt ? new Date(r.startedAt).toISOString() : 'unknown';
+      const updated = r.updatedAt ? new Date(r.updatedAt).toISOString() : 'unknown';
+      lines.push(id + ' stage ' + (r.stage || 'unknown') + ' started ' + started + ' updated ' + updated + (r.url ? ' ' + r.url : ''));
+    }
+  } else {
+    lines.push('--- no runs in storage ---');
+  }
+  const traceLines = Array.isArray(trace) ? trace : [];
+  lines.push('--- diagnostic log (' + traceLines.length + ' lines) ---');
+  for (const l of traceLines) lines.push(String(l));
+  return lines.join('\n');
+}
+async function refreshDiagLog() {
+  const box = $('diagLog');
+  if (!box) return;
+  let text;
+  try {
+    const saved = await chrome.storage.local.get(['diagTrace', 'ct-active-runs']);
+    text = formatDiagLog(saved['diagTrace'], saved['ct-active-runs']);
+  } catch (e) {
+    text = 'Could not read the log: ' + String((e && e.message) || e);
+  }
+  box.textContent = text;
+}
+async function copyDiagLog() {
+  const btn = $('copyDiagLog');
+  const text = ($('diagLog') && $('diagLog').textContent) || '';
+  const done = (t) => { if (btn) { btn.textContent = t; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); } };
+  try {
+    await navigator.clipboard.writeText(text);
+    done('Copied');
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done('Copied');
+    } catch { done('Copy failed'); }
+  }
 }
 
 async function refreshModels() {
