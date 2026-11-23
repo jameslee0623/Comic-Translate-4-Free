@@ -581,6 +581,21 @@ async function loadWithWebgpuFallback(kind, loadFn) {
     throw e;
   }
 }
+// 2.3.8: iOS (Orion) has a low per-process memory ceiling — the three
+// model sessions together (~340MB) can get the extension process killed
+// outright, and a kill cannot be caught. On iOS only, release each
+// session before loading the next, so at most one big model is resident.
+// Desktop is unaffected (sessions stay cached across stages and runs).
+// iPadOS reports a Mac UA, so touch points tell it apart from a real Mac.
+function isLowMemoryDevice() {
+  try {
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+    if (/iPhone|iPad|iPod/.test(ua)) return true;
+    if (/Macintosh/.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1) return true;
+  } catch {}
+  return false;
+}
+
 async function ensureModel(kind) {
   // Await any in-flight load so inference never runs on a null session.
   if (loading[kind]) { await loading[kind]; return; }
@@ -596,6 +611,13 @@ async function ensureModel(kind) {
     }
     // 2.0.13: apply a measured thread count before creating any session.
     await threadsReady();
+    // 2.3.8 (low-memory, iOS only): release the previous stage's session
+    // before loading the next model. A released model reloads on demand
+    // (ensureModel checks .loaded), so this only costs reload time.
+    if (isLowMemoryDevice()) {
+      if (kind === 'ocr-baberu') await resetGroup('detector');
+      else if (kind === 'inpaint') await resetGroup('ocr-baberu');
+    }
     if (kind === 'detector' && !detector.loaded) {
       await detector.load(await modelBuffer('detector'), ['wasm']);
     } else if (kind === 'ocr-baberu' && !baberu.loaded) {
