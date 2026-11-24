@@ -3550,8 +3550,10 @@ async function runPipeline(tabId, opts = {}) {
     // paste containing it shows the true totals and the outcome.
     diagPush('run ended run ' + runId + ' ok false error ' + msg + ' progressSendFails ' + diagProgressFails + ' lastProgress ' + (currentRun ? currentRun.stage + ' ' + currentRun.progress : 'none'));
     // DIAGNOSTIC (temporary): send AFTER the summary is pushed, so the
-    // panel log includes it. Error runs only (not user cancels).
-    if (!quietCancel) await sendDiagLog(tabId, runId);
+    // panel log includes it. Error runs only (not user cancels), and only
+    // when debug mode is on — otherwise the panel pops up even though the
+    // user turned it off.
+    if (!quietCancel && settings.debugMode) await sendDiagLog(tabId, runId);
     result = { runId, ok: false, error: msg, cancelled: !!quietCancel,
       ...(e && e.fallbackUrl ? { fallbackUrl: e.fallbackUrl } : {}) };
   } finally {
@@ -4563,7 +4565,10 @@ async function recoverOrphanedRuns() {
         const sent = await failOrphanedRun(orphanRunId, rec, msg);
         if (sent) {
           diagPush('orphan error: ' + msg);
-          if (rec.tabId != null) await sendDiagLog(rec.tabId, orphanRunId);
+          if (rec.tabId != null) {
+            const s = await getSettings().catch(() => null);
+            if (s && s.debugMode) await sendDiagLog(rec.tabId, orphanRunId);
+          }
         }
         diagPush('orphan recovery done run ' + orphanRunId);
       } catch {}
@@ -4591,7 +4596,10 @@ setMlAlarmRecoveryHook(async (entry, msg) => {
     const sent = await failOrphanedRun(entry.runId, { tabId: entry.tabId }, msg);
     if (sent) {
       diagPush('alarm recovery error: ' + msg);
-      if (entry.tabId != null) await sendDiagLog(entry.tabId, entry.runId);
+      if (entry.tabId != null) {
+        const s = await getSettings().catch(() => null);
+        if (s && s.debugMode) await sendDiagLog(entry.tabId, entry.runId);
+      }
     }
   } catch {}
 });

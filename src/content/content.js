@@ -1216,6 +1216,7 @@
   const stageOrder = ['capture', 'detect', 'blocks', 'ocr', 'mask', 'inpaint', 'translate', 'render', 'diaglog'];
   let currentRunId = null;
   let latestRunId = null;   // run the service worker last started for this tab
+  let debugPanelSuppressed = false; // user hid the panel with the Debug toggle; auto-show stays off until a new run
 
   // FIX3: content-script-held keep-alive Port. FIX2's self-connect Port
   // (both ends in the background) did not prevent the background dying
@@ -1295,6 +1296,7 @@
       const on = debugPanel.style.display === 'none';
       debugPanel.style.display = on ? 'flex' : 'none';
       dbgBtnEl.textContent = on ? 'Debug: on' : 'Debug: off';
+      debugPanelSuppressed = !on;
     });
     dbgBtn = dbgBtnEl;
     bar.appendChild(dbgBtn);
@@ -1658,10 +1660,11 @@
       if (currentRunId !== msg.runId) {
         for (const k of Object.keys(stageTabs)) delete stageTabs[k];
         lastRunTimes = null;
+        debugPanelSuppressed = false;
       }
       currentRunId = msg.runId;
       stageTabs[msg.stage] = msg.payload;
-      if (msg.debug) {
+      if (msg.debug && !debugPanelSuppressed) {
         overlay.style.display = 'flex';
         debugPanel.style.display = 'flex';
         if (dbgBtn) dbgBtn.textContent = 'Debug: on';
@@ -1676,6 +1679,7 @@
       if (msg.runId !== latestRunId) { sendResponse({ ok: false, error: 'stale run' }); return false; }
       (async () => {
         try {
+          if (currentRunId !== msg.runId) debugPanelSuppressed = false;
           currentRunId = msg.runId;
           const { imageDataUrl, width, height, blocks, timings, debug, mode } = msg;
           // Compose the final translated page on a scratch canvas.
@@ -1771,7 +1775,7 @@
             seqMs,
             breakdown: Object.entries(allTimings).filter(([k]) => k !== 'total').map(([k, v]) => `${k} ${v}ms`).join(' · '),
           };
-          if (debug) {
+          if (debug && !debugPanelSuppressed) {
             ensureOverlay();
             overlay.style.display = 'flex';
             debugPanel.style.display = 'flex';
