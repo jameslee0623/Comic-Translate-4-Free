@@ -1,7 +1,7 @@
 // Settings page: read/write settings + model management + connection checks.
 import { BUILD } from '../shared/version.js';
 import { storeUrlForFirefox } from '../shared/contracts.js';
-import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, readSettingsRaw, updateSettings } from '../shared/settings.js';
+import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings } from '../shared/settings.js';
 const $ = id => document.getElementById(id);
 // Defaults live in shared/settings.js — single source of truth.
 const DEFAULTS = DEFAULT_SETTINGS;
@@ -157,7 +157,6 @@ function setChecked(id, v) {
   if (el) el.checked = !!v;
 }
 function applyToForm(s) {
-  if (s.translationBackend === 'local-llm') s.translationBackend = 'google'; // backend retired from UI
   fillLangs($('sourceLang'), [['auto', ctMsg('source_auto') || 'Auto-detect'], ...LANGS], s.sourceLang);
   fillLangs($('targetLang'), TARGET_LANGS, s.targetLang);
   setVal('backend', s.translationBackend);
@@ -180,10 +179,22 @@ function applyToForm(s) {
 }
 
 async function load() {
-  const s = await readSettingsRaw();
+  const s = await getSettings();
   lastSettings = s;
   applyToForm(s);
   formLoaded = true;
+  // Reconcile the allow-all switch with the real permission, like the
+  // popup does: if <all_urls> was revoked outside the extension, the
+  // switch must show OFF instead of a stale ON.
+  try {
+    const has = await chrome.permissions.contains({ origins: ['<all_urls>'] });
+    if (!!s.allowAllSites !== has) {
+      const fresh = await getSettings();
+      const next = { ...(fresh || {}), allowAllSites: has };
+      lastSettings = next;
+      await persistSettings(next);
+    }
+  } catch { /* permissions API unavailable — leave storage alone */ }
   refreshModels();
   refreshDiagLog();
   $('refreshDiagLog').onclick = refreshDiagLog;

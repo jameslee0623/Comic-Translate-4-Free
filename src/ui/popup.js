@@ -1,7 +1,7 @@
 // Popup: trigger runs, show progress, backend + language quick-switch, whitelist.
 import { BUILD } from '../shared/version.js';
 import { baseDomain, imageHostOrigins, originAccessPatterns, displayHost, hostOf, isSiteAllowed } from '../shared/site-access.js';
-import { NATIVE_LANGS as LANGS, TARGET_LANGS, readSettingsRaw, updateSettings as writeSettings } from '../shared/settings.js';
+import { NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings as writeSettings } from '../shared/settings.js';
 const $ = id => document.getElementById(id);
 // Escape for innerHTML interpolation (hostnames are DNS-safe, but explicit).
 const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -119,7 +119,7 @@ async function refreshStatus() {
 }
 
 async function refreshSettings() {
-  const settings = await readSettingsRaw();
+  const settings = await getSettings();
   // Reconcile the allow-all-sites flag with the real <all_urls> permission.
   // The permission prompt steals focus and can close the popup, killing this
   // JS context before permissions.request() resolves — the grant then never
@@ -135,7 +135,7 @@ async function refreshSettings() {
       // during the permissions.contains await. Merge only the reconciled
       // flag into fresh state so a stale write can't clobber a
       // concurrent change.
-      const fresh = await readSettingsRaw();
+      const fresh = await getSettings();
       await chrome.storage.local.set({ settings: { ...(fresh || {}), allowAllSites: has } });
     }
   } catch { /* permissions API unavailable — leave storage alone */ }
@@ -368,7 +368,7 @@ async function refreshSite(settings) {  const [tab] = await chrome.tabs.query({ 
       // Re-read: the optimistic write above (or a Settings-page edit) may
       // have moved the list since this handler ran.
       let cur = null;
-      try { (cur = await readSettingsRaw()); } catch { /* keep going */ }
+      try { (cur = await getSettings()); } catch { /* keep going */ }
       const wl2 = new Set((cur && cur.siteWhitelist) || []);
       if (granting) {
         if (!granted) wl2.delete(currentHost); // denied: roll back the optimistic add
@@ -508,7 +508,7 @@ chrome.runtime.onMessage.addListener(msg => {
       // reopening the popup — refreshSite merges the run's grantHosts
       // into the grant list, so one click covers every picture.
       refreshStatus().then(async () => {
-        const settings = await readSettingsRaw().catch(() => null);
+        const settings = await getSettings().catch(() => null);
         refreshSite(settings || {});
       }).catch(() => {});
     }

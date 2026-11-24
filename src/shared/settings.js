@@ -290,6 +290,14 @@ export async function getSettings() {
   const clamp = (v, lo, hi, fb) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fb;
   s.detectionThreshold = clamp(+s.detectionThreshold, 0.05, 0.9, DEFAULT_SETTINGS.detectionThreshold);
   s.minImageSize = Math.round(clamp(+s.minImageSize, 100, 4000, DEFAULT_SETTINGS.minImageSize));
+  // One-time migration (2026-09-30, fixed 2026-11-23): the Local LLM
+  // (WebLLM) backend does not work and is hidden from the UI. A stored
+  // 'local-llm' backend migrates to Google once, with a write-back, so
+  // opening Settings no longer silently converts it on every save.
+  if (s.translationBackend === 'local-llm') {
+    s.translationBackend = 'google';
+    chrome.storage.local.set({ settings: s }).catch(() => {});
+  }
   // 2.2.12: validate the backend too — a corrupt/retired stored value used
   // to pass through, leaving the popup's backend dropdown blank and the
   // pipeline with an unknown backend string.
