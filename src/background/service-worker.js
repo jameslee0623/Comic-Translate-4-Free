@@ -113,6 +113,19 @@ async function readDiagTrace() {
     return arr.filter((l) => typeof l === 'string');
   } catch { return []; }
 }
+// Print a line only once across background restarts. The version header,
+// device line, and gpu-disabled line re-print on every background start
+// (Firefox restarts the background often), filling the log with repeats.
+// This checks the persisted trace first and skips the line if it is
+// already there. Old repeats already in the trace age out (last 200).
+async function diagPushOnce(line) {
+  const s = '[ct-diag] ' + String(line);
+  try {
+    const arr = await readDiagTrace();
+    if (arr.includes(s)) return;
+  } catch {}
+  diagPush(line);
+}
 // Replay the persisted pre-restart log into the in-memory buffer (direct
 // buffer push, NOT diagPush, so the replayed lines are not persisted
 // again). Returns how many lines were replayed.
@@ -148,7 +161,7 @@ replayDiagTrace().catch(() => {});
 // missing getManifest must never break background load.
 try {
   const _m = chrome.runtime.getManifest();
-  diagPush('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')');
+  diagPushOnce('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')').catch(() => {});
 } catch {}
 // GPU inpaint kill-switch (2.3.27): once WebGPU inpaint fails, it is a
 // deterministic failure on this setup (e.g. a Metal shader that never
@@ -182,7 +195,7 @@ async function loadGpuInpaintDead() {
     gpuInpaintDead = true;
     if (!gpuInpaintDeadLogged) {
       gpuInpaintDeadLogged = true;
-      diagPush('inpaint gpu disabled (known failure — using WASM)');
+      diagPushOnce('inpaint gpu disabled (known failure — using WASM)').catch(() => {});
     }
   } catch {}
 }
@@ -254,7 +267,7 @@ async function logDeviceLine() {
       }
     }
     const where = model ? model + (os && os !== model ? ' (' + os + ')' : '') : (os || 'unknown device');
-    diagPush('Device: ' + where + ' - ' + (app || 'unknown browser'));
+    diagPushOnce('Device: ' + where + ' - ' + (app || 'unknown browser')).catch(() => {});
   } catch {}
 }
 logDeviceLine().catch(() => {});
