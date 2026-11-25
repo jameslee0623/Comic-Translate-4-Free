@@ -82,9 +82,8 @@
     input[type=range] { width: 100%; }
     .hint { margin-left: 0; max-width: none; }
     button { min-height: 44px; font-size: 14px; }
-    .model { flex-direction: column; align-items: stretch; gap: 8px; }
+    .model { flex-direction: row; justify-content: space-between; align-items: center; }
     .model > div:last-child { display: flex; gap: 8px; }
-    .model > div:last-child button { flex: 1; }
     .langfields { flex-direction: column; }
     .row a { text-align: center; }
     #diagLog { font-size: 12px; }
@@ -168,7 +167,7 @@
 
   <h2 data-i18n="pro_title" id="proSection">Pro</h2>
   <p style="color:#8a8a90;font-size:12px" data-i18n="pro_desc">Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate.</p>
-  <div class="row"><span id="proStatus" style="color:#e8e8ea;font-size:13px"></span><a id="proGet" href="#" target="_blank" rel="noopener noreferrer" data-i18n="pro_get_short" style="font-size:13px;color:#8ab4f8">Get Pro</a></div>
+  <div class="row" style="flex-direction:row"><span id="proStatus" style="color:#e8e8ea;font-size:13px"></span><a id="proGet" href="#" target="_blank" rel="noopener noreferrer" data-i18n="pro_get_short" style="font-size:13px;color:#8ab4f8">Get Pro</a></div>
   <div class="row"><label data-i18n="pro_key">License key</label><input type="text" id="proKey" autocomplete="off" data-i18n-ph="pro_key_ph" placeholder="Paste your Pro license key"></div>
   <div class="row"><label></label><button id="proActivate" data-i18n="pro_activate">Activate Pro</button><button id="proDeactivate" data-i18n="pro_deactivate" style="display:none">Deactivate</button><span id="proResult" class="check-result"></span></div>
 
@@ -195,7 +194,7 @@
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
 
   <h2 id="diagSection">Diagnostic log</h2>
-  <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
+  <div class="row" style="justify-content:space-between;flex-direction:row"><button id="refreshDiagLog" style="font-size:13px">Refresh</button><button id="copyDiagLog" style="font-size:13px">Copy</button></div>
   <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
   </div>
 
