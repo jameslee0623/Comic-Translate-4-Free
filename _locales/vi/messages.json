@@ -48,7 +48,7 @@
     "message": "Azure Translator (cần khóa)"
   },
   "backend_google_opt": {
-    "message": "Google (miễn phí, không cần khóa)"
+    "message": "Google Translator (không cần khóa)"
   },
   "backend_hint": {
     "message": "LM Studio phải đang chạy với máy chủ tương thích OpenAI đã bật (mặc định http://127.0.0.1:1234)."
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (日本語 + English + 简体中文, huấn luyện trên manga)"
+    "message": "OCR (huấn luyện trên manga)"
   },
   "model_detector": {
-    "message": "Trình phát hiện văn bản (RT-DETR-v2)"
+    "message": "Trình phát hiện văn bản"
   },
   "model_inpaint": {
-    "message": "Trình phục hồi nền LaMa (manga)"
+    "message": "Trình phục hồi nền manga"
   },
   "models": {
     "message": "Mô hình"
@@ -367,10 +367,10 @@
     "message": "Bạn có thích Comic Translate 4 Free không?"
   },
   "support_modal_text": {
-    "message": "Nếu bạn thích, hãy ủng hộ — điều đó giúp ích rất nhiều."
+    "message": "Nếu bạn thích, một đánh giá hoặc phản hồi sẽ giúp ích rất nhiều."
   },
   "support_hint": {
-    "message": "Tiện ích này miễn phí và mã nguồn mở. Nếu bạn thích tiện ích này, bạn có thể hỗ trợ phát triển tiếp."
+    "message": "Dịch manga và truyện tranh trong trình duyệt của bạn."
   },
   "pagecache_title": {
     "message": "Bộ nhớ đệm trang đã dịch"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (miễn phí, cần khóa)"
+    "message": "Gemini (cần khóa, khuyên dùng)"
   },
   "gemini_key": {
     "message": "Khóa API Gemini"
@@ -463,7 +463,7 @@
     "message": "Hãy dùng Gemini để có bản dịch tốt hơn. Azure sẽ bị gỡ bỏ trong phiên bản tương lai."
   },
   "azure_retire_step1": {
-    "message": "Mở Google AI Studio và tạo khóa API — miễn phí, không cần thẻ tín dụng."
+    "message": "Mở Google AI Studio và tạo khóa API."
   },
   "azure_retire_step2": {
     "message": "Sao chép khóa."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "Mở Cài đặt"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

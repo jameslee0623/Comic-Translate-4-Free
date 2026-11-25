@@ -48,7 +48,7 @@
     "message": "Azure Translator (perlu kunci API)"
   },
   "backend_google_opt": {
-    "message": "Google (gratis, tanpa kunci API)"
+    "message": "Google Translator (tanpa kunci)"
   },
   "backend_hint": {
     "message": "LM Studio harus berjalan dengan server yang kompatibel OpenAI diaktifkan (bawaan http://127.0.0.1:1234)."
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (日本語 + English + 简体中文, terlatih manga)"
+    "message": "OCR (terlatih manga)"
   },
   "model_detector": {
-    "message": "Detektor teks (RT-DETR-v2)"
+    "message": "Detektor teks"
   },
   "model_inpaint": {
-    "message": "Inpainter LaMa (manga)"
+    "message": "Inpainter manga"
   },
   "models": {
     "message": "Model"
@@ -367,10 +367,10 @@
     "message": "Menikmati Comic Translate 4 Free?"
   },
   "support_modal_text": {
-    "message": "Jika Anda menyukainya, mohon dukung — itu sangat membantu."
+    "message": "Jika Anda menyukainya, rating atau masukan sangat membantu."
   },
   "support_hint": {
-    "message": "Ekstensi ini gratis dan open source. Jika Anda menyukai ekstensi ini, Anda bisa mendukung pengembangannya."
+    "message": "Terjemahkan manga dan komik di browser Anda."
   },
   "pagecache_title": {
     "message": "Cache halaman terjemahan"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (gratis, perlu kunci API)"
+    "message": "Gemini (perlu kunci, disarankan)"
   },
   "gemini_key": {
     "message": "Kunci API Gemini"
@@ -463,7 +463,7 @@
     "message": "Gunakan Gemini untuk terjemahan yang lebih baik. Azure akan dihapus pada versi mendatang."
   },
   "azure_retire_step1": {
-    "message": "Buka Google AI Studio dan buat kunci API — gratis, tidak perlu kartu kredit."
+    "message": "Buka Google AI Studio dan buat kunci API."
   },
   "azure_retire_step2": {
     "message": "Salin kunci tersebut."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "Buka Pengaturan"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

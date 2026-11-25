@@ -48,7 +48,7 @@
     "message": "Azure Translator (key required)"
   },
   "backend_google_opt": {
-    "message": "Google (free, no key)"
+    "message": "Google Translator (no key)"
   },
   "backend_hint": {
     "message": "LM Studio must be running with its OpenAI-compatible server enabled (default http://127.0.0.1:1234)."
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (Japanese + English + Chinese Simplified, manga-trained v1.1)"
+    "message": "OCR (manga-trained)"
   },
   "model_detector": {
-    "message": "Text detector (RT-DETR-v2)"
+    "message": "Text detector"
   },
   "model_inpaint": {
-    "message": "LaMa inpainter (manga)"
+    "message": "Manga inpainter"
   },
   "models": {
     "message": "Models"
@@ -367,10 +367,10 @@
     "message": "Enjoying Comic Translate 4 Free?"
   },
   "support_modal_text": {
-    "message": "If you like it, please support it — it helps a lot."
+    "message": "If you like it, a rating or feedback helps a lot."
   },
   "support_hint": {
-    "message": "This extension is free and open source. If you like this extension, you can support its ongoing development."
+    "message": "Translate manga and comics in your browser."
   },
   "pagecache_title": {
     "message": "Translated page cache"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (free, key required)"
+    "message": "Gemini (key required, recommended)"
   },
   "gemini_key": {
     "message": "Gemini API key"
@@ -463,7 +463,7 @@
     "message": "Use Gemini for better translations. Azure will be removed in a future version."
   },
   "azure_retire_step1": {
-    "message": "Open Google AI Studio and create an API key — free, no credit card needed."
+    "message": "Open Google AI Studio and create an API key."
   },
   "azure_retire_step2": {
     "message": "Copy the key."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "Open Settings"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

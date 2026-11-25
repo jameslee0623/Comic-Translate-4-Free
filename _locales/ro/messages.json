@@ -48,7 +48,7 @@
     "message": "Azure Translator (necesită cheie)"
   },
   "backend_google_opt": {
-    "message": "Google (gratuit, fără cheie)"
+    "message": "Google Translator (fără cheie)"
   },
   "backend_hint": {
     "message": "LM Studio trebuie să ruleze cu serverul compatibil OpenAI activat (implicit http://127.0.0.1:1234)."
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (japoneză + engleză + chineză simplificată, antrenat pe manga v1.1)"
+    "message": "OCR (antrenat pe manga)"
   },
   "model_detector": {
-    "message": "Detector de text (RT-DETR-v2)"
+    "message": "Detector de text"
   },
   "model_inpaint": {
-    "message": "Inpainter LaMa (manga)"
+    "message": "Inpainter manga"
   },
   "models": {
     "message": "Modele"
@@ -367,10 +367,10 @@
     "message": "Îți place Comic Translate 4 Free?"
   },
   "support_modal_text": {
-    "message": "Dacă îți place, te rog s-o sprijini — ajută foarte mult."
+    "message": "Dacă îți place, o evaluare sau un feedback ajută mult."
   },
   "support_hint": {
-    "message": "Această extensie este gratuită și open source. Dacă îți place această extensie, poți sprijini dezvoltarea ei continuă."
+    "message": "Tradu manga și benzi desenate în browser."
   },
   "pagecache_title": {
     "message": "Cache pentru pagini traduse"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (gratuit, necesită cheie)"
+    "message": "Gemini (necesită cheie, recomandat)"
   },
   "gemini_key": {
     "message": "Cheie API Gemini"
@@ -463,7 +463,7 @@
     "message": "Folosește Gemini pentru traduceri mai bune. Azure va fi eliminat într-o versiune viitoare."
   },
   "azure_retire_step1": {
-    "message": "Deschide Google AI Studio și creează o cheie API — gratuit, fără card de credit."
+    "message": "Deschide Google AI Studio și creează o cheie API."
   },
   "azure_retire_step2": {
     "message": "Copiază cheia."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "Deschide setările"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

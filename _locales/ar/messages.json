@@ -60,7 +60,7 @@
     "message": "Azure Translator (يتطلب مفتاحًا)"
   },
   "backend_google_opt": {
-    "message": "Google (مجاني، بلا مفتاح)"
+    "message": "Google Translator (بلا مفتاح)"
   },
   "backend_hint": {
     "message": "LM Studio مع تفعيل خادم OpenAI المتوافق (الافتراضي http://127.0.0.1:1234)."
@@ -215,13 +215,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (اليابانية + الإنجليزية + الصينية المبسطة، مُدرَّب على المانغا)"
+    "message": "OCR (مُدرَّب على المانغا)"
   },
   "model_detector": {
-    "message": "كاشف النص (RT-DETR-v2)"
+    "message": "كاشف النص"
   },
   "model_inpaint": {
-    "message": "مُرمِّم LaMa (مانغا)"
+    "message": "مُرمِّم المانغا"
   },
   "models": {
     "message": "النماذج"
@@ -382,7 +382,7 @@
     "message": "جارٍ الترجمة…"
   },
   "support_hint": {
-    "message": "هذه الإضافة مجانية ومفتوحة المصدر. إذا أعجبتك هذه الإضافة، يمكنك دعم تطويرها المستمر."
+    "message": "ترجم المانغا والقصص المصورة في متصفحك."
   },
   "support_project": {
     "message": "❤️ ادعم هذا المشروع"
@@ -406,7 +406,7 @@
     "message": "هل يعجبك Comic Translate 4 Free؟"
   },
   "support_modal_text": {
-    "message": "إذا أعجبك، فادعمه من فضلك — هذا يساعد كثيرًا."
+    "message": "إذا أعجبتك، فإن التقييم أو الملاحظات يساعدان كثيرًا."
   },
   "target_lang": {
     "message": "اللغة الهدف"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (مجاني، يتطلب مفتاحًا)"
+    "message": "Gemini (يتطلب مفتاحًا، موصى به)"
   },
   "gemini_key": {
     "message": "مفتاح Gemini API"
@@ -463,7 +463,7 @@
     "message": "استخدم Gemini لترجمات أفضل. ستتم إزالة Azure في إصدار مستقبلي."
   },
   "azure_retire_step1": {
-    "message": "افتح Google AI Studio وأنشئ مفتاح API — مجاني، ولا حاجة لبطاقة ائتمانية."
+    "message": "افتح Google AI Studio وأنشئ مفتاح API."
   },
   "azure_retire_step2": {
     "message": "انسخ المفتاح."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "فتح الإعدادات"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

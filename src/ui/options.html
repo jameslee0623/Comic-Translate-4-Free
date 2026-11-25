@@ -40,6 +40,11 @@
   .switch input:checked + .slider { background: #1a73e8; }
   .switch input:checked + .slider::after { left: 20px; }
   .switch input:focus-visible + .slider { outline: 2px solid #8ab4f8; outline-offset: 2px; }
+  /* Disabled (locked) switches: dimmed slider, so a Pro-locked toggle reads as off. */
+  .switch input:disabled + .slider { opacity: .4; }
+  .switch input:disabled + .slider::after { background: #9a9aa0; }
+  /* PRO badge after a Pro-only label. */
+  .protag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: #fff; background: #1a73e8; border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
   .check-result { font-size: 12px; margin-left: 8px; }
   .check-result.ok { color: #7ee787; } .check-result.err { color: #ff7b72; }
   #allowedSites { list-style: none; padding: 0; margin: 8px 0; }
@@ -89,7 +94,7 @@
     <a href="#modelsSection" data-i18n="models">Models</a>
     <a href="#cacheSection" data-i18n="pagecache_title">Translated page cache</a>
     <a href="#aboutSection" data-i18n="support_title">About this project</a>
-    <a href="#debugSection" data-i18n="debug">Debug</a>
+    <a href="#debugSection" id="debugNavLink" data-i18n="debug" style="display:none">Debug</a>
     <a href="#diagSection">Diagnostic log</a>
   </nav>
   <main>
@@ -103,7 +108,7 @@
     <option value="modelsSection" data-i18n="models">Models</option>
     <option value="cacheSection" data-i18n="pagecache_title">Translated page cache</option>
     <option value="aboutSection" data-i18n="support_title">About this project</option>
-    <option value="debugSection" data-i18n="debug">Debug</option>
+    <option value="debugSection" id="debugJumpOpt" data-i18n="debug" style="display:none">Debug</option>
     <option value="diagSection">Diagnostic log</option>
   </select>
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 12px"><h1 style="margin:0"><span data-i18n="appName">Comic Translate 4 Free</span> — <span data-i18n="options_title">Settings</span> <span id="saved" data-i18n="saved">Saved ✓</span></h1><span id="version" style="color:#8a8a90;font-size:12px;white-space:nowrap"></span></div>
@@ -123,13 +128,13 @@
 
   <h2 data-i18n="translation_backend" id="engineSection">Translating engine</h2>
   <div class="row"><label data-i18n="backend">Translating engine</label><select id="backend">
-    <option value="google" data-i18n="backend_google_opt">Google (free, no key)</option>
+    <option value="google" data-i18n="backend_google_opt">Google Translator (no key)</option>
     <option value="azure" data-i18n="backend_azure_opt">Azure Translator (key required)</option>
-    <option value="gemini" data-i18n="backend_gemini_opt">Gemini (free, key required)</option>
+    <option value="gemini" data-i18n="backend_gemini_opt">Gemini (key required, recommended)</option>
     <option value="lmstudio" data-i18n="backend_lmstudio_opt">LM Studio (local server)</option>
   </select></div>
   <p class="hint" id="googleNote" data-i18n="backend_google_note">Google needs no key and no setup.</p>
-  <div class="row"><label for="backendFailover" data-i18n="backend_failover">If the engine fails, try another one</label><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
+  <div class="row"><label for="backendFailover" data-i18n="backend_failover">If the engine fails, try another one</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="backend_failover_hint">Automatically switches to a working engine instead of stopping.</p>
   <div class="row" data-engine="azure"><label data-i18n="azure_key">Azure API key</label><input type="password" id="azureKey" autocomplete="off"></div>
   <div class="row" data-engine="azure"><label data-i18n="azure_region">Azure region</label><input type="text" id="azureRegion" data-i18n-ph="azure_region_ph" placeholder="e.g. japaneast" autocomplete="off"></div>
@@ -149,12 +154,18 @@
   <div class="row"><label data-i18n="min_image_size">Minimum image size (px)</label><input type="number" id="minImageSize" min="100" max="4000"></div>
   <p class="hint" data-i18n="min_image_hint">Images smaller than this are skipped.</p>
   <div class="row"><label data-i18n="play_ding">Play a sound when finishes</label><label class="switch"><input type="checkbox" id="playDing"><span class="slider"></span></label></div>
-  <div class="row"><label data-i18n="auto_translate">Auto-translate on page load</label><label class="switch"><input type="checkbox" id="autoTranslate"><span class="slider"></span></label></div>
+  <div class="row"><label data-i18n="auto_translate">Auto-translate on page load</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="autoTranslate"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="auto_hint">When on, allowed pages start translating automatically as soon as they finish loading.</p>
-  <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
+  <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="pretranslate_next_hint">While you read this page, the next page is translated in the background, so it is ready when you open it.</p>
 
-
+  <h2 data-i18n="pro_title" id="proSection">Pro</h2>
+  <p class="hint" data-i18n="pro_desc">Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate.</p>
+  <div class="row"><label data-i18n="pro_status">Status</label><span id="proStatus" style="color:#e8e8ea;font-size:13px"></span></div>
+  <div class="row"><label data-i18n="pro_usage">Today</label><span id="proUsage" style="color:#9a9aa0;font-size:13px"></span></div>
+  <div class="row"><label data-i18n="pro_key">License key</label><input type="text" id="proKey" autocomplete="off" data-i18n-ph="pro_key_ph" placeholder="Paste your Pro license key"></div>
+  <div class="row"><label></label><button id="proActivate" data-i18n="pro_activate">Activate Pro</button><button id="proDeactivate" data-i18n="pro_deactivate" style="display:none">Deactivate</button><span id="proResult" class="check-result"></span></div>
+  <div class="row" id="proGetRow"><label></label><a id="proGet" href="#" target="_blank" rel="noopener noreferrer" data-i18n="pro_get">Get Pro — $3/month</a></div>
 
   <h2 data-i18n="models" id="modelsSection">Models</h2>
   <div class="row"><button id="downloadAll" data-i18n="download_all">Download all models</button></div>
@@ -165,24 +176,19 @@
   <div class="row"><span id="cacheStats" style="color:#9a9aa0;font-size:12px"></span><button id="clearCache" data-i18n="pagecache_clear">Clear cache</button></div>
 
   <h2 data-i18n="support_title" id="aboutSection">About this project</h2>
-  <p style="color:#8a8a90;font-size:12px;margin:0 0 4px" data-i18n="support_hint">This extension is free and open source. If you like this extension, you can support its ongoing development.</p>
+  <p style="color:#8a8a90;font-size:12px;margin:0 0 4px" data-i18n="support_hint">Translate manga and comics in your browser.</p>
   <div class="row">
-    <a href="https://ko-fi.com/jameslee0623" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">❤️ Support this project</a>
     <a id="rateStore" href="https://chromewebstore.google.com/detail/comic-translate-4-free/pndooikgcenncdohfggodonniihplppj" target="_blank" rel="noopener noreferrer" data-i18n="rate_store" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ Rate it in the store</a>
     <a href="mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback" data-i18n="feedback_email" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">✉️ Send feedback by email</a>
-    <a href="https://github.com/jameslee0623/Comic-Translate-4-Free" target="_blank" rel="noopener noreferrer" style="padding:7px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;text-decoration:none;font-size:13px">⭐ Star on GitHub</a>
   </div>
-  <!--
-    Ko-fi's embeddable widget (kofiwidget2.draw()) is a REMOTE script and cannot
-    run on this page: the manifest pins extension-page CSP to script-src 'self'
-    'wasm-unsafe-eval', and MV3 forbids remotely hosted code in extension pages.
-    Hence the plain links above; the widget itself lives in the READMEs, where
-    remote scripts are allowed.
-  -->
 
+  <!-- Debug section: hidden unless the dev flag is on (see options.js).
+       Only James's devices show it; regular users never see it. -->
+  <div id="debugWrap" style="display:none">
   <h2 data-i18n="debug" id="debugSection">Debug</h2>
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
+  </div>
 
   <h2 id="diagSection">Diagnostic log</h2>
   <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
@@ -198,7 +204,7 @@
       <h2 data-i18n="azure_retire_title" style="margin:0 0 8px">Azure is being retired</h2>
       <p data-i18n="azure_retire_body" style="color:#c9c9ce;margin:0 0 10px">Use Gemini for better translations. Azure will be removed in a future version.</p>
       <ol style="margin:0 0 14px;padding-left:22px;color:#c9c9ce">
-        <li><span data-i18n="azure_retire_step1">Open Google AI Studio and create an API key — free, no credit card needed.</span> <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color:#8ab4f8">aistudio.google.com/apikey</a></li>
+        <li><span data-i18n="azure_retire_step1">Open Google AI Studio and create an API key.</span> <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="color:#8ab4f8">aistudio.google.com/apikey</a></li>
         <li data-i18n="azure_retire_step2">Copy the key.</li>
         <li data-i18n="azure_retire_step3">Paste it into the Gemini API key field in Settings, then click Check Gemini connection.</li>
         <li data-i18n="azure_retire_step4">Pick Gemini as the translating engine.</li>

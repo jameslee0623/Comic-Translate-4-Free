@@ -48,7 +48,7 @@
     "message": "Azure Translator（キー必須）"
   },
   "backend_google_opt": {
-    "message": "Google（無料、キー不要）"
+    "message": "Google Translator（キー不要）"
   },
   "backend_hint": {
     "message": "LM StudioはOpenAI互換サーバーを有効にして起動してください（デフォルト http://127.0.0.1:1234）。"
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR（日本語＋英語＋簡体字中国語、漫画学習済み）"
+    "message": "OCR（漫画学習済み）"
   },
   "model_detector": {
-    "message": "テキスト検出（RT-DETR-v2）"
+    "message": "テキスト検出"
   },
   "model_inpaint": {
-    "message": "LaMaインペインター（マンガ用）"
+    "message": "マンガ用インペインター"
   },
   "models": {
     "message": "モデル"
@@ -367,10 +367,10 @@
     "message": "Comic Translate 4 Free を楽しんでいますか？"
   },
   "support_modal_text": {
-    "message": "気に入ったら、ぜひ応援してください — 大きな助けになります。"
+    "message": "気に入ったら、評価やフィードバックがとても役立ちます。"
   },
   "support_hint": {
-    "message": "この拡張機能は無料でオープンソースです。この拡張機能が気に入ったなら、開発の支援をいただけると助かります。"
+    "message": "ブラウザでマンガやコミックを翻訳。"
   },
   "pagecache_title": {
     "message": "翻訳済みページのキャッシュ"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini（無料、キー必須）"
+    "message": "Gemini（キー必須、推奨）"
   },
   "gemini_key": {
     "message": "Gemini APIキー"
@@ -463,7 +463,7 @@
     "message": "より良い翻訳には Gemini をお使いください。Azure は将来のバージョンで削除されます。"
   },
   "azure_retire_step1": {
-    "message": "Google AI Studio を開いて API キーを作成します — 無料で、クレジットカードは不要です。"
+    "message": "Google AI Studio を開いて API キーを作成します。"
   },
   "azure_retire_step2": {
     "message": "キーをコピーします。"
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "設定を開く"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

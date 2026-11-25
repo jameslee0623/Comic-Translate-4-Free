@@ -1,9 +1,10 @@
 // Background service worker: pipeline orchestration, model management,
 // translation APIs, capture, debug emission. ML inference itself lives in
 // the offscreen document; pure-JS stages (blocks, mask) run here.
-import { MSG, STORE_URLS, KOFI_URL, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
+import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings } from '../shared/settings.js';
+import { canAutoOrPre, addProUsage, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
   boxIoU, clampBox, dedupAndMergeSeams, mergeBoxesByCost,
@@ -1366,6 +1367,10 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
     const resolved = tier1Entry.sourceLang || detectPageLang(blocks.map(b => b.text));
     effSettings = { ...settings, sourceLang: resolved || 'ja' };
   }
+  // Failover is a Pro feature: free users get it while under the daily
+  // limit; after 50 images/day it turns off (the Settings toggle locks too).
+  const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
+  if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
   const runController = runs.get(runId)?.abortController || new AbortController();
   // Tier-1 translate needs its own 30s abort (the full pipeline has one;
   // this path had none, so a stalled backend hung forever). Local
@@ -2065,6 +2070,13 @@ async function joinOrCancelPretranslate(runId, tabUrl, isAuto = true) {
 // incognito, already done).
 async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
   if (!settings || settings.pretranslateNextPage === false) return;
+  // Freemium gate: pre-translate counts against the 50/day free limit
+  // unless Pro is active. A stale Pro validation re-checks in the background.
+  {
+    const gate = await canAutoOrPre(settings);
+    if (!gate.ok) { diagPush('pre-translate skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)'); return; }
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).catch(() => {});
+  }
   try { if (await isIncognitoTab(sourceTabId)) return; } catch { /* proceed */ }
   cancelPretranslate();
   // Learned rule first: if this site has an active learned rule, build the
@@ -2300,6 +2312,10 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
       effSettings = { ...settings, sourceLang: detected || 'ja' };
       for (const b of blocks) b.source_lang = effSettings.sourceLang;
     }
+    // Failover is a Pro feature: free users get it while under the daily
+    // limit; after 50 images/day it turns off (the Settings toggle locks too).
+    const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
+    if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
     // ---- translate + mask/inpaint in parallel; render waits for both.
     const entry = runs.get(runId);
     const abortController = (entry && entry.abortController) || new AbortController();
@@ -2424,6 +2440,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     const finalDataUrl = await rgbaToDataURL(inpainted, w, h, Math.max(w, h));
     await writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, settings, sourceTabId, 'replace');
     diagPush('pre-translate: done ' + imageUrl.slice(0, 80));
+    // Freemium: one newly translated image against the free daily limit.
+    // Pro users are not counted.
+    if (!proIsActive(settings)) await addProUsage(1);
   } finally {
     for (const k of pxKeys.splice(0)) await pixelDrop(k);
   }
@@ -2439,6 +2458,10 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
     const resolved = tier1Entry.sourceLang || detectPageLang(blocks.map(b => b.text));
     effSettings = { ...settings, sourceLang: resolved || 'ja' };
   }
+  // Failover is a Pro feature: free users get it while under the daily
+  // limit; after 50 images/day it turns off (the Settings toggle locks too).
+  const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
+  if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
   const entry = runs.get(runId);
   const abortController = (entry && entry.abortController) || new AbortController();
   // 30s aborts the current attempt so translateBlocks can fail over; the
@@ -2980,6 +3003,10 @@ async function runPipeline(tabId, opts = {}) {
         effSettings = { ...settings, sourceLang: detected || 'ja' };
         for (const b of blocks) b.source_lang = effSettings.sourceLang;
       }
+      // Failover is a Pro feature: free users get it while under the daily
+      // limit; after 50 images/day it turns off (the Settings toggle locks too).
+      const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
+      if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
 
       // ---- 5+6+7. translate || (mask -> inpaint). Translate and mask both need
       // only the OCR text and are independent of each other (translate: network
@@ -3870,6 +3897,21 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
         if (r.tabId === tabId && !r.cancelled) { diagPush('auto diag skip: run in flight ' + url.slice(0, 120) + srcTag); return; }
       }
     }
+    // Freemium gate: auto-translate counts against the 50/day free limit
+    // unless Pro is active. Manual translate is always free and never gated.
+    // A stale Pro validation re-checks in the background (never blocks the run).
+    const gate = await canAutoOrPre(settings);
+    if (!gate.ok) {
+      diagPush('auto diag skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)');
+      try {
+        await withTimeout(chrome.tabs.sendMessage(tabId, {
+          type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
+          error: 'Free limit reached: ' + gate.used + '/' + gate.limit + ' auto-translate images today. Get Pro in Settings for unlimited auto-translate.',
+        }), MSG_TIMEOUT_MS, 'free limit notice');
+      } catch {}
+      return;
+    }
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).catch(() => {});
     diagPush('auto diag start: ' + url.slice(0, 120) + srcTag);
     // New page: drop whatever the tab was doing and start fresh immediately.
     // A stale run must never finish on top of the new page.
@@ -3882,6 +3924,10 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     autoFired.set(tabId, { url, at: now });
     await cancelRunsForTab(tabId);
     const r = await runPipeline(tabId, { auto: true });
+    // Freemium: count newly translated images against the free daily limit.
+    // Pro users are not counted. Cache hits translate 0 images, so they
+    // never consume the limit.
+    if (r.ok && !proIsActive(settings)) await addProUsage(r.images || 0);
     if (!r.ok && !r.cancelled) {
       console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
       // 2.3.5: a failed auto run must not consume the dedupe window.
@@ -4301,7 +4347,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // can never use this channel to open an arbitrary URL.
   if (msg && msg.type === MSG.OPEN_LINK && typeof msg.url === 'string') {
     const ok = msg.url === STORE_URLS.chrome || msg.url === STORE_URLS.firefox ||
-      msg.url === KOFI_URL || msg.url === FEEDBACK_MAILTO;
+      msg.url === FEEDBACK_MAILTO;
     if (!ok) { sendResponse({ ok: false, error: 'not an allowed link' }); return false; }
     (async () => {
       try { await chrome.tabs.create({ url: msg.url, active: true }); sendResponse({ ok: true }); }

@@ -61,7 +61,6 @@ export const STORE_URLS = {
   chrome: 'https://chromewebstore.google.com/detail/comic-translate-4-free/pndooikgcenncdohfggodonniihplppj',
   firefox: 'https://addons.mozilla.org/firefox/addon/comic-translate-4-free/',
 };
-export const KOFI_URL = 'https://ko-fi.com/jameslee0623';
 export const FEEDBACK_MAILTO = 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback';
 export function storeUrlForFirefox(isFirefox) {
   return isFirefox ? STORE_URLS.firefox : STORE_URLS.chrome;

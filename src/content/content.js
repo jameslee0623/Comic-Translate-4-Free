@@ -986,7 +986,6 @@
       return b;
     };
     btns.appendChild(mkBtn('rate_store', '⭐ 5 stars at store', supportStoreUrl()));
-    btns.appendChild(mkBtn('support_project', '❤️ Support this project', 'https://ko-fi.com/jameslee0623'));
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback'));
     card.appendChild(x);
     card.appendChild(title);

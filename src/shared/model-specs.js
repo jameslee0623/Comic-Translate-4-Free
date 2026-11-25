@@ -6,21 +6,21 @@ const hf = (repo, file) => `https://huggingface.co/${repo}/resolve/main/${file}`
 
 export const MODEL_GROUPS = [
   {
-    id: 'detector', labelKey: 'model_detector', label: 'Bubble/text detector (RT-DETR-v2)', required: true,
+    id: 'detector', labelKey: 'model_detector', label: 'Text detector', required: true,
     files: [
       { id: 'detector', file: 'detector-v4-s_int8.onnx', bytes: 11120765,
         url: hf('ogkalu/comic-text-and-bubble-detector', 'detector-v4-s_int8.onnx') },
     ],
   },
   {
-    id: 'inpaint', labelKey: 'model_inpaint', label: 'LaMa manga inpainter', required: true,
+    id: 'inpaint', labelKey: 'model_inpaint', label: 'Manga inpainter', required: true,
     files: [
       { id: 'inpaint', file: 'lama-manga-dynamic.onnx', bytes: 206291843,
         url: hf('ogkalu/lama-manga-onnx-dynamic', 'lama-manga-dynamic.onnx') },
     ],
   },
   {
-    id: 'ocr-baberu', labelKey: 'model_baberu', label: 'Baberu OCR (Japanese + English + Chinese Simplified/Traditional, manga-trained)',
+    id: 'ocr-baberu', labelKey: 'model_baberu', label: 'OCR (manga-trained)',
     files: [
       // v1.2 (2026-10-26): retrained with Manga109-s human labels (sound
       // effects 50%->74%, handwriting 60%->67%). All three files change,

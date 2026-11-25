@@ -48,7 +48,7 @@
     "message": "Azure Translator（需要金鑰）"
   },
   "backend_google_opt": {
-    "message": "Google（免費，無需金鑰）"
+    "message": "Google Translator（無需金鑰）"
   },
   "backend_hint": {
     "message": "LM Studio 須啟用 OpenAI 相容伺服器並執行（預設 http://127.0.0.1:1234）。"
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR（日文＋英文＋簡體中文，漫畫訓練）"
+    "message": "OCR（漫畫訓練）"
   },
   "model_detector": {
-    "message": "文字偵測（RT-DETR-v2）"
+    "message": "文字偵測"
   },
   "model_inpaint": {
-    "message": "LaMa 影像修補（漫畫專用）"
+    "message": "漫畫影像修補"
   },
   "models": {
     "message": "模型"
@@ -367,10 +367,10 @@
     "message": "喜歡 Comic Translate 4 Free 嗎？"
   },
   "support_modal_text": {
-    "message": "如果你喜歡它，請支持一下——這很有幫助。"
+    "message": "如果喜歡，評分或意見回饋會很有幫助。"
   },
   "support_hint": {
-    "message": "本擴充功能免費開源。如果你喜歡這個擴充功能，歡迎支持它的持續開發。"
+    "message": "在瀏覽器中翻譯漫畫。"
   },
   "pagecache_title": {
     "message": "已翻譯頁面快取"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini（免費，需要金鑰）"
+    "message": "Gemini（需要金鑰，推薦）"
   },
   "gemini_key": {
     "message": "Gemini API 金鑰"
@@ -463,7 +463,7 @@
     "message": "請改用 Gemini 以獲得更好的翻譯。Azure 將在未來版本中移除。"
   },
   "azure_retire_step1": {
-    "message": "開啟 Google AI Studio 並建立一個 API 金鑰——免費，無需信用卡。"
+    "message": "開啟 Google AI Studio 並建立一個 API 金鑰。"
   },
   "azure_retire_step2": {
     "message": "複製該金鑰。"
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "開啟設定"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

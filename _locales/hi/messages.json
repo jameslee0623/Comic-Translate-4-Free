@@ -60,7 +60,7 @@
     "message": "Azure Translator (की ज़रूरी)"
   },
   "backend_google_opt": {
-    "message": "Google (मुफ़्त, बिना की)"
+    "message": "Google Translator (बिना की)"
   },
   "backend_hint": {
     "message": "LM Studio चल रहा होना चाहिए और उसका OpenAI-कम्पैटिबल सर्वर चालू होना चाहिए (डिफ़ॉल्ट http://127.0.0.1:1234)।"
@@ -215,13 +215,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (जापानी + अंग्रेज़ी + चीनी सरलीकृत, मंगा-प्रशिक्षित)"
+    "message": "OCR (मंगा-प्रशिक्षित)"
   },
   "model_detector": {
-    "message": "टेक्स्ट डिटेक्टर (RT-DETR-v2)"
+    "message": "टेक्स्ट डिटेक्टर"
   },
   "model_inpaint": {
-    "message": "LaMa इनपेंटर (मंगा)"
+    "message": "मंगा इनपेंटर"
   },
   "models": {
     "message": "मॉडल"
@@ -382,7 +382,7 @@
     "message": "अनुवाद हो रहा है…"
   },
   "support_hint": {
-    "message": "यह एक्सटेंशन मुफ़्त और ओपन सोर्स है। अगर आपको यह एक्सटेंशन पसंद है, तो आप इसके विकास में मदद कर सकते हैं।"
+    "message": "अपने ब्राउज़र में मंगा और कॉमिक्स का अनुवाद करें।"
   },
   "support_project": {
     "message": "❤️ इस प्रोजेक्ट को सपोर्ट करें"
@@ -406,7 +406,7 @@
     "message": "Comic Translate 4 Free पसंद आ रहा है?"
   },
   "support_modal_text": {
-    "message": "अगर पसंद है, तो कृपया इसका समर्थन करें — इससे बहुत मदद मिलती है।"
+    "message": "अगर पसंद आए, तो रेटिंग या फ़ीडबैक बहुत मदद करता है।"
   },
   "target_lang": {
     "message": "लक्ष्य भाषा"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (मुफ़्त, की ज़रूरी)"
+    "message": "Gemini (की ज़रूरी, अनुशंसित)"
   },
   "gemini_key": {
     "message": "Gemini API की"
@@ -463,7 +463,7 @@
     "message": "बेहतर अनुवाद के लिए Gemini का उपयोग करें। Azure को भविष्य के संस्करण में हटा दिया जाएगा।"
   },
   "azure_retire_step1": {
-    "message": "Google AI Studio खोलें और एक API कुंजी बनाएँ — मुफ़्त, क्रेडिट कार्ड की ज़रूरत नहीं।"
+    "message": "Google AI Studio खोलें और एक API कुंजी बनाएँ।"
   },
   "azure_retire_step2": {
     "message": "कुंजी कॉपी करें।"
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "सेटिंग खोलें"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

@@ -2,6 +2,7 @@
 import { BUILD } from '../shared/version.js';
 import { storeUrlForFirefox } from '../shared/contracts.js';
 import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings } from '../shared/settings.js';
+import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
 const $ = id => document.getElementById(id);
 // Defaults live in shared/settings.js — single source of truth.
 const DEFAULTS = DEFAULT_SETTINGS;
@@ -201,6 +202,7 @@ async function load() {
   $('copyDiagLog').onclick = copyDiagLog;
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();
+  refreshPro();
   // Azure retirement notice (2.3.1): same once-after-update nudge as the
   // popup — users already on Azure never touch the dropdown, so show the
   // notice once on first Settings open, then remember it. The flag is
@@ -218,6 +220,71 @@ function persistSettings(s) {
   return chrome.storage.local.set({ settings: s });
 }
 
+// Pro (freemium): status line, today's usage, license activation.
+// The license key input is NOT part of collect() — it holds a new key to
+// activate, not the stored key. Activation stores the key via pro.js.
+async function refreshPro() {
+  const statusEl = $('proStatus'), usageEl = $('proUsage'), keyEl = $('proKey');
+  const actBtn = $('proActivate'), deactBtn = $('proDeactivate'), resultEl = $('proResult'), getRow = $('proGetRow'), getLink = $('proGet');
+  if (!statusEl) return;
+  const s = await getSettings().catch(() => ({}));
+  const active = proIsActive(s);
+  statusEl.textContent = active ? 'Pro active — unlimited auto-translate and pre-translate' : 'Free — 50 auto/pre-translate images a day';
+  const used = await getProUsageCount();
+  usageEl.textContent = active ? 'Pro — no limit' : (used + ' / ' + PRO_FREE_DAILY_LIMIT + ' images used today');
+  if (actBtn) actBtn.style.display = active ? 'none' : '';
+  if (deactBtn) deactBtn.style.display = active ? '' : 'none';
+  if (keyEl && active) keyEl.value = '';
+  // The Get Pro link only works once James has created the Dodo product.
+  if (getLink) {
+    if (DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE')) getLink.href = DODO_CHECKOUT_URL;
+    else if (getRow) getRow.style.display = 'none';
+  }
+  // Pro lock: without a subscription, auto-translate and pre-translate
+  // turn off and gray out once the daily free limit is hit. The stored
+  // preference is kept (collect() reads lastSettings while disabled), so
+  // the toggles come back on their own tomorrow or when Pro is activated.
+  const gate = await canAutoOrPre(s).catch(() => ({ ok: true }));
+  const locked = !gate.ok;
+  const at = $('autoTranslate'), pt = $('pretranslateNext'), fo = $('backendFailover');
+  if (at) {
+    at.disabled = locked;
+    at.checked = locked ? false : !!s.autoTranslateOnLoad;
+  }
+  if (pt) {
+    pt.disabled = locked;
+    pt.checked = locked ? false : s.pretranslateNextPage !== false;
+  }
+  // Failover is a Pro feature too: same lock — off and grayed out once
+  // the daily free limit is hit, back on its own tomorrow or with Pro.
+  if (fo) {
+    fo.disabled = locked;
+    fo.checked = locked ? false : !!s.backendFailover;
+  }
+  // A stale Pro validation re-checks in the background.
+  if (active && proCheckDue(s)) {
+    validateProLicense(s).then(r => { if (r.ok) refreshPro(); }).catch(() => {});
+  }
+}
+$('proActivate').onclick = async () => {
+  const resultEl = $('proResult');
+  const key = ($('proKey') || {}).value || '';
+  if (resultEl) { resultEl.className = 'check-result'; resultEl.textContent = 'activating…'; }
+  const r = await activateProLicense(key);
+  if (resultEl) {
+    resultEl.className = 'check-result ' + (r.ok ? 'ok' : 'err');
+    resultEl.textContent = r.ok ? '✓ Pro activated' : '✗ ' + (r.error || 'activation failed');
+  }
+  if (r.ok) { $('proKey').value = ''; refreshPro(); }
+};
+$('proDeactivate').onclick = async () => {
+  const resultEl = $('proResult');
+  const s = await getSettings().catch(() => ({}));
+  await deactivateProLicense(s);
+  if (resultEl) { resultEl.className = 'check-result ok'; resultEl.textContent = 'Pro deactivated'; }
+  refreshPro();
+};
+
 // Sync with the popup (or any other writer): if settings change elsewhere,
 // update the form. lastSettings is refreshed too, because collect() spreads
 // it — without this, the next auto-save would clobber the remote change
@@ -228,10 +295,15 @@ function persistSettings(s) {
 // popup write landing inside the window gets ignored, then the next
 // auto-save overwrites it with the stale form.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !changes.settings) return;
+  if (area !== 'local') return;
+  // Usage ticks up in the background as auto/pre-translate runs; when it
+  // hits the daily limit, the Pro toggles gray out live on this page.
+  if (changes['ct-pro-usage'] && formLoaded && !changes.settings) { refreshPro(); return; }
+  if (!changes.settings) return;
   const s = { ...DEFAULTS, ...((changes.settings && changes.settings.newValue) || {}) };
   lastSettings = s;
   if (formLoaded) applyToForm(s);
+  if (formLoaded) refreshPro();
 });
 
 // Every control auto-saves; no Save button.
@@ -279,9 +351,9 @@ function collect() {
     lmStudioKey: $('lmStudioKey').value.trim(),
     minImageSize: minImg.ok ? Math.round(minImg.value) : (lastSettings.minImageSize ?? DEFAULTS.minImageSize),
     debugMode: $('debugMode').checked,
-    backendFailover: $('backendFailover').checked,
-    siteWhitelist: [...allowedSites], autoTranslateOnLoad: $('autoTranslate').checked,
-    pretranslateNextPage: $('pretranslateNext').checked,
+    backendFailover: $('backendFailover').disabled ? !!lastSettings.backendFailover : $('backendFailover').checked,
+    siteWhitelist: [...allowedSites], autoTranslateOnLoad: $('autoTranslate').disabled ? !!lastSettings.autoTranslateOnLoad : $('autoTranslate').checked,
+    pretranslateNextPage: $('pretranslateNext').disabled ? lastSettings.pretranslateNextPage !== false : $('pretranslateNext').checked,
     playDing: $('playDing').checked,
     allowAllSites: $('allowAllSites').checked,
   };
@@ -664,3 +736,28 @@ try {
   const v = chrome.runtime.getManifest().version;
   $('version').textContent = `v${v}`;
 } catch { $('version').textContent = 'v' + BUILD; }
+// Debug section: hidden unless the dev flag is on. The flag lives in
+// chrome.storage.local ('ct-dev'), so it is per-device — only James's
+// devices show Debug. Reveal it by clicking the version number 5 times;
+// the flag persists, so it stays revealed on that device.
+async function refreshDebugVisibility() {
+  let dev = false;
+  try { dev = !!(await chrome.storage.local.get('ct-dev'))['ct-dev']; } catch { /* off */ }
+  const wrap = $('debugWrap'), nav = $('debugNavLink'), jump = $('debugJumpOpt');
+  if (wrap) wrap.style.display = dev ? '' : 'none';
+  if (nav) nav.style.display = dev ? '' : 'none';
+  if (jump) jump.style.display = dev ? '' : 'none';
+  return dev;
+}
+let versionClicks = [];
+const versionEl = $('version');
+if (versionEl) versionEl.addEventListener('click', async () => {
+  const now = Date.now();
+  versionClicks = [...versionClicks.filter(t => now - t < 2000), now];
+  if (versionClicks.length >= 5) {
+    versionClicks = [];
+    try { await chrome.storage.local.set({ 'ct-dev': true }); } catch { /* ignore */ }
+    refreshDebugVisibility();
+  }
+});
+refreshDebugVisibility();

@@ -48,7 +48,7 @@
     "message": "Azure Translator (Schlüssel erforderlich)"
   },
   "backend_google_opt": {
-    "message": "Google (kostenlos, kein Schlüssel)"
+    "message": "Google Translator (kein Schlüssel)"
   },
   "backend_hint": {
     "message": "LM Studio muss mit aktiviertem OpenAI-kompatiblen Server laufen (Standard: http://127.0.0.1:1234)."
@@ -164,13 +164,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (日本語 + English + 简体中文, auf Manga trainiert)"
+    "message": "OCR (auf Manga trainiert)"
   },
   "model_detector": {
-    "message": "Texterkennung (RT-DETR-v2)"
+    "message": "Texterkennung"
   },
   "model_inpaint": {
-    "message": "LaMa-Inpainter (Manga)"
+    "message": "Manga-Inpainter"
   },
   "models": {
     "message": "Modelle"
@@ -367,10 +367,10 @@
     "message": "Gefällt dir Comic Translate 4 Free?"
   },
   "support_modal_text": {
-    "message": "Wenn sie dir gefällt, unterstütze sie bitte — das hilft sehr."
+    "message": "Wenn sie dir gefällt, hilft eine Bewertung oder Rückmeldung sehr."
   },
   "support_hint": {
-    "message": "Diese Erweiterung ist kostenlos und Open Source. Wenn Ihnen diese Erweiterung gefällt, können Sie die Weiterentwicklung unterstützen."
+    "message": "Übersetze Manga und Comics in deinem Browser."
   },
   "pagecache_title": {
     "message": "Cache übersetzter Seiten"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (kostenlos, Schlüssel erforderlich)"
+    "message": "Gemini (Schlüssel erforderlich, empfohlen)"
   },
   "gemini_key": {
     "message": "Gemini-API-Schlüssel"
@@ -463,7 +463,7 @@
     "message": "Nutze Gemini für bessere Übersetzungen. Azure wird in einer zukünftigen Version entfernt."
   },
   "azure_retire_step1": {
-    "message": "Öffne Google AI Studio und erstelle einen API-Schlüssel — kostenlos, keine Kreditkarte nötig."
+    "message": "Öffne Google AI Studio und erstelle einen API-Schlüssel."
   },
   "azure_retire_step2": {
     "message": "Kopiere den Schlüssel."
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "Einstellungen öffnen"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

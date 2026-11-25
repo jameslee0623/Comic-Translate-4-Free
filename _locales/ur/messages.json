@@ -60,7 +60,7 @@
     "message": "Azure Translator (کی درکار ہے)"
   },
   "backend_google_opt": {
-    "message": "Google (مفت، کوئی کی نہیں)"
+    "message": "Google Translator (کوئی کی نہیں)"
   },
   "backend_hint": {
     "message": "LM Studio کا OpenAI-compatible سرور فعال ہونا چاہیے (ڈیفالٹ http://127.0.0.1:1234)۔"
@@ -215,13 +215,13 @@
     "description": "Hint under the minimum image size field"
   },
   "model_baberu": {
-    "message": "Baberu OCR (日本語 + English + 简体中文، مانگا پر تربیت یافتہ)"
+    "message": "OCR (مانگا پر تربیت یافتہ)"
   },
   "model_detector": {
-    "message": "ٹیکسٹ ڈیٹیکٹر (RT-DETR-v2)"
+    "message": "ٹیکسٹ ڈیٹیکٹر"
   },
   "model_inpaint": {
-    "message": "LaMa ان پینٹر (مانگا)"
+    "message": "مانگا ان پینٹر"
   },
   "models": {
     "message": "ماڈلز"
@@ -382,7 +382,7 @@
     "message": "ترجمہ ہو رہا ہے…"
   },
   "support_hint": {
-    "message": "یہ ایکسٹینشن مفت اور اوپن سورس ہے۔ اگر آپ کو یہ ایکسٹینشن پسند ہے تو آپ اس کی مسلسل ترقی میں مدد کر سکتے ہیں۔"
+    "message": "اپنے براؤزر میں مانگا اور کامکس کا ترجمہ کریں۔"
   },
   "support_project": {
     "message": "❤️ اس پراجیکٹ کی حمایت کریں"
@@ -406,7 +406,7 @@
     "message": "Comic Translate 4 Free پسند آ رہا ہے؟"
   },
   "support_modal_text": {
-    "message": "اگر پسند ہے تو براہ کرم اس کی حمایت کریں — اس سے بہت مدد ملتی ہے۔"
+    "message": "اگر پسند آئے تو ریٹنگ یا فیڈبیک بہت مدد کرتا ہے۔"
   },
   "target_lang": {
     "message": "ہدف زبان"
@@ -448,7 +448,7 @@
     "description": "Button to grant host permission for LM Studio server URL"
   },
   "backend_gemini_opt": {
-    "message": "Gemini (مفت، کی درکار ہے)"
+    "message": "Gemini (کی درکار ہے، تجویز کردہ)"
   },
   "gemini_key": {
     "message": "Gemini API کی"
@@ -463,7 +463,7 @@
     "message": "بہتر ترجمے کے لیے Gemini استعمال کریں۔ Azure مستقبل کے ورژن میں ہٹا دیا جائے گا۔"
   },
   "azure_retire_step1": {
-    "message": "Google AI Studio کھولیں اور API کلید بنائیں — مفت، کریڈٹ کارڈ کی ضرورت نہیں۔"
+    "message": "Google AI Studio کھولیں اور API کلید بنائیں۔"
   },
   "azure_retire_step2": {
     "message": "کلید کاپی کریں۔"
@@ -485,5 +485,35 @@
   },
   "azure_retire_open_settings": {
     "message": "سیٹنگز کھولیں"
+  },
+  "pro_title": {
+    "message": "Pro"
+  },
+  "pro_desc": {
+    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+  },
+  "pro_status": {
+    "message": "Status"
+  },
+  "pro_usage": {
+    "message": "Today"
+  },
+  "pro_key": {
+    "message": "License key"
+  },
+  "pro_key_ph": {
+    "message": "Paste your Pro license key"
+  },
+  "pro_activate": {
+    "message": "Activate Pro"
+  },
+  "pro_deactivate": {
+    "message": "Deactivate"
+  },
+  "pro_get": {
+    "message": "Get Pro — $3/month"
+  },
+  "pro_get_short": {
+    "message": "Get Pro"
   }
 }

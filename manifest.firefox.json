@@ -35,6 +35,7 @@
     "https://translate.googleapis.com/*",
     "https://api.cognitive.microsofttranslator.com/*",
     "https://generativelanguage.googleapis.com/*",
+    "https://live.dodopayments.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],

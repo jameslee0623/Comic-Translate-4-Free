@@ -2,6 +2,7 @@
 import { BUILD } from '../shared/version.js';
 import { baseDomain, imageHostOrigins, originAccessPatterns, displayHost, hostOf, isSiteAllowed } from '../shared/site-access.js';
 import { NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings as writeSettings } from '../shared/settings.js';
+import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, proIsActive } from '../shared/pro.js';
 const $ = id => document.getElementById(id);
 // Escape for innerHTML interpolation (hostnames are DNS-safe, but explicit).
 const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -166,6 +167,30 @@ async function refreshSettings() {
   await refreshSite(settings || {});
 }
 
+// Pro (freemium) status line: free usage today, or Pro. The link opens
+// Settings (Pro section) — or the Dodo checkout once James sets it up.
+async function refreshPro() {
+  const statusEl = $('proStatus'), linkEl = $('proLink');
+  if (!statusEl) return;
+  const settings = await getSettings().catch(() => ({}));
+  const active = proIsActive(settings);
+  if (active) {
+    statusEl.textContent = 'Pro — unlimited auto-translate';
+    if (linkEl) linkEl.style.display = 'none';
+    return;
+  }
+  const used = await getProUsageCount();
+  statusEl.textContent = 'Free: ' + used + ' / ' + PRO_FREE_DAILY_LIMIT + ' auto images today';
+  if (linkEl) {
+    linkEl.style.display = '';
+    linkEl.onclick = e => {
+      e.preventDefault();
+      if (DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE')) chrome.tabs.create({ url: DODO_CHECKOUT_URL });
+      else chrome.runtime.openOptionsPage();
+    };
+  }
+}
+
 // Full refresh: status + settings. The 3s interval only needs the status
 // part — rewriting the settings dropdowns on every tick stomps the user's
 // in-progress selection (the open language list collapses), so settings
@@ -173,7 +198,7 @@ async function refreshSettings() {
 async function refresh() {
   // Status and settings load in parallel: a hung status (blocked background)
   // must not delay the settings UI.
-  await Promise.all([refreshStatus(), refreshSettings()]);
+  await Promise.all([refreshStatus(), refreshSettings(), refreshPro()]);
 }
 
 // The pictures often live on CDN hosts different from the page host; without
