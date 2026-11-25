@@ -1,5 +1,4 @@
 // Popup: trigger runs, show progress, backend + language quick-switch, whitelist.
-import { BUILD } from '../shared/version.js';
 import { baseDomain, imageHostOrigins, originAccessPatterns, displayHost, hostOf, isSiteAllowed } from '../shared/site-access.js';
 import { NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings as writeSettings } from '../shared/settings.js';
 import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, proIsActive } from '../shared/pro.js';
@@ -547,10 +546,6 @@ fillLangs();
 // Models auto-download (2.2.2): no first-run redirect to Settings any
 // more — the install trigger fetches them, and a run that starts before
 // they finish waits for them instead.
-try {
-  const v = chrome.runtime.getManifest().version;
-  $('build').textContent = `v${v}`;
-} catch { $('build').textContent = 'v' + BUILD; }
 refresh();
 refreshModelsReady();
 refreshCacheStats();
