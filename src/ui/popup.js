@@ -341,7 +341,12 @@ async function refreshSite(settings) {  const [tab] = await chrome.tabs.query({ 
       $('grantBtn').onclick = () => {
         // Request synchronously in the click: no awaits before
         // permissions.request() or Firefox drops the user gesture.
-        requestSiteAccessNow(currentHost).then(() => refreshSite(settings));
+        requestSiteAccessNow(currentHost).then(() => {
+          refreshSite(settings);
+          // Re-register + inject the content script now, so the
+          // right-click unlock works without a refresh.
+          try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
+        });
       };
     }
   }
@@ -363,7 +368,12 @@ async function refreshSite(settings) {  const [tab] = await chrome.tabs.query({ 
         // Synchronous in the click — no awaits before permissions.request().
         // requestSiteAccessNow grants the page host plus every picture host
         // in cachedImageHosts (including the failed run's full grantHosts).
-        requestSiteAccessNow(currentHost).then(() => refreshSite(settings));
+        requestSiteAccessNow(currentHost).then(() => {
+          refreshSite(settings);
+          // Re-register + inject the content script now, so the
+          // right-click unlock works without a refresh.
+          try { chrome.runtime.sendMessage({ type: 'ct/sync-auto-start' }).catch(() => {}); } catch {}
+        });
       };
     }
   }

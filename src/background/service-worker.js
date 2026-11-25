@@ -4284,8 +4284,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   // 2.3.15: re-register the content script after a grant change
   // (popup/Settings ask for this right after allowing a site).
+  // Also inject it into the active tab right away, so the right-click
+  // unlock works without a refresh — registerContentScripts only
+  // covers future page loads, so the already-open page would otherwise
+  // need a reload. The content script's double-injection guard makes
+  // this a no-op if it's already there. Best-effort: a missing host
+  // permission or a chrome:// tab just throws, caught below.
   if (msg && msg.type === MSG.SYNC_AUTO_START) {
-    try { syncAutoStartRegistrations(); } catch {}
+    (async () => {
+      try { await syncAutoStartRegistrations(); } catch {}
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [null]);
+        if (!tab || tab.id === undefined || tab.id === null) return;
+        const settings = await getSettings();
+        const host = hostOf(tab.url || '');
+        if (!host) return;
+        if (!settings.allowAllSites && !isSiteAllowed(host, settings.siteWhitelist || [])) return;
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId: tab.id }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+      } catch {}
+    })();
     return false;
   }
   // Inpaint progress from the Chrome offscreen document (one-way, no reply).
