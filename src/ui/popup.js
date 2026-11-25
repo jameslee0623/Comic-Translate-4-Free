@@ -169,15 +169,16 @@ async function refreshSettings() {
 // Pro (freemium) status line: free usage today, or Pro. The link opens
 // Settings (Pro section) — or the Dodo checkout once James sets it up.
 async function refreshPro() {
-  const statusEl = $('proStatus'), linkEl = $('proLink');
+  const statusEl = $('proStatus'), linkEl = $('proLink'), rowEl = $('proRow');
   if (!statusEl) return;
   const settings = await getSettings().catch(() => ({}));
   const active = proIsActive(settings);
   if (active) {
-    statusEl.textContent = 'Pro — unlimited auto-translate';
-    if (linkEl) linkEl.style.display = 'none';
+    // Subscribed: hide the whole Pro row — no usage line, no Get Pro.
+    if (rowEl) rowEl.style.display = 'none';
     return;
   }
+  if (rowEl) rowEl.style.display = '';
   const used = await getProUsageCount();
   statusEl.textContent = 'Free: ' + used + ' / ' + PRO_FREE_DAILY_LIMIT + ' auto images today';
   if (linkEl) {
