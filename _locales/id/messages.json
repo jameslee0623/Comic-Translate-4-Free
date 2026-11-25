@@ -453,6 +453,14 @@
   "backend_gemini_opt": {
     "message": "Gemini (perlu kunci, disarankan)"
   },
+  "bench_clear": {
+    "message": "Clear",
+    "description": "Clear the benchmark log."
+  },
+  "bench_copy_table": {
+    "message": "Copy benchmark table",
+    "description": "Copy the recorded benchmark runs as a table."
+  },
   "gemini_key": {
     "message": "Kunci API Gemini"
   },

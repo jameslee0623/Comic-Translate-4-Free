@@ -1862,7 +1862,7 @@
             if (pill) pill.style.display = 'none';
             renderDebugTab('render');
           }
-          sendResponse({ ok: true, replaced, ...(renderMissDiag ? { diag: renderMissDiag } : {}) });
+          sendResponse({ ok: true, replaced, renderMs: allTimings.render, ...(renderMissDiag ? { diag: renderMissDiag } : {}) });
           // The keep-alive stays open: a multi-pic run renders once per
           // picture, and closing here killed the tab-held port after the
           // first render, leaving the rest of the run on the worker-side

@@ -5,6 +5,7 @@ import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../sh
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings, updateSettingsField } from '../shared/settings.js';
 import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
+import { recordBenchRun } from '../shared/bench.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
   boxIoU, clampBox, dedupAndMergeSeams, mergeBoxesByCost,
@@ -2867,6 +2868,7 @@ async function runPipeline(tabId, opts = {}) {
         ({ rgba, w, h, mode, tier, attempts } = await loadPipelineImagePixels(tabId, img, settings, tabUrl, { srcUrl: manualSrc, runId }));
       }
       imgTimings.capture = Math.round(performance.now() - t0);
+      imgTimings.tier = tier;
       // Capture diagnostic: which tier ran, how long each attempt took, and
       // how big the download was — the log then answers "internet or local?"
       // on its own, no debug mode needed. page-canvas is local (the picture
@@ -2961,6 +2963,7 @@ async function runPipeline(tabId, opts = {}) {
       t0 = performance.now();
       const blocks = buildBlocks(detections, w, h, rgba, settings);
       imgTimings.blocks = Math.round(performance.now() - t0);
+      imgTimings.blockCount = blocks.length;
       imgSetProgress('blocks', 0.3);
       // Promotion visibility: how many blocks came from bubbles with no
       // text box. 0 on a page where detection is already good (no-op).
@@ -3041,6 +3044,7 @@ async function runPipeline(tabId, opts = {}) {
           ocrSlow.sort((a, b) => b.ms - a.ms);
         }
         imgTimings.ocr = ocrMs;
+        imgTimings.ocrEngine = r.engine || '';
         imgSetProgress('ocr', 0.55);
         const ocrThumbs = [];
         // Thumbnails are debug-panel only — skip the 40 canvas encodes in normal runs.
@@ -3532,7 +3536,10 @@ async function runPipeline(tabId, opts = {}) {
       // and let a stale render reach the tab.
       checkCancelled(runId);
       imgTimings.total = Math.round(performance.now() - imgT0);
-      await sendRender(tabId, runId, mode, finalDataUrl, w, h, blocks, imgTimings, settings.debugMode, { srcUrl: manualSrc || img.src, uid: img.uid });
+      const renderRes = await sendRender(tabId, runId, mode, finalDataUrl, w, h, blocks, imgTimings, settings.debugMode, { srcUrl: manualSrc || img.src, uid: img.uid });
+      // The content script measures the render (canvas compose + text draw)
+      // and returns it on the RENDER reply; the benchmark log needs it.
+      imgTimings.render = (renderRes && Number.isFinite(renderRes.renderMs)) ? Math.round(renderRes.renderMs) : 0;
       // ---- 9. page cache: remember this translated page for instant revisits.
       // Best-effort — a cache failure must never fail the run. Skipped in
       // incognito; a cancelled run never reaches this point (it throws above).
@@ -3558,6 +3565,28 @@ async function runPipeline(tabId, opts = {}) {
           if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
         }
         if (r && r.doneExtra) lastDoneExtra = r.doneExtra;
+        // Benchmark log: one entry per finished full run (imgTimings.total
+        // is only set on the full path — cache hits and no-text pictures
+        // never reach it, so they are not recorded). Fire-and-forget:
+        // logging must never slow or fail a run.
+        if (r && r.ok && !r.noText && Number.isFinite(imgTimings.total)) {
+          recordBenchRun({
+            t: new Date().toISOString(),
+            v: chrome.runtime.getManifest().version,
+            br: (typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox')) ? 'Firefox' : 'Chrome',
+            host: hostOf(img.src) || '',
+            img: img.w + 'x' + img.h,
+            blk: imgTimings.blockCount || 0,
+            ocr: imgTimings.ocrEngine || '',
+            be: settings.translationBackend || '',
+            tier: imgTimings.tier || '',
+            cap: imgTimings.capture || 0, det: imgTimings.detect || 0,
+            blkMs: imgTimings.blocks || 0, ocrMs: imgTimings.ocr || 0,
+            tr: imgTimings.translate || 0, mask: imgTimings.mask || 0,
+            inp: imgTimings.inpaint || 0, ren: imgTimings.render || 0,
+            total: imgTimings.total,
+          }).catch(() => {});
+        }
       } catch (e) {
         // Only a USER cancel aborts the whole run. A per-image failure —
         // even one that throws 'cancelled' (e.g. a translate timeout-abort)

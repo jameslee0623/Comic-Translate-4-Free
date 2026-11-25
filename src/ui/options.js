@@ -3,6 +3,7 @@ import { BUILD } from '../shared/version.js';
 import { storeUrlForFirefox } from '../shared/contracts.js';
 import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings } from '../shared/settings.js';
 import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, resetProUsageToday, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
+import { readBenchLog, clearBenchLog, formatBenchTable } from '../shared/bench.js';
 const $ = id => document.getElementById(id);
 // Defaults live in shared/settings.js — single source of truth.
 const DEFAULTS = DEFAULT_SETTINGS;
@@ -217,6 +218,32 @@ async function load() {
     resetBtn.textContent = 'Reset ✓';
     setTimeout(() => { resetBtn.textContent = old; }, 1500);
   };
+  // Benchmark table (Debug only): every finished run is recorded with
+  // its per-stage times; Copy puts the whole log out as a Markdown
+  // table for future benchmarking. Clear wipes the log.
+  const benchCountEl = $('benchCount');
+  const refreshBenchCount = async () => {
+    const log = await readBenchLog().catch(() => []);
+    if (benchCountEl) benchCountEl.textContent = log.length ? `(${log.length} run${log.length > 1 ? 's' : ''})` : '';
+  };
+  const copyBenchBtn = $('copyBenchTable');
+  if (copyBenchBtn) copyBenchBtn.onclick = async () => {
+    const log = await readBenchLog().catch(() => []);
+    const text = log.length ? formatBenchTable(log) : '(no benchmark runs recorded yet)';
+    try { await navigator.clipboard.writeText(text); } catch { /* clipboard may be blocked */ }
+    const old = copyBenchBtn.textContent;
+    copyBenchBtn.textContent = log.length ? `Copied ${log.length} ✓` : 'Nothing to copy';
+    setTimeout(() => { copyBenchBtn.textContent = old; }, 1500);
+  };
+  const clearBenchBtn = $('clearBenchLog');
+  if (clearBenchBtn) clearBenchBtn.onclick = async () => {
+    await clearBenchLog().catch(() => {});
+    await refreshBenchCount();
+    const old = clearBenchBtn.textContent;
+    clearBenchBtn.textContent = 'Cleared ✓';
+    setTimeout(() => { clearBenchBtn.textContent = old; }, 1500);
+  };
+  refreshBenchCount();
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();
   refreshPro();
