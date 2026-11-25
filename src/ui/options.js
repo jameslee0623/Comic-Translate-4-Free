@@ -178,6 +178,9 @@ function applyToForm(s) {
   allowedSites = [...(s.siteWhitelist || [])];
   renderSiteList();
   showEngineFields();
+  // The Debug section shows only while debug mode is on (the switch is
+  // its show/hide control), so refresh it whenever the form is loaded.
+  refreshDebugVisibility();
 }
 
 async function load() {
@@ -773,19 +776,19 @@ try {
   const v = chrome.runtime.getManifest().version;
   $('version').textContent = `v${v}`;
 } catch { $('version').textContent = 'v' + BUILD; }
-// Debug section: hidden unless the dev flag is on. The flag lives in
-// chrome.storage.local ('ct-dev'), so it is per-device — only James's
-// devices show Debug. Reveal it by clicking the version number 5 times;
-// the flag persists, so it stays revealed on that device. The 5-click
-// also turns debug mode on, so the Debug section is live at once.
-async function refreshDebugVisibility() {
-  let dev = false;
-  try { dev = !!(await chrome.storage.local.get('ct-dev'))['ct-dev']; } catch { /* off */ }
+// Debug section: shown only while debug mode is on. The switch itself
+// is the show/hide control — turn it off and the whole Debug section
+// (and the on-page debug panel, which the background gates on the same
+// setting) hides at once. Only clicking the version number 5 times
+// turns it back on, so normal users never see it. The diagnostic log
+// keeps recording either way (diagPush is not gated on debug mode).
+function refreshDebugVisibility() {
+  const on = !!($('debugMode') && $('debugMode').checked);
   const wrap = $('debugWrap'), nav = $('debugNavLink'), jump = $('debugJumpOpt');
-  if (wrap) wrap.style.display = dev ? '' : 'none';
-  if (nav) nav.style.display = dev ? '' : 'none';
-  if (jump) jump.style.display = dev ? '' : 'none';
-  return dev;
+  if (wrap) wrap.style.display = on ? '' : 'none';
+  if (nav) nav.style.display = on ? '' : 'none';
+  if (jump) jump.style.display = on ? '' : 'none';
+  return on;
 }
 let versionClicks = [];
 const versionEl = $('version');
@@ -794,11 +797,14 @@ if (versionEl) versionEl.addEventListener('click', async () => {
   versionClicks = [...versionClicks.filter(t => now - t < 2000), now];
   if (versionClicks.length >= 5) {
     versionClicks = [];
-    try { await chrome.storage.local.set({ 'ct-dev': true }); } catch { /* ignore */ }
-    refreshDebugVisibility();
-    // Turn debug mode on too, so the Debug section is live at once.
+    // Turn debug mode on, so the Debug section shows at once.
     const dbg = $('debugMode');
     if (dbg && !dbg.checked) { dbg.checked = true; saveNow(); }
+    refreshDebugVisibility();
   }
 });
+// Turning the switch off hides the section at once (the auto-save in
+// the change list above persists the new value first).
+const dbgEl = $('debugMode');
+if (dbgEl) dbgEl.addEventListener('change', () => refreshDebugVisibility());
 refreshDebugVisibility();
