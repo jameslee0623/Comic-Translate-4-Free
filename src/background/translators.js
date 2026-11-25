@@ -971,7 +971,11 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
     // Only a real user cancel skips failover. A timeout-abort is also
     // marked 'cancelled' by the backend helpers, but it must still fail
     // over — otherwise a stalled backend never switches to Azure.
-    if (isUserCancelled?.()) throw e;
+    // A cancelled run throws a quiet 'cancelled', not the backend's
+    // error: otherwise a run the user left (fast page-flip) surfaces
+    // the backend's error (e.g. Gemini source-language) as a visible
+    // failure instead of stopping quietly.
+    if (isUserCancelled?.()) throw Object.assign(new Error('cancelled'), { cancelled: true });
     lastErr = e;
     // Opt-in failover: try the next backend. Never silently fail over to
     // paid Azure without the opt-in — the setting gates it.
@@ -1057,7 +1061,7 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
           console.warn(`[ct] backend failover: ${backend} failed, ${fb} succeeded`);
           break;
         } catch (fe) {
-          if (isUserCancelled?.()) throw fe;
+          if (isUserCancelled?.()) throw Object.assign(new Error('cancelled'), { cancelled: true });
           lastErr = fe;
           if (fb === 'azure') azureConsumed = true;
         }

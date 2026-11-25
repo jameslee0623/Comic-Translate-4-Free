@@ -110,8 +110,11 @@ export async function addProUsageForImages(entries) {
     }
     if (!added) return 0;
     // Bound the stored keys (the daily limit is 50, so 200 is generous).
+    // Cap the stored count at the daily limit too: a run that finishes
+    // past the limit (manual runs are not gated) used to push it to
+    // 51/50, 52/50, ... and the display showed an impossible number.
     const keysArr = [...keySet].slice(-200);
-    await chrome.storage.local.set({ [USAGE_KEY]: { date: today, count: count + added, keys: keysArr } });
+    await chrome.storage.local.set({ [USAGE_KEY]: { date: today, count: Math.min(count + added, PRO_FREE_DAILY_LIMIT), keys: keysArr } });
     return added;
   } catch { return 0; }
 }

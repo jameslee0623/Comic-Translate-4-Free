@@ -738,6 +738,14 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
 // (page-canvas = local, page/worker-fetch = network download) and how long
 // each attempt took, so a slow capture can be read as internet or local
 // without a debug-mode run.
+// Page-fetch failures, per image host: the page's fetch is blocked by
+// CORS on that host, so it fails the same way every time (~800ms wasted
+// per capture on nhentai before worker-fetch succeeds). Remember a
+// failure for 30 min, then retry in case the site changed. In-memory
+// only — a background restart clears it, which is fine (one slow
+// capture re-learns it).
+const pageFetchDead = new Map(); // hostname -> timestamp ms of last page-fetch failure
+const PAGE_FETCH_DEAD_MS = 30 * 60 * 1000;
 async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {}) {
   const failures = [];
   const attempts = [];
@@ -770,6 +778,17 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     failures.push('page canvas skipped (already showing the translated render)');
   }
   const b0 = performance.now();
+  // Skip page-fetch for a host that failed it recently (see pageFetchDead
+  // above): the page's fetch is CORS-blocked there, so it always fails
+  // after ~800ms. Go straight to worker-fetch instead.
+  let fetchHost = '';
+  try { fetchHost = new URL(info.src).hostname.toLowerCase(); } catch {}
+  const deadSince = fetchHost ? pageFetchDead.get(fetchHost) : 0;
+  const skipPageFetch = !!(deadSince && (Date.now() - deadSince) < PAGE_FETCH_DEAD_MS);
+  if (skipPageFetch) {
+    failures.push('page download skipped (host failed recently)');
+    attempts.push({ tier: 'page-fetch', ms: 0, ok: false, error: 'page download skipped (host failed recently)' });
+  } else {
   if (opts.runId) persistDiagStage(opts.runId, 'capture-page-fetch');
   try {
     // 2.2.12: race the content-script round trip against a 30s timeout.
@@ -780,12 +799,17 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     if (f && f.ok && typeof f.dataUrl === 'string' && f.dataUrl.startsWith('data:')) {
       const { rgba, w, h } = await dataUrlToRGBA(f.dataUrl);
       const b64 = f.dataUrl.split(',')[1] || '';
+      // The host works now — clear any earlier failure so it is not skipped.
+      if (fetchHost) pageFetchDead.delete(fetchHost);
       attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: true, bytes: Math.round(b64.length * 3 / 4) });
       return { rgba, w, h, mode: 'replace', tier: 'page-fetch', attempts };
     }
     failures.push('page download: ' + String((f && f.error) || 'no bytes').slice(0, 100));
   } catch (e) { failures.push('page download: ' + String((e && e.message) || e).slice(0, 100)); }
   attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: false, error: failures[failures.length - 1] });
+  // Remember the failure so the next capture from this host skips it.
+  if (fetchHost) pageFetchDead.set(fetchHost, Date.now());
+  }
   const c0 = performance.now();
   if (opts.runId) persistDiagStage(opts.runId, 'capture-worker-fetch');
   try {
@@ -2753,11 +2777,19 @@ async function runPipeline(tabId, opts = {}) {
       } catch { /* unparsable src — skipped by the contains check below */ }
     }
     let promptGranted = false;
-    try {
-      promptGranted = await chrome.permissions.request({ origins: [...allOrigins] });
-      if (promptGranted) diagPush('permission gate: granted via prompt (all hosts)');
-    } catch (e) {
-      diagPush('permission gate: prompt failed: ' + String((e && e.message) || e).slice(0, 80));
+    // Only prompt from a user gesture (manual Translate). On an auto run
+    // permissions.request always fails ("may only be called from a user
+    // input handler"), so calling it there is a wasted round-trip and a
+    // "prompt failed" line in every run's log. Auto runs skip straight
+    // to the contains check below; if a host is missing, the gate error
+    // tells the user to open the popup and tap Grant (a real gesture).
+    if (!opts.auto) {
+      try {
+        promptGranted = await chrome.permissions.request({ origins: [...allOrigins] });
+        if (promptGranted) diagPush('permission gate: granted via prompt (all hosts)');
+      } catch (e) {
+        diagPush('permission gate: prompt failed: ' + String((e && e.message) || e).slice(0, 80));
+      }
     }
     const missingHosts = await checkImageHostPermissions(images);
     if (missingHosts.length) {
