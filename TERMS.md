@@ -21,9 +21,8 @@ when all Pro features are turned off in Settings.
 
 Auto-translate, pre-translate, and engine failover are Pro features. They
 are free for 50 images a day. After 50 images in a day, those features stop
-until the next day, unless you have an active Pro subscription. A long strip
-counts as the comic pages it spans (a strip 3 pages long counts as 3, 5
-pages long counts as 5), not as one image. Re-translating the same image
+until the next day, unless you have an active Pro subscription. One image
+counts as one, whatever its height. Re-translating the same image
 does not count again.
 
 ## Pro subscription

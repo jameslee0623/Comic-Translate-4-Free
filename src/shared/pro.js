@@ -2,24 +2,23 @@
 // Free: 50 images/day while any Pro feature is on (auto-translate,
 // pre-translate, engine failover). A translation is free only when all
 // Pro features are off. Pro: unlimited, unlocked by a Dodo license key.
-// A long strip counts as the normal comic pages it spans (a strip 3
-// pages long counts as 3, 5 pages as 5), not as one image.
+// One image counts as one, whatever its height (long strips are 1:1).
 // Dodo's license endpoints are public (no API key), so the extension calls
 // them directly. The business_id check at activation stops a key bought
 // from any other Dodo seller from unlocking Pro here.
 
 export const PRO_FREE_DAILY_LIMIT = 50;
 
-// A normal comic/manga page is about 1.5x taller than wide (3:2 — the
-// standard tankobon / US comic page ratio). A long strip (webtoon) is
-// many pages tall, so it counts as that many images against the free
-// daily limit: pages = height / (width * 1.5), rounded, at least 1.
+// A long strip counts as ONE image (1:1), not as the pages it spans.
+// James's order 2026-11-25: height alone overcounts — an Asurascans
+// strip 900x16000px counted as 12 pages, so one 18-image chapter cost
+// 126 of the 50/day free limit, and those strips carry little text.
+// One image = one count, whatever its height. PRO_PAGE_RATIO and the
+// w/h arguments stay so the rule can come back later if needed.
 export const PRO_PAGE_RATIO = 1.5;
 
 export function pagesForImage(w, h) {
-  const W = Number(w), H = Number(h);
-  if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) return 1;
-  return Math.max(1, Math.round(H / (W * PRO_PAGE_RATIO)));
+  return 1;
 }
 
 // --- Dodo setup: James fills these in after creating the Pro product ---
@@ -71,10 +70,8 @@ export function anyProFeatureOn(settings) {
 // reaches here (it throws before counting). Returns new images counted.
 export async function addProUsageForImages(entries) {
   // Each entry is a URL string (counts as 1 image) or { key/url/src, w, h }
-  // (counts as the normal comic pages the image spans — a long strip 3
-  // pages long counts as 3, 5 pages as 5; see pagesForImage). Distinct
-  // images only: a re-translation of the same URL is free, however many
-  // pages it spans.
+  // (counts as 1 image — long strips are 1:1, see pagesForImage).
+  // Distinct images only: a re-translation of the same URL is free.
   const list = (Array.isArray(entries) ? entries : [entries])
     .map(e => {
       if (typeof e === 'string') return { key: e, pages: 1 };

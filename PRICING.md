@@ -9,8 +9,7 @@ Last updated: November 25, 2026
 - Auto-translate, pre-translate, and engine failover are free for
   50 images a day. After 50 images in a day, those features stop until
   the next day.
-- A long strip counts as the comic pages it spans (a strip 3 pages long
-  counts as 3, 5 pages long counts as 5). Re-translating the same image
+- One image counts as one, whatever its height. Re-translating the same image
   does not count again.
 
 ## Pro — $3/month or $30/year
