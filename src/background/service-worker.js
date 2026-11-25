@@ -2287,6 +2287,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     checkCancelled(runId);
     // ---- text blocks
     const blocks = buildBlocks(detections, w, h, rgba, settings);
+    // No text: nothing to translate or cache (writePageCache refuses
+    // empty blocks), and nothing to count toward the free quota.
+    if (!blocks.length) { diagPush('pre-translate: no text in ' + imageUrl.slice(0, 80)); return; }
     // ---- OCR
     const crops = [];
     for (const [i, b] of blocks.entries()) {
@@ -2927,6 +2930,13 @@ async function runPipeline(tabId, opts = {}) {
         })),
         ms: imgTimings.blocks,
       });
+      // No text found: nothing to translate, inpaint, render, or cache
+      // (writePageCache refuses empty blocks, so the next visit
+      // re-detects). Return early so the picture is NOT counted toward
+      // the free quota either — counting it would charge the user for
+      // nothing, and again on every revisit. The caller skips it in
+      // doneImgs/doneCountEntries when r.noText is set.
+      if (!blocks.length) return { ok: true, noText: true };
 
       // ---- 4. OCR (sequential — the mask stage needs blk.text, so it must
       // wait for OCR; see buildBlockMaskData's `if (!blk.text ...)` guard).
@@ -3494,8 +3504,13 @@ async function runPipeline(tabId, opts = {}) {
       const imgT0 = performance.now();
       try {
         const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0);
-        doneImgs.push(imgIdx + 1);
-        if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
+        // No text in this picture: nothing was translated, nothing was
+        // cached, so it counts as neither translated nor quota. It is
+        // not a failure either — it just has no text.
+        if (!r || !r.noText) {
+          doneImgs.push(imgIdx + 1);
+          if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
+        }
         if (r && r.doneExtra) lastDoneExtra = r.doneExtra;
       } catch (e) {
         // Only a USER cancel aborts the whole run. A per-image failure —
@@ -3515,8 +3530,11 @@ async function runPipeline(tabId, opts = {}) {
           try {
             const pre = await fallbackCaptureViaTab(tabId, e.fallbackUrl);
             const r2 = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, pre);
-            doneImgs.push(imgIdx + 1);
-            if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
+            // No text: same as above — not translated, not counted.
+            if (!r2 || !r2.noText) {
+              doneImgs.push(imgIdx + 1);
+              if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
+            }
             if (r2 && r2.doneExtra) lastDoneExtra = r2.doneExtra;
             recovered = true;
           } catch (e2) {
