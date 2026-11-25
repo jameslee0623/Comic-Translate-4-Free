@@ -49,7 +49,10 @@ export async function getProUsageCount() {
     const stored = await chrome.storage.local.get(USAGE_KEY);
     const rec = stored[USAGE_KEY];
     if (!rec || rec.date !== dateStr()) return 0;
-    return Number.isFinite(rec.count) ? Math.max(0, rec.count) : 0;
+    // Cap the display at the daily limit: a count stored before the
+    // 1.7.52 write cap can already be over 50 (54/50), and the display
+    // must never show an impossible number.
+    return Number.isFinite(rec.count) ? Math.min(Math.max(0, rec.count), PRO_FREE_DAILY_LIMIT) : 0;
   } catch { return 0; }
 }
 

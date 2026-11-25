@@ -3940,6 +3940,14 @@ chrome.runtime.onInstalled.addListener(details => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // A new document is loading (refresh or navigation): the old auto-fire
+  // record is stale. Without this, a refresh within 2 min of a successful
+  // run is skipped as a dupe ("auto diag skip: dedupe 2min") and the
+  // cached translation is never re-rendered — the page stays untranslated
+  // even though the translation is already in the cache. A duplicate
+  // 'complete' from a slow iframe never triggers a new 'loading', so the
+  // dedupe still blocks double-fires for the same load.
+  if (changeInfo && changeInfo.status === 'loading') autoFired.delete(tabId);
   // Learned next-page rules: watch URL changes (URL-only learning). Runs
   // on the 'loading' event, which carries changeInfo.url — the 'complete'
   // event below usually does not.
