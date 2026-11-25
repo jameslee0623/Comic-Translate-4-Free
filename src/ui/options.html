@@ -100,7 +100,6 @@
     <a href="#cacheSection" data-i18n="pagecache_title">Translated page cache</a>
     <a href="#aboutSection" data-i18n="support_title">About this project</a>
     <a href="#debugSection" id="debugNavLink" data-i18n="debug" style="display:none">Debug</a>
-    <a href="#diagSection">Diagnostic log</a>
   </nav>
   <main>
   <div id="error" style="color:#ff7b72;font-size:13px;margin:0 0 8px"></div>
@@ -114,7 +113,6 @@
     <option value="cacheSection" data-i18n="pagecache_title">Translated page cache</option>
     <option value="aboutSection" data-i18n="support_title">About this project</option>
     <option value="debugSection" id="debugJumpOpt" data-i18n="debug" style="display:none">Debug</option>
-    <option value="diagSection">Diagnostic log</option>
   </select>
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 12px"><h1 style="margin:0"><span data-i18n="appName">Comic Translate 4 Free</span> — <span data-i18n="options_title">Settings</span> <span id="saved" data-i18n="saved">Saved ✓</span></h1><span id="version" style="color:#8a8a90;font-size:12px;white-space:nowrap"></span></div>
 
@@ -193,11 +191,11 @@
   <h2 data-i18n="debug" id="debugSection">Debug</h2>
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
-  </div>
 
   <h2 id="diagSection">Diagnostic log</h2>
   <div class="row"><button id="refreshDiagLog">Refresh</button><button id="copyDiagLog">Copy</button></div>
   <pre id="diagLog" style="white-space:pre-wrap;word-break:break-word;background:#141417;border:1px solid #2a2a2e;border-radius:6px;padding:8px;max-height:300px;overflow:auto;font:11px monospace;color:#c9c9ce;margin:4px 0 0">(log loads when this page opens)</pre>
+  </div>
 
   </main>
   </div>
