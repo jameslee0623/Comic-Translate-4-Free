@@ -2568,6 +2568,11 @@ async function runPipeline(tabId, opts = {}) {
     // never started.
     settings = await getSettings();
     keepAliveStart(runId); // FIX2: hold the background alive for this run only; released in finally.
+    // Show the pill at once (1%): before this, a cache-hit run showed
+    // nothing for seconds (waitForModels + capture) and then jumped
+    // 2% -> 100%, so the user thought it was stuck. The pill must
+    // appear the moment the run starts.
+    try { setProgress(runId, 'capture', 0.01); } catch { /* pill is best-effort */ }
     // Auto-download (2.2.2): if the models are not here yet (install
     // download still going, or it never ran), fetch them now and wait,
     // showing progress in the pill, instead of failing the run.
