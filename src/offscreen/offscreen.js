@@ -1345,6 +1345,10 @@ export const mlHandlers = handlers;
 // shadowing the document's reply and clobbering pixel outputs. Workers
 // never used this listener anyway (they use self.onmessage), so
 // excluding them changes nothing for Firefox.
+// Serialize ML compute (same ORT guard as the Firefox worker — see
+// ml-worker.js): one inference at a time. ML_CANCEL bypasses the queue.
+const ML_COMPUTE_TYPES = new Set([MSG.ML_ENSURE, MSG.ML_DETECT, MSG.ML_OCR, MSG.ML_INPAINT, MSG.ML_TRANSLATE].filter(Boolean));
+let mlQueue = Promise.resolve();
 if (typeof document !== 'undefined' && typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const fn = handlers[msg && msg.type];
@@ -1365,14 +1369,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const isPretranslate = typeof msg.runId === 'string' && msg.runId.startsWith('pre-');
   if (!isPretranslate && msg.type !== MSG.ML_BENCH_THREADS && msg.type !== MSG.ML_BENCH_KEEPALIVE) benchCancel();
   if (!isPretranslate && msg.type !== MSG.ML_BENCH_KEEPALIVE) scheduleBenchSelfStart();
-  (async () => {
+  const runFn = async () => {
     try {
       sendResponse(await fn(msg));
     } catch (e) {
       console.error('[offscreen]', e);
       sendResponse({ ok: false, error: String((e && e.message) || e) });
     }
-  })();
+  };
+  if (ML_COMPUTE_TYPES.has(msg.type)) {
+    mlQueue = mlQueue.then(runFn).catch(() => {});
+  } else {
+    runFn();
+  }
   return true; // async response
 });
 }

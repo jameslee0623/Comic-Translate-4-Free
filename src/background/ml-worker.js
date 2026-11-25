@@ -40,9 +40,16 @@ Promise.all([
   globalThis.__ctInpaintProgress = (runId, frac) => {
     try { self.postMessage({ type: 'inpaint-progress', runId, frac }); } catch {}
   };
-  self.onmessage = async (e) => {
-    const msg = e.data;
-    if (!msg || !msg.type) return;
+  // Serialize ML compute: ORT's WASM backend runs one inference at a
+  // time. Two concurrent session.run() calls trip ORT's own guard — the
+  // second throws "Session already started" and its finally clears the
+  // first's session, so the first throws "Session mismatch" too. Both
+  // runs fail. Queueing here makes concurrent runs wait their turn
+  // instead of killing each other. ML_CANCEL bypasses the queue: it must
+  // run at once to stop the in-flight work, not wait behind it.
+  const ML_COMPUTE = new Set(['ml/ensure', 'ml/detect', 'ml/ocr', 'ml/inpaint', 'ml/translate']);
+  let mlQueue = Promise.resolve();
+  const runMl = async (msg) => {
     try {
       const fn = mlHandlers[msg.type];
       if (!fn) throw new Error('ML worker has no handler for ' + msg.type);
@@ -50,6 +57,15 @@ Promise.all([
       self.postMessage({ callId: msg.callId, runId: msg.runId, ok: true, res });
     } catch (err) {
       self.postMessage({ callId: msg.callId, runId: msg.runId, ok: false, error: String((err && err.message) || err) });
+    }
+  };
+  self.onmessage = (e) => {
+    const msg = e.data;
+    if (!msg || !msg.type) return;
+    if (ML_COMPUTE.has(msg.type)) {
+      mlQueue = mlQueue.then(() => runMl(msg)).catch(() => {});
+    } else {
+      runMl(msg);
     }
   };
   // DIAGNOSTIC (temporary): log errors that escape the handler
