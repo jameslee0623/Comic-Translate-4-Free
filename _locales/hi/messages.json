@@ -45,7 +45,7 @@
     "message": "अनुवाद इंजन"
   },
   "backend_failover": {
-    "message": "अगर इंजन विफल हो जाए, तो दूसरा आज़माएँ",
+    "message": "दूसरा इंजन आज़माएँ",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

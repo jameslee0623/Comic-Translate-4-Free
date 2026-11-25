@@ -45,7 +45,7 @@
     "message": "Движок перевода"
   },
   "backend_failover": {
-    "message": "Если движок не сработает, попробуйте другой",
+    "message": "Попробовать другой движок",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

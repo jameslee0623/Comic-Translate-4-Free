@@ -45,7 +45,7 @@
     "message": "محرك الترجمة"
   },
   "backend_failover": {
-    "message": "إذا فشل المحرك، جرّب محركًا آخر",
+    "message": "جرّب محركًا آخر",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

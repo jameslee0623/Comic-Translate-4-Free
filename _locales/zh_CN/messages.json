@@ -33,7 +33,7 @@
     "message": "翻译引擎"
   },
   "backend_failover": {
-    "message": "如果引擎失败，请尝试另一个",
+    "message": "尝试其他引擎",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

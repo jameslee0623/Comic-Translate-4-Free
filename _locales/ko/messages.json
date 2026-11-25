@@ -33,7 +33,7 @@
     "message": "번역 엔진"
   },
   "backend_failover": {
-    "message": "엔진에 실패하면 다른 엔진을 시도하세요",
+    "message": "다른 엔진 시도",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

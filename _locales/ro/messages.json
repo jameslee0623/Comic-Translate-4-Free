@@ -33,7 +33,7 @@
     "message": "Motor de traducere"
   },
   "backend_failover": {
-    "message": "Dacă motorul eșuează, încearcă altul",
+    "message": "Încearcă alt motor",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

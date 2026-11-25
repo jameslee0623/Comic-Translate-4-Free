@@ -45,7 +45,7 @@
     "message": "Motor de traducción"
   },
   "backend_failover": {
-    "message": "Si el motor falla, prueba con otro",
+    "message": "Probar otro motor",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

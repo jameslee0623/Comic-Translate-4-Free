@@ -45,7 +45,7 @@
     "message": "ترجمے کا انجن"
   },
   "backend_failover": {
-    "message": "اگر انجن ناکام ہو جائے تو دوسرا آزمائیں",
+    "message": "دوسرا انجن آزمائیں",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

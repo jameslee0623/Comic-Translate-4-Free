@@ -33,7 +33,7 @@
     "message": "Translating engine"
   },
   "backend_failover": {
-    "message": "If the engine fails, try another one",
+    "message": "Try another engine",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

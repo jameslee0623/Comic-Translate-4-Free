@@ -33,7 +33,7 @@
     "message": "Mesin penerjemah"
   },
   "backend_failover": {
-    "message": "Jika mesin gagal, coba yang lain",
+    "message": "Coba mesin lain",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

@@ -33,7 +33,7 @@
     "message": "Mecanismo de tradução"
   },
   "backend_failover": {
-    "message": "Se o mecanismo falhar, tente outro",
+    "message": "Tentar outro mecanismo",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

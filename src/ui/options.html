@@ -45,6 +45,11 @@
   .switch input:disabled + .slider::after { background: #9a9aa0; }
   /* PRO badge after a Pro-only label. */
   .protag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .05em; color: #fff; background: #1a73e8; border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+  /* Toggle rows: title + PRO badge in the first column, switch at the right.
+     The badge sits inside .rowtitle so it stays with the title text instead
+     of floating next to the switch. */
+  .rowtitle { display: inline-flex; align-items: center; min-width: 220px; flex: 1; }
+  .rowtitle label { min-width: 0; }
   .check-result { font-size: 12px; margin-left: 8px; }
   .check-result.ok { color: #7ee787; } .check-result.err { color: #ff7b72; }
   #allowedSites { list-style: none; padding: 0; margin: 8px 0; }
@@ -134,7 +139,7 @@
     <option value="lmstudio" data-i18n="backend_lmstudio_opt">LM Studio (local server)</option>
   </select></div>
   <p class="hint" id="googleNote" data-i18n="backend_google_note">Google needs no key and no setup.</p>
-  <div class="row"><label for="backendFailover" data-i18n="backend_failover">If the engine fails, try another one</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
+  <div class="row"><span class="rowtitle"><label for="backendFailover" data-i18n="backend_failover">Try another engine</label><span class="protag">PRO</span></span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="backend_failover_hint">Automatically switches to a working engine instead of stopping.</p>
   <div class="row" data-engine="azure"><label data-i18n="azure_key">Azure API key</label><input type="password" id="azureKey" autocomplete="off"></div>
   <div class="row" data-engine="azure"><label data-i18n="azure_region">Azure region</label><input type="text" id="azureRegion" data-i18n-ph="azure_region_ph" placeholder="e.g. japaneast" autocomplete="off"></div>
@@ -154,9 +159,9 @@
   <div class="row"><label data-i18n="min_image_size">Minimum image size (px)</label><input type="number" id="minImageSize" min="100" max="4000"></div>
   <p class="hint" data-i18n="min_image_hint">Images smaller than this are skipped.</p>
   <div class="row"><label data-i18n="play_ding">Play a sound when finishes</label><label class="switch"><input type="checkbox" id="playDing"><span class="slider"></span></label></div>
-  <div class="row"><label data-i18n="auto_translate">Auto-translate on page load</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="autoTranslate"><span class="slider"></span></label></div>
+  <div class="row"><span class="rowtitle"><label data-i18n="auto_translate">Auto-translate on page load</label><span class="protag">PRO</span></span><label class="switch"><input type="checkbox" id="autoTranslate"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="auto_hint">When on, allowed pages start translating automatically as soon as they finish loading.</p>
-  <div class="row"><label data-i18n="pretranslate_next">Pre-translate the next page</label><span class="protag">PRO</span><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
+  <div class="row"><span class="rowtitle"><label data-i18n="pretranslate_next">Pre-translate the next page</label><span class="protag">PRO</span></span><label class="switch"><input type="checkbox" id="pretranslateNext"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="pretranslate_next_hint">While you read this page, the next page is translated in the background, so it is ready when you open it.</p>
 
   <h2 data-i18n="pro_title" id="proSection">Pro</h2>

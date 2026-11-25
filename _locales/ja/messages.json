@@ -33,7 +33,7 @@
     "message": "翻訳エンジン"
   },
   "backend_failover": {
-    "message": "エンジンが失敗したら、別のものを試す",
+    "message": "別のエンジンを試す",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

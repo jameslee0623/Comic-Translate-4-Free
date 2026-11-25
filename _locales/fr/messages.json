@@ -33,7 +33,7 @@
     "message": "Moteur de traduction"
   },
   "backend_failover": {
-    "message": "Si le moteur échoue, essayez-en un autre",
+    "message": "Essayer un autre moteur",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {

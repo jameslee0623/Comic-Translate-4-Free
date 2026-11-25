@@ -33,7 +33,7 @@
     "message": "অনুবাদ ইঞ্জিন"
   },
   "backend_failover": {
-    "message": "ইঞ্জিন ব্যর্থ হলে, আরেকটি চেষ্টা করুন",
+    "message": "অন্য ইঞ্জিন চেষ্টা করুন",
     "description": "Checkbox: try another translation backend if the selected one fails"
   },
   "backend_failover_hint": {
