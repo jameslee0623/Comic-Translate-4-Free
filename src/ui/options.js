@@ -224,21 +224,22 @@ function persistSettings(s) {
 // The license key input is NOT part of collect() — it holds a new key to
 // activate, not the stored key. Activation stores the key via pro.js.
 async function refreshPro() {
-  const statusEl = $('proStatus'), usageEl = $('proUsage'), keyEl = $('proKey');
-  const actBtn = $('proActivate'), deactBtn = $('proDeactivate'), resultEl = $('proResult'), getRow = $('proGetRow'), getLink = $('proGet');
+  const statusEl = $('proStatus'), keyEl = $('proKey');
+  const actBtn = $('proActivate'), deactBtn = $('proDeactivate'), resultEl = $('proResult'), getLink = $('proGet');
   if (!statusEl) return;
   const s = await getSettings().catch(() => ({}));
   const active = proIsActive(s);
-  statusEl.textContent = active ? 'Pro active — unlimited auto-translate and pre-translate' : 'Free — 50 auto/pre-translate images a day';
   const used = await getProUsageCount();
-  usageEl.textContent = active ? 'Pro — no limit' : (used + ' / ' + PRO_FREE_DAILY_LIMIT + ' images used today');
+  statusEl.textContent = active ? 'Pro — unlimited auto-translate and pre-translate' : 'Free: ' + used + ' / ' + PRO_FREE_DAILY_LIMIT + ' auto images today';
   if (actBtn) actBtn.style.display = active ? 'none' : '';
   if (deactBtn) deactBtn.style.display = active ? '' : 'none';
   if (keyEl && active) keyEl.value = '';
-  // The Get Pro link only works once James has created the Dodo product.
+  // The Get Pro link sits on the same line as the status (like the popup).
+  // It only shows for free users, and only once the Dodo checkout is set.
   if (getLink) {
-    if (DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE')) getLink.href = DODO_CHECKOUT_URL;
-    else if (getRow) getRow.style.display = 'none';
+    const showGet = !active && DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE');
+    if (showGet) getLink.href = DODO_CHECKOUT_URL;
+    getLink.style.display = showGet ? '' : 'none';
   }
   // Pro lock: without a subscription, auto-translate and pre-translate
   // turn off and gray out once the daily free limit is hit. The stored
