@@ -1,6 +1,6 @@
 # Privacy Policy — Comic Translate 4 Free
 
-Last updated: September 30, 2026
+Last updated: November 25, 2026
 
 Comic Translate 4 Free is a browser extension that translates text inside comic
 and manga page images. This policy explains what data the extension handles and
@@ -27,6 +27,12 @@ where that data goes.
   keys, the allowed-sites list, model download state, and UI preferences are
   stored locally in your browser (`chrome.storage`). They are never sent
   anywhere.
+- **Pro usage count.** How many images you translated today while a Pro
+  feature was on (for the free 50-images-a-day limit) is stored locally in
+  your browser. It is never sent anywhere.
+- **Pro license key.** If you buy Pro, your license key is stored locally in
+  your browser. It is sent only to Dodo Payments, to check that it is valid
+  (see below).
 - **Downloaded ML models.** The text detector, OCR, and inpainting models
   (~340 MB total) are downloaded once from Hugging Face and cached in your
   browser (IndexedDB) so translation works offline afterwards.
@@ -43,8 +49,22 @@ service you selected in settings:
 | Service | What is sent | Notes |
 |---|---|---|
 | Google Translate (default, free, no key) | Recognized text, source and target language codes | Subject to Google's privacy policy |
+| Gemini (key required, recommended) | Same as above, plus your API key authenticates the request | Subject to Google's privacy policy; key is stored locally |
 | Azure Translator | Same as above, plus your API key authenticates the request | Subject to Microsoft's privacy policy; key is stored locally |
 | LM Studio | Same as above | Sent to the server URL you configured — commonly your own local machine, in which case data never leaves your device |
+
+## Pro subscriptions (Dodo Payments)
+
+Pro is an optional paid subscription ($3/month or $30/year) that unlocks
+unlimited auto-translate, pre-translate, and engine failover. Payments are
+processed by Dodo Payments, the merchant of record. The extension never sees
+or stores your payment details — card numbers, billing addresses, and
+payment history live with Dodo, under Dodo's privacy policy.
+
+To check your Pro access, the extension sends your license key (and a
+random per-browser installation id) to Dodo's license servers when you
+activate Pro, and re-checks once a day while Pro is active. Nothing else
+is sent to Dodo.
 
 Image downloads are ordinary web requests: when the extension reads the page's
 image from its host (or its CDN) or downloads models from Hugging Face, those
