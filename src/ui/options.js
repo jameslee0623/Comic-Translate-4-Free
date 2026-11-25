@@ -202,7 +202,9 @@ async function load() {
   } catch { /* permissions API unavailable — leave storage alone */ }
   refreshModels();
   refreshDiagLog();
-  $('refreshDiagLog').onclick = refreshDiagLog;
+  // The log refreshes whenever the Settings page is focused, so there is
+  // no Refresh button any more — switching to the tab is the refresh.
+  window.addEventListener('focus', refreshDiagLog);
   $('copyDiagLog').onclick = copyDiagLog;
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();

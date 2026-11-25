@@ -19,6 +19,9 @@ for (const k of Object.keys(STAGE_LABEL)) {
 }
 
 let currentHost = null;
+// Whether the current site is allowed (allow-all or whitelisted), set by
+// refreshSite. The icon-click auto-translate only runs when this is true.
+let siteAllowed = false;
 
 function setStatus(s) {
   $('status').textContent = s || '';
@@ -297,6 +300,7 @@ async function refreshSite(settings) {  const [tab] = await chrome.tabs.query({ 
   }
   const allowAll = !!settings.allowAllSites;
   const ok = allowAll || isSiteAllowed(currentHost, list);
+  siteAllowed = ok;
   const hostHtml = `<b>${escHtml(currentHost)}</b>`;
   const statusHtml = allowAll
     ? `<span class="ok">${ctMsg('all_sites_on') || 'all sites allowed ✓'}</span>`
@@ -557,7 +561,19 @@ fillLangs();
 // Models auto-download (2.2.2): no first-run redirect to Settings any
 // more — the install trigger fetches them, and a run that starts before
 // they finish waits for them instead.
-refresh();
-refreshModelsReady();
+// Clicking the icon opens the popup AND starts translating the page,
+// when the Translate button is usable: no run in flight, models ready,
+// site allowed, and no grant row (host access granted). If a grant is
+// still needed the user must click Grant first — the run would fail
+// without it.
+async function autoTranslateOnOpen() {
+  const btn = $('translateBtn');
+  const grantRow = $('grantRow');
+  if (!btn || btn.disabled) return;
+  if (!siteAllowed) return;
+  if (grantRow && grantRow.style.display !== 'none') return;
+  btn.click();
+}
+Promise.all([refresh(), refreshModelsReady()]).then(autoTranslateOnOpen).catch(() => {});
 refreshCacheStats();
 setInterval(refreshStatus, 3000);
