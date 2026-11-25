@@ -490,7 +490,7 @@
     "message": "Pro"
   },
   "pro_desc": {
-    "message": "Auto-translate and pre-translate lock after 50 images a day without a subscription. Manual translate is always free. Pro unlocks unlimited auto-translate and pre-translate."
+    "message": "Translations count toward the free 50 images a day when any Pro feature is on. When all Pro features are off, translating is free. Pro unlocks unlimited use."
   },
   "pro_status": {
     "message": "Status"

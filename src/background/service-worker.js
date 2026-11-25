@@ -4,7 +4,7 @@
 import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings } from '../shared/settings.js';
-import { canAutoOrPre, addProUsageForImages, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
+import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
   boxIoU, clampBox, dedupAndMergeSeams, mergeBoxesByCost,
@@ -2442,8 +2442,10 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     diagPush('pre-translate: done ' + imageUrl.slice(0, 80));
     // Freemium: one newly translated image against the free daily limit.
     // Pro users are not counted. Distinct images only — a re-translation
-    // of the same URL is free.
-    if (!proIsActive(settings)) await addProUsageForImages([imageUrl]);
+    // of the same URL is free. Pre-translate only runs when it is on, so
+    // a Pro feature is always on here, but the gate keeps the rule in one
+    // place (anyProFeatureOn).
+    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages([imageUrl]);
   } finally {
     for (const k of pxKeys.splice(0)) await pixelDrop(k);
   }
@@ -3568,6 +3570,13 @@ async function runPipeline(tabId, opts = {}) {
     try { pretranslateNextPage(tabId, tabUrl, settings); } catch {}
     if (settings.debugMode) await sendDiagLog(tabId, runId);
     result = { runId, ok: true, images: doneImgs.length, imageSrcs: doneSrcs, failed: failedImgs, ...(opts.resume ? { resumed: true, alreadyDone } : {}) };
+    // Freemium: a finished translation counts toward the free daily quota
+    // when any Pro feature is on (auto, pre-translate, or failover).
+    // It is free only when all three are off. Pro users are not counted.
+    // A run cancelled in the middle throws above, so it counts nothing.
+    // This covers auto and manual runs alike — the auto handler no longer
+    // counts separately.
+    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages(doneSrcs);
   } catch (e) {
     let msg;
     // A user-cancelled run stays 'cancelled' even if the in-flight work
@@ -3931,11 +3940,9 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     autoFired.set(tabId, { url, at: now });
     await cancelRunsForTab(tabId);
     const r = await runPipeline(tabId, { auto: true });
-    // Freemium: count finished, distinct images against the free daily
-    // limit. Pro users are not counted. Cache hits translate 0 images,
-    // so they never consume the limit. A run cancelled in the middle
-    // throws above, so it counts nothing.
-    if (r.ok && !proIsActive(settings)) await addProUsageForImages(r.imageSrcs || []);
+    // Freemium counting now lives inside runPipeline (it counts a finished
+    // translation when any Pro feature is on), so nothing to add here.
+    // A run cancelled in the middle throws above and counts nothing.
     if (!r.ok && !r.cancelled) {
       console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
       // 2.3.5: a failed auto run must not consume the dedupe window.

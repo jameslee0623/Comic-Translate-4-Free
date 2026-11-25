@@ -1,7 +1,7 @@
 // Freemium (Pro) with Dodo Payments license keys.
-// Free: 50 images/day for auto-translate + pre-translate. Manual translate
-// (Translate button, right-click Send) is always free and never counted.
-// Pro: unlimited auto + pre-translate, unlocked by a Dodo license key.
+// Free: 50 images/day while any Pro feature is on (auto-translate,
+// pre-translate, engine failover). A translation is free only when all
+// Pro features are off. Pro: unlimited, unlocked by a Dodo license key.
 // Dodo's license endpoints are public (no API key), so the extension calls
 // them directly. The business_id check at activation stops a key bought
 // from any other Dodo seller from unlocking Pro here.
@@ -38,6 +38,17 @@ export async function getProUsageCount() {
     if (!rec || rec.date !== dateStr()) return 0;
     return Number.isFinite(rec.count) ? Math.max(0, rec.count) : 0;
   } catch { return 0; }
+}
+
+// True when any Pro feature is enabled: auto-translate, pre-translate, or
+// engine failover. A finished translation counts toward the free daily
+// quota when any Pro feature is on; it is free only when all three are
+// off. (Failover defaults on, so by default every translation counts.)
+export function anyProFeatureOn(settings) {
+  if (!settings) return false;
+  return !!settings.autoTranslateOnLoad
+    || !!settings.pretranslateNextPage
+    || !!settings.backendFailover;
 }
 
 // Add finished auto/pre-translate images to today's count — distinct

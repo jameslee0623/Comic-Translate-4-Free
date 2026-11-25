@@ -24,8 +24,9 @@ export const DEFAULT_SETTINGS = {
   autoTranslateOnLoad: true, // start the pipeline automatically on allowed page loads
   pretranslateNextPage: true, // after a run finishes, translate the next page's single picture in the background into the page cache
   playDing: true, // play a chime when a translation finishes (toggle in Settings)
-  // Pro (freemium, Dodo Payments license keys): free is 50 auto/pre-translate
-  // images/day; Pro is unlimited. Manual translate is always free.
+  // Pro (freemium, Dodo Payments license keys): free is 50 images/day
+  // while any Pro feature is on (auto, pre-translate, failover); Pro is
+  // unlimited. A translation is free only when all Pro features are off.
   proLicenseKey: '', // Dodo license key, entered by the user in Settings
   proInstanceId: '', // Dodo license instance id, from activation
   proActive: false, // last validation said valid (re-checked at most once a day)
