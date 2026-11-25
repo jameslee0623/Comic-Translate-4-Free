@@ -624,22 +624,28 @@ async function fetchImagePixels(url, referrer) {
   const CAPTURE_FETCH_TIMEOUT_MS = 30000;
   let lastErr = new Error('image download failed');
   for (const init of tries) {
-    let res;
     const ctrl = new AbortController();
     const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, CAPTURE_FETCH_TIMEOUT_MS);
-    try { res = await fetch(url, { ...init, signal: ctrl.signal }); }
-    catch (e) {
-      clearTimeout(timer);
-      if (e && e.name === 'AbortError') { lastErr = new Error('image download timed out after 30s'); break; }
-      lastErr = e; break;
-    }
-    clearTimeout(timer);
-    if (res.ok) {
+    try {
+      const res = await fetch(url, { ...init, signal: ctrl.signal });
+      if (!res.ok) {
+        lastErr = new Error('image download failed: HTTP ' + res.status);
+        if (res.status !== 403) break;
+        continue;
+      }
+      // The body read shares the same 30s timeout: a server that sends
+      // headers then stalls mid-body used to hang the run at
+      // "capture-worker-fetch" forever — the old code cleared the timer
+      // as soon as headers arrived, so res.blob() had no timeout at all.
+      // Aborting the signal rejects the in-flight blob() read.
       const blob = await res.blob();
       return { ...bitmapToRGBA(await createImageBitmap(blob)), bytes: blob.size };
+    } catch (e) {
+      if (e && e.name === 'AbortError') { lastErr = new Error('image download timed out after 30s'); break; }
+      lastErr = e; break;
+    } finally {
+      clearTimeout(timer);
     }
-    lastErr = new Error('image download failed: HTTP ' + res.status);
-    if (res.status !== 403) break;
   }
   throw lastErr;
 }
@@ -3025,6 +3031,7 @@ async function runPipeline(tabId, opts = {}) {
           ocrCallMs = Math.round(performance.now() - ocrCallT0);
           ocrMs = r.ms;
           ocrEngineLabel = (MODEL_GROUPS.find(g => g.id === r.engine) || {}).label || r.engine || '';
+          imgTimings.ocrEngine = r.engine || '';
           for (const res of r.results) {
             blocks[res.id].text = res.text;
             ocrStats.set(res.id, { chars: res.chars, chunks: res.chunks, hitCeiling: res.hitCeiling, stopped: res.stopped, skipped: !!res.skipped });
@@ -3044,7 +3051,6 @@ async function runPipeline(tabId, opts = {}) {
           ocrSlow.sort((a, b) => b.ms - a.ms);
         }
         imgTimings.ocr = ocrMs;
-        imgTimings.ocrEngine = r.engine || '';
         imgSetProgress('ocr', 0.55);
         const ocrThumbs = [];
         // Thumbnails are debug-panel only — skip the 40 canvas encodes in normal runs.
