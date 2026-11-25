@@ -2552,12 +2552,16 @@ async function runPipeline(tabId, opts = {}) {
   const pipelineT0 = performance.now(); // overall wall-clock for this run
   const pxKeys = []; // IDB pixel-bus keys created this run; dropped in finally
   let result;
+  // Settings for this run. Declared here (not inside the try) so the
+  // catch below can read it: a const inside try is block-scoped to try
+  // and referencing it in catch throws 'settings is not defined'.
+  let settings = null;
   try {
     // 2.2.12: getSettings() lives inside the try now. It used to run before
     // the try, so a throw leaked the run record (persisted above) and the
     // runs-map entry — orphan recovery could later auto-resume a run that
     // never started.
-    const settings = await getSettings();
+    settings = await getSettings();
     keepAliveStart(runId); // FIX2: hold the background alive for this run only; released in finally.
     // Auto-download (2.2.2): if the models are not here yet (install
     // download still going, or it never ran), fetch them now and wait,
@@ -3608,21 +3612,33 @@ async function runPipeline(tabId, opts = {}) {
     // flag it sets must not swallow it. Prefer the recorded failure so
     // inpaint/timeout/translate errors always notify.
     const branchError = runs.get(runId)?.branchError;
-    const quietCancel = (runs.get(runId)?.userCancelled || ((e && e.cancelled) || isCancelled(runId))) && !branchError;
+    let quietCancel = (runs.get(runId)?.userCancelled || ((e && e.cancelled) || isCancelled(runId))) && !branchError;
     if (quietCancel) {
       setProgress(runId, 'cancelled', 0);
       msg = 'cancelled';
     } else {
       const err = branchError || e;
       msg = String((err && err.message) || err);
-      broadcastError(runId, msg, err && err.grantHost ? { host: err.grantHost, label: displayHost(err.grantHost), hosts: err.grantHosts || null } : null);
-      try {
-        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
-        // Show the debug panel on failure too (emitDebug sets debug:true and
-        // respects debugMode) — otherwise a capture-stage failure leaves
-        // James with only the error text and no stage/tier diagnostics.
-        await emitDebug(runId, tabId, settings, 'error', { title: 'Error', error: msg });
-      } catch { /* ignore */ }
+      // A render that lost to a newer run ('stale run') is not a failure:
+      // the user moved to another page and the new run owns the tab now.
+      // Treat it as a quiet cancel — no error pill, and the auto dedupe
+      // stays (the new run already recorded it). Otherwise a fast
+      // page-flip leaves 'Render failed' on every page and the dedupe
+      // clears, so the next flip re-runs and fails the same way.
+      if (msg.includes('stale run')) {
+        quietCancel = true;
+        setProgress(runId, 'cancelled', 0);
+        msg = 'cancelled';
+      } else {
+        broadcastError(runId, msg, err && err.grantHost ? { host: err.grantHost, label: displayHost(err.grantHost), hosts: err.grantHosts || null } : null);
+        try {
+          await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+          // Show the debug panel on failure too (emitDebug sets debug:true and
+          // respects debugMode) — otherwise a capture-stage failure leaves
+          // James with only the error text and no stage/tier diagnostics.
+          if (settings) await emitDebug(runId, tabId, settings, 'error', { title: 'Error', error: msg });
+        } catch { /* ignore */ }
+      }
     }
     // DIAGNOSTIC (temporary): one self-contained summary line, so ANY
     // paste containing it shows the true totals and the outcome.
@@ -3631,7 +3647,7 @@ async function runPipeline(tabId, opts = {}) {
     // panel log includes it. Error runs only (not user cancels), and only
     // when debug mode is on — otherwise the panel pops up even though the
     // user turned it off.
-    if (!quietCancel && settings.debugMode) await sendDiagLog(tabId, runId);
+    if (!quietCancel && settings && settings.debugMode) await sendDiagLog(tabId, runId);
     result = { runId, ok: false, error: msg, cancelled: !!quietCancel,
       ...(e && e.fallbackUrl ? { fallbackUrl: e.fallbackUrl } : {}) };
   } finally {
