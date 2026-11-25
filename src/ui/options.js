@@ -739,7 +739,8 @@ try {
 // Debug section: hidden unless the dev flag is on. The flag lives in
 // chrome.storage.local ('ct-dev'), so it is per-device — only James's
 // devices show Debug. Reveal it by clicking the version number 5 times;
-// the flag persists, so it stays revealed on that device.
+// the flag persists, so it stays revealed on that device. The 5-click
+// also turns debug mode on, so the Debug section is live at once.
 async function refreshDebugVisibility() {
   let dev = false;
   try { dev = !!(await chrome.storage.local.get('ct-dev'))['ct-dev']; } catch { /* off */ }
@@ -758,6 +759,9 @@ if (versionEl) versionEl.addEventListener('click', async () => {
     versionClicks = [];
     try { await chrome.storage.local.set({ 'ct-dev': true }); } catch { /* ignore */ }
     refreshDebugVisibility();
+    // Turn debug mode on too, so the Debug section is live at once.
+    const dbg = $('debugMode');
+    if (dbg && !dbg.checked) { dbg.checked = true; saveNow(); }
   }
 });
 refreshDebugVisibility();
