@@ -13,6 +13,14 @@ let _translateLog = null;
 export function setTranslateLogger(fn) { _translateLog = typeof fn === 'function' ? fn : null; }
 function tlog(line) { try { if (_translateLog) _translateLog(line); } catch {} }
 
+// Local translator: the service worker sets this to a function that calls
+// the ML host (callMl ML_TRANSLATE). translators.js itself cannot import
+// ml-bridge (the SW owns the host connection), so it goes through this
+// setter, same as setTranslateLogger above. Signature:
+//   (texts, sourceLang, { signal, runId, targetLang }) -> [string] (Traditional Chinese)
+let _localTranslator = null;
+export function setLocalTranslator(fn) { _localTranslator = typeof fn === 'function' ? fn : null; }
+
 function sleepAbortable(ms, signal) {
   if (!signal) return sleep(ms);
   if (signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true });
@@ -912,7 +920,19 @@ async function localLlm(texts, settings, signal) {
   return googleFree(texts, settings.sourceLang, settings.targetLang, signal);
 }
 
-export async function translateBlocks(blocks, settings, onProgress, signal, deadlineMs = 30000, isUserCancelled) {
+// Local Opus-MT backend (test, 2026-11-25): on-device, no internet.
+// Only Traditional Chinese targets and ja/en sources are supported —
+// anything else throws so the caller fails over to an online backend.
+// If the local translator is not wired up (or the models are not
+// downloaded), the ML host throws and failover runs, like the others.
+async function localTranslate(texts, settings, signal, runId) {
+  if (!_localTranslator) throw new Error('local translation is not available — the local translate test is off or the models are not downloaded');
+  const target = String(settings.targetLang || 'zh-TW');
+  if (target !== 'zh-TW' && target !== 'zh_TW') throw new Error('local translation only supports Traditional Chinese (zh-TW) as the target');
+  return _localTranslator(texts, settings.sourceLang, { signal, runId, targetLang: target });
+}
+
+export async function translateBlocks(blocks, settings, onProgress, signal, deadlineMs = 30000, isUserCancelled, runId = null) {
   const idx = [], texts = [];
   blocks.forEach((b, i) => {
     if (b.text && b.text.trim()) { idx.push(i); texts.push(b.text); }
@@ -934,6 +954,7 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
     if (b === 'gemini') return await gemini(texts, settings, sig);
     if (b === 'lmstudio') return await lmStudio(texts, settings, sig, attemptDeadlineMs ?? deadlineMs);
     if (b === 'local-llm') return await localLlm(texts, settings, sig);
+    if (b === 'local') return await localTranslate(texts, settings, sig, runId);
     return await googleFree(texts, settings.sourceLang, settings.targetLang, sig);
   };
   let results;
@@ -983,6 +1004,13 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
       const geminiConfigured = !!(settings.geminiApiKey || '').trim();
       if (backend !== 'google') candidates.push('google');
       if (geminiConfigured && backend !== 'gemini') candidates.push('gemini');
+      // Local Opus-MT (test): offline and free, so it sits after the
+      // online free backends and before LM Studio (which needs a server).
+      // Only when the test is on and the target is Traditional Chinese
+      // (the only target the local models produce); otherwise the attempt
+      // would fail at once in localTranslate.
+      const target = String(settings.targetLang || 'zh-TW');
+      if (settings.localTranslateTest && (target === 'zh-TW' || target === 'zh_TW') && backend !== 'local') candidates.push('local');
       if (backend !== 'lmstudio') candidates.push('lmstudio');
       if (azureConfigured && backend !== 'azure') candidates.push('azure');
       // If the primary died by timeout-abort, the caller's signal is dead:
@@ -1105,6 +1133,6 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   return translated;
 }
 
-export const BACKEND_LABEL = { google: 'Google (free)', azure: 'Azure Translator', gemini: 'Gemini (3.5 Flash-Lite)', lmstudio: 'LM Studio (local)', 'local-llm': 'Local LLM (experimental)' };
+export const BACKEND_LABEL = { google: 'Google (free)', azure: 'Azure Translator', gemini: 'Gemini (3.5 Flash-Lite)', lmstudio: 'LM Studio (local)', 'local-llm': 'Local LLM (experimental)', local: 'Local (Opus-MT, test)' };
 // Short labels for the status pill (it has room for one word, not a sentence).
-export const BACKEND_SHORT_LABEL = { google: 'Google', azure: 'Azure', gemini: 'Gemini', lmstudio: 'LM Studio', 'local-llm': 'Local LLM' };
+export const BACKEND_SHORT_LABEL = { google: 'Google', azure: 'Azure', gemini: 'Gemini', lmstudio: 'LM Studio', 'local-llm': 'Local LLM', local: 'Local' };

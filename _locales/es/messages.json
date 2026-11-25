@@ -525,10 +525,22 @@
   "model_distil": {
     "message": "OCR distil (Japanese test)"
   },
+  "model_mt_ja_en": {
+    "message": "Local translate (Japanese to English)"
+  },
+  "model_mt_en_zh": {
+    "message": "Local translate (English to Chinese)"
+  },
   "ocr_distil_test": {
     "message": "Use distil OCR for Japanese (test)"
   },
   "ocr_distil_test_hint": {
     "message": "Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR."
+  },
+  "local_translate_test": {
+    "message": "Use local translation for Chinese (test)"
+  },
+  "local_translate_test_hint": {
+    "message": "Translates on this device with a downloaded model, no internet needed. Japanese and English to Chinese only for now. Needs the local models downloaded below."
   }
 }

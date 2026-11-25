@@ -27,6 +27,7 @@ export const MSG = {
   ML_ENSURE: 'ml/ensure',                // {model:'detector'|'ocr-baberu'|'inpaint'} -> {ok} | {ok:false,error}
   ML_DETECT: 'ml/detect',                // {key,width,height,threshold,runId} -> {ok, boxes:[{xyxy,label,score}], ms, inputMean}
   ML_OCR: 'ml/ocr',                      // {crops:[{id,key,width,height}], sourceLang, runId, useDistil} -> {ok, results:[{id,text,chars,chunks,hitCeiling}], ms, engine}
+  ML_TRANSLATE: 'ml/translate',          // {texts:[string], sourceLang, targetLang, runId} -> {ok, results:[string], ms, engine} (local Opus-MT test; ja->en->zh two-hop, en->zh direct, OpenCC to Traditional)
   ML_INPAINT: 'ml/inpaint',              // {patches:[{id,key,maskKey,width,height}], runId} -> {ok, results:[{id,key,width,height}], ms}
   ML_DOWNLOAD: 'ml/download',            // {fileId} -> {ok, bytes} (progress via MODEL_PROGRESS)
   ML_RESET: 'ml/reset',                  // {group} -> {ok} (drop loaded sessions)

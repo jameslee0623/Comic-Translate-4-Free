@@ -4,8 +4,9 @@
 export const DEFAULT_SETTINGS = {
   sourceLang: 'auto', // 'auto' = detect from the OCR'd text; or 'ja' | 'en' | 'zh-CN' | 'zh-TW'
   ocrDistilTest: false, // distil OCR test (2026-11-25): when on, Japanese (or auto) pages OCR with the small distil model instead of Baberu; EN/ZH stay on Baberu
+  localTranslateTest: false, // local translation test (2026-11-25): when on, Japanese/English to Chinese translates on-device with Opus-MT + OpenCC, no internet needed; hidden in the Debug section
   targetLang: 'en', // static fallback only — with no stored value, readSettingsRaw()/getSettings() use the browser language instead (browserTargetLang, below)
-  translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm'
+  translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm' | 'local' (local = Opus-MT test, needs localTranslateTest on)
   backendFailover: true, // if the selected backend fails, try another (default on, 2026-10-26)
   azureKey: '',
   azureRegion: '',
@@ -310,7 +311,12 @@ export async function getSettings() {
   // 2.2.12: validate the backend too — a corrupt/retired stored value used
   // to pass through, leaving the popup's backend dropdown blank and the
   // pipeline with an unknown backend string.
-  const VALID_BACKENDS = ['google', 'azure', 'gemini', 'lmstudio', 'local-llm'];
+  const VALID_BACKENDS = ['google', 'azure', 'gemini', 'lmstudio', 'local-llm', 'local'];
   if (!VALID_BACKENDS.includes(s.translationBackend)) s.translationBackend = DEFAULT_SETTINGS.translationBackend;
+  // Local translate test (2026-11-25): a stored 'local' backend only
+  // works while the test is on. If the test was turned off (or the
+  // stored value predates the test), fall back to Google instead of
+  // failing every translation. Read-only sanitize, like the check above.
+  if (s.translationBackend === 'local' && !s.localTranslateTest) s.translationBackend = DEFAULT_SETTINGS.translationBackend;
   return s;
 }

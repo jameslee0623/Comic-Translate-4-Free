@@ -129,8 +129,6 @@
     <div class="langfield"><label data-i18n="source_lang">Source language</label><select id="sourceLang"></select></div>
     <div class="langfield"><label data-i18n="target_lang">Target language</label><select id="targetLang"></select></div>
   </div>
-  <div class="row"><span class="rowtitle"><label for="ocrDistilTest" data-i18n="ocr_distil_test">Use distil OCR for Japanese (test)</label></span><label class="switch"><input type="checkbox" id="ocrDistilTest"><span class="slider"></span></label></div>
-  <p class="hint" data-i18n="ocr_distil_test_hint">Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR.</p>
 
   <h2 data-i18n="translation_backend" id="engineSection">Translating engine</h2>
   <div class="row"><label data-i18n="backend">Translating engine</label><select id="backend">
@@ -192,6 +190,10 @@
   <h2 data-i18n="debug" id="debugSection">Debug</h2>
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
+  <div class="row"><span class="rowtitle"><label for="ocrDistilTest" data-i18n="ocr_distil_test">Use distil OCR for Japanese (test)</label></span><label class="switch"><input type="checkbox" id="ocrDistilTest"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="ocr_distil_test_hint">Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR.</p>
+  <div class="row"><span class="rowtitle"><label for="localTranslateTest" data-i18n="local_translate_test">Use local translation for Chinese (test)</label></span><label class="switch"><input type="checkbox" id="localTranslateTest"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="local_translate_test_hint">Translates on this device with a downloaded model, no internet needed. Japanese and English to Chinese only for now. Needs the local models downloaded below.</p>
 
   <h2 id="diagSection">Diagnostic log</h2>
   <div class="row" style="justify-content:space-between;flex-direction:row"><button id="refreshDiagLog" style="font-size:13px">Refresh</button><button id="copyDiagLog" style="font-size:13px">Copy</button></div>

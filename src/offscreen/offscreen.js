@@ -4,10 +4,12 @@
 // Verified: ort 1.30 threaded WASM runs here with numThreads=1 and no COOP/COEP
 // (chrome-extension: pages get SharedArrayBuffer without crossOriginIsolated).
 import { MSG, openDb, idbGet } from '../shared/contracts.js';
-import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET, DISTIL_VOCAB_ASSET } from '../shared/model-specs.js';
+import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET, DISTIL_VOCAB_ASSET, OPUS_MT_JA_EN_VOCAB_ASSET, OPUS_MT_EN_ZH_VOCAB_ASSET } from '../shared/model-specs.js';
 import { Detector } from './ml/detector.js';
 import { BaberuOCR } from './ml/baberu.js';
 import { DistilOCR } from './ml/distil.js';
+import { OpusMT } from './ml/opus-mt.js';
+import { toTraditionalTW } from './ml/opencc.js';
 import { meanBrightness } from '../shared/image-ops.js';
 import { Inpainter } from './ml/inpaint.js';
 import { tileOrigins, TILE_MAX } from '../shared/textblock.js';
@@ -485,6 +487,11 @@ const detector = new Detector();
 const baberu = new BaberuOCR();
 const distil = new DistilOCR();
 const inpainter = new Inpainter();
+// Local translate test (2026-11-25): Opus-MT. ja-en starts the decoder
+// from 60715 (<pad>), en-zh from 65000 (the configs'
+// decoder_start_token_id).
+const mtJaEn = new OpusMT(60715);
+const mtEnZh = new OpusMT(65000);
 
 // Groups whose model file was re-downloaded while a run was using the
 // session. The reset is deferred to the next ensureModel (see below) —
@@ -493,12 +500,14 @@ const inpainter = new Inpainter();
 const staleGroups = new Set();
 
 // Drop loaded ORT sessions so the next inference re-reads model files from
-// IndexedDB. group: 'detector' | 'ocr-baberu' | 'ocr-distil' | 'inpaint' | '*'.
+// IndexedDB. group: 'detector' | 'ocr-baberu' | 'ocr-distil' | 'inpaint' | 'mt-ja-en' | 'mt-en-zh' | '*'.
 async function resetGroup(group) {
   if (group === 'detector' || group === '*') await detector.reset();
   if (group === 'ocr-baberu' || group === '*') await baberu.reset();
   if (group === 'ocr-distil' || group === '*') await distil.reset();
   if (group === 'inpaint' || group === '*') await inpainter.reset();
+  if (group === 'mt-ja-en' || group === '*') await mtJaEn.reset();
+  if (group === 'mt-en-zh' || group === '*') await mtEnZh.reset();
 }
 
 // WASM OOM signatures from ORT/Emscripten. Matches ml-bridge.js's OOM_RE.
@@ -573,6 +582,20 @@ async function loadBaberu(providers) {
 async function loadDistil(providers) {
   await distil.load(await modelBuffer('ocr-distil-u8s8'), providers);
 }
+async function loadMtJaEn(providers) {
+  // Fetch one graph at a time so the three buffers (~163MB) are never
+  // all resident at once (same reason as loadBaberu above).
+  await mtJaEn.load(
+    await modelBuffer('mt-ja-en-encoder'),
+    await modelBuffer('mt-ja-en-decoder'),
+    await modelBuffer('mt-ja-en-decoder-past'), providers);
+}
+async function loadMtEnZh(providers) {
+  await mtEnZh.load(
+    await modelBuffer('mt-en-zh-encoder'),
+    await modelBuffer('mt-en-zh-decoder'),
+    await modelBuffer('mt-en-zh-decoder-past'), providers);
+}
 async function loadWithWebgpuFallback(kind, loadFn) {
   // 1.4.0 (m2): NO in-worker WASM fallback. Try WebGPU alone; on
   // creation failure, reset the group once (dispose any half-loaded
@@ -628,7 +651,8 @@ async function ensureModel(kind) {
     // (ensureModel checks .loaded), so this only costs reload time.
     if (isLowMemoryDevice()) {
       if (kind === 'ocr-baberu' || kind === 'ocr-distil') await resetGroup('detector');
-      else if (kind === 'inpaint') { await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); }
+      else if (kind === 'mt-ja-en' || kind === 'mt-en-zh') { await resetGroup('detector'); await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); }
+      else if (kind === 'inpaint') { await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); await resetGroup('mt-ja-en'); await resetGroup('mt-en-zh'); }
     }
     if (kind === 'detector' && !detector.loaded) {
       await detector.load(await modelBuffer('detector'), ['wasm']);
@@ -644,6 +668,20 @@ async function ensureModel(kind) {
         await loadWithWebgpuFallback(kind, loadDistil);
       } catch (e) { await distil.reset(); throw e; }
       distil.setVocab(vocabJson);
+    } else if (kind === 'mt-ja-en' && !mtJaEn.loaded) {
+      // Local translate test: MT is WASM-only (the autoregressive step
+      // loop is latency-bound, like Baberu — GPU was ~2x slower there).
+      const vocabJson = await assetText(OPUS_MT_JA_EN_VOCAB_ASSET);
+      try {
+        await loadWithWebgpuFallback(kind, loadMtJaEn);
+      } catch (e) { await mtJaEn.reset(); throw e; }
+      mtJaEn.setVocab(vocabJson);
+    } else if (kind === 'mt-en-zh' && !mtEnZh.loaded) {
+      const vocabJson = await assetText(OPUS_MT_EN_ZH_VOCAB_ASSET);
+      try {
+        await loadWithWebgpuFallback(kind, loadMtEnZh);
+      } catch (e) { await mtEnZh.reset(); throw e; }
+      mtEnZh.setVocab(vocabJson);
     } else if (kind === 'inpaint' && !inpainter.loaded) {
       await loadWithWebgpuFallback(kind, async (providers) => {
         await inpainter.load(await modelBuffer('inpaint'), providers);
@@ -1165,6 +1203,52 @@ const handlers = {
     // (4 on the M4) or fell back to the raw core count.
     const threadsUsed = (typeof ort !== 'undefined' && ort.env && ort.env.wasm && typeof ort.env.wasm.numThreads === 'number') ? ort.env.wasm.numThreads : null;
     return { ok: true, results, ms: Math.round(performance.now() - t0), engine, loadMs, threads: threadsUsed };
+  },
+
+  // ML_TRANSLATE {texts, sourceLang, targetLang, runId} — local translate
+  // test (2026-11-25): Opus-MT on-device, no internet. ja -> en -> zh
+  // (two hops: no direct ja->zh ONNX exists), en -> zh direct, then
+  // OpenCC s2twp to Traditional (Taiwan). Target must be zh-TW; any
+  // other target or source throws so the SW fails over to an online
+  // backend. Texts run sequentially: one text already fills the WASM
+  // threads (same finding as OCR, 2.0.10), two would just share them.
+  async [MSG.ML_TRANSLATE]({ texts, sourceLang, targetLang, runId }) {
+    throwIfCancelled(runId);
+    const t0 = performance.now();
+    const target = String(targetLang || 'zh-TW');
+    if (target !== 'zh-TW' && target !== 'zh_TW') {
+      throw new Error('local translation only supports Traditional Chinese (zh-TW) as the target, not ' + target);
+    }
+    const src = String(sourceLang || 'ja');
+    if (src !== 'ja' && src !== 'en') {
+      throw new Error('local translation only supports Japanese and English sources, not ' + src);
+    }
+    const loadT0 = performance.now();
+    if (src === 'ja') await ensureModel('mt-ja-en');
+    await ensureModel('mt-en-zh');
+    const loadMs = Math.round(performance.now() - loadT0);
+    throwIfCancelled(runId);
+    const shouldAbort = () => cancelledRuns.has(runId);
+    const results = [];
+    try {
+      for (const text of texts || []) {
+        throwIfCancelled(runId);
+        if (!text || !String(text).trim()) { results.push(''); continue; }
+        let zh;
+        if (src === 'ja') {
+          const en = await mtJaEn.translate(text, { shouldAbort });
+          if (shouldAbort()) throw new Error('cancelled');
+          zh = (await mtEnZh.translate(en.text, { shouldAbort })).text;
+        } else {
+          zh = (await mtEnZh.translate(text, { shouldAbort })).text;
+        }
+        results.push(toTraditionalTW(zh));
+      }
+    } finally {
+      releaseRun(runId);
+    }
+    throwIfCancelled(runId);
+    return { ok: true, results, ms: Math.round(performance.now() - t0), engine: 'local-opus-mt', loadMs };
   },
 
   // MEASURE1 diagnostic: report the WASM thread facts of the realm

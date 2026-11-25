@@ -13,7 +13,7 @@ import {
 import { toGrayU8, meanBrightness, renderScale, resizeBilinearRGBA } from '../shared/image-ops.js';
 import { pixelPut, pixelTake, pixelDrop, pixelPruneRun } from '../shared/pixel-bus.js';
 import { generateMask, detectContentMaskInBbox } from '../shared/mask.js';
-import { translateBlocks, checkAzure, checkLmStudio, checkGemini, BACKEND_LABEL, BACKEND_SHORT_LABEL, setTranslateLogger } from './translators.js';
+import { translateBlocks, checkAzure, checkLmStudio, checkGemini, BACKEND_LABEL, BACKEND_SHORT_LABEL, setTranslateLogger, setLocalTranslator } from './translators.js';
 import { detectPageLang } from '../shared/lang-detect.js';
 import { mlHostAlive, ensureMlHost, callMl, cancelMlForRun, runGpuInpaint, cancelGpuInpaint, runChromeGpuInpaint, cancelChromeGpuInpaint, notifyChromeGpuProgress, makeCanvas, canvasToBlob, directHandlers, WEBP_TYPE, WEBP_QUALITY, setMlAlarmRecoveryHook } from './ml-bridge.js';
 import {
@@ -66,6 +66,34 @@ function diagPush(line) {
 // its retries, not just one slow call). translators.js is a module — it
 // cannot see diagPush directly, so the logger is injected here.
 setTranslateLogger(diagPush);
+// Local Opus-MT translator (test, 2026-11-25): translators.js cannot call
+// the ML host itself, so the host call is injected here, same as the
+// logger above. Races the host call against the translate signal: a 30s
+// budget abort (or a user cancel) must not leave the host translating
+// the rest of the page — ML_CANCEL stops its in-flight work for the run.
+setLocalTranslator(async (texts, sourceLang, { signal, runId, targetLang }) => {
+  if (signal?.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true });
+  let onAbort;
+  const abortP = new Promise((_, reject) => {
+    onAbort = () => {
+      // Stop the host's in-flight translate for this run (best effort —
+      // the race below already rejected, so this is only cleanup).
+      callMl({ type: MSG.ML_CANCEL, runId }).catch(() => {});
+      reject(Object.assign(new Error('cancelled'), { cancelled: true }));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    const r = await Promise.race([
+      callMlChecked(runId, { type: MSG.ML_TRANSLATE, texts, sourceLang, targetLang, runId }),
+      abortP,
+    ]);
+    if (!r || !r.ok) throw new Error((r && r.error) || 'local translation failed');
+    return r.results;
+  } finally {
+    signal?.removeEventListener('abort', onAbort);
+  }
+});
 
 // 2.1.20: bench trace — every bench line, persisted. diagPush alone is
 // in-memory, so a worker restart wipes the bench lines before the next
@@ -1392,7 +1420,7 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
   };
   let translated;
   try {
-    translated = await translateBlocks(blocks, effSettings, failoverNotice, translateController.signal, 30000, () => runs.get(runId)?.cancelled === true);
+    translated = await translateBlocks(blocks, effSettings, failoverNotice, translateController.signal, 30000, () => runs.get(runId)?.cancelled === true, runId);
   } finally {
     clearTimeout(tier1TimeoutId);
   }
@@ -2342,7 +2370,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
       let translated;
       try {
         translated = await Promise.race([
-          translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
+          translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true, runId),
           backstopP,
         ]);
       } finally {
@@ -2494,7 +2522,7 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
   let translated;
   try {
     translated = await Promise.race([
-      translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
+      translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true, runId),
       backstopP,
     ]);
   } finally {
@@ -3078,7 +3106,7 @@ async function runPipeline(tabId, opts = {}) {
             }
           };
           translated = await Promise.race([
-            translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true),
+            translateBlocks(blocks, effSettings, failoverNotice, abortController.signal, 30000, () => runs.get(runId)?.cancelled === true, runId),
             backstopP,
           ]);
         } finally {

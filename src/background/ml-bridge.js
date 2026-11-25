@@ -78,6 +78,7 @@ const ML_GROUP_FOR_TYPE = {
   [MSG.ML_DETECT]: 'text detector',
   [MSG.ML_OCR]: 'OCR',
   [MSG.ML_INPAINT]: 'inpainter',
+  [MSG.ML_TRANSLATE]: 'local translator',
   [MSG.ML_ENSURE]: 'model',
   [MSG.ML_DIAG]: 'thread diagnostic',
 };
@@ -107,6 +108,7 @@ const ML_TIMEOUT_MS = {
   [MSG.ML_DETECT]: 30 * 1000,
   [MSG.ML_OCR]: 120 * 1000,
   [MSG.ML_INPAINT]: 120 * 1000,
+  [MSG.ML_TRANSLATE]: 120 * 1000, // a page of blocks, two-hop on a slow device
   [MSG.ML_DIAG]: 10 * 1000,
   // 2.2.12: downloads are not compute — a 206 MB model on a slow
   // connection takes far longer than the 90s default, and the old default

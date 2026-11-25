@@ -48,6 +48,39 @@ export const MODEL_GROUPS = [
         url: hf('muscgab/manga-ocr-nar-small-distil', 'onnx/manga_ocr_nar_small_distil_int8_u8s8.onnx') },
     ],
   },
+  {
+    // Local translate test (2026-11-25): Opus-MT, Japanese -> English.
+    // There is no direct ja->zh ONNX model (Xenova has none, and
+    // Helsinki-NLP only ships ja->zh as PyTorch), so Japanese goes
+    // ja->en->zh — this group plus 'mt-en-zh' below, ~332MB for the pair.
+    // Quantized (uint8 dynamic) files: the int8 decoder is ~3x bigger
+    // for no clear benefit. Optional: only downloaded when the user
+    // enables the local translate test. Weights Apache-2.0.
+    id: 'mt-ja-en', labelKey: 'model_mt_ja_en', label: 'Local translate (Japanese to English)',
+    files: [
+      { id: 'mt-ja-en-encoder', file: 'encoder_model_quantized.onnx', bytes: 50705822,
+        url: hf('Xenova/opus-mt-ja-en', 'onnx/encoder_model_quantized.onnx') },
+      { id: 'mt-ja-en-decoder', file: 'decoder_model_quantized.onnx', bytes: 57631042,
+        url: hf('Xenova/opus-mt-ja-en', 'onnx/decoder_model_quantized.onnx') },
+      { id: 'mt-ja-en-decoder-past', file: 'decoder_with_past_model_quantized.onnx', bytes: 54359578,
+        url: hf('Xenova/opus-mt-ja-en', 'onnx/decoder_with_past_model_quantized.onnx') },
+    ],
+  },
+  {
+    // Local translate test (2026-11-25): Opus-MT, English -> Simplified
+    // Chinese (OpenCC converts it to Traditional afterwards). Direct
+    // for English sources; the second hop for Japanese sources.
+    // Optional, like 'mt-ja-en'. Weights Apache-2.0.
+    id: 'mt-en-zh', labelKey: 'model_mt_en_zh', label: 'Local translate (English to Chinese)',
+    files: [
+      { id: 'mt-en-zh-encoder', file: 'encoder_model_quantized.onnx', bytes: 52899742,
+        url: hf('Xenova/opus-mt-en-zh', 'onnx/encoder_model_quantized.onnx') },
+      { id: 'mt-en-zh-decoder', file: 'decoder_model_quantized.onnx', bytes: 59842102,
+        url: hf('Xenova/opus-mt-en-zh', 'onnx/decoder_model_quantized.onnx') },
+      { id: 'mt-en-zh-decoder-past', file: 'decoder_with_past_model_quantized.onnx', bytes: 56570638,
+        url: hf('Xenova/opus-mt-en-zh', 'onnx/decoder_with_past_model_quantized.onnx') },
+    ],
+  },
 ];
 
 // OCR engine routing by source language (LANGS in shared/settings.js):
@@ -68,6 +101,13 @@ export const BABERU_VOCAB_ASSET = 'src/offscreen/ml/dicts/baberu-vocab.json';
 // end of text). From muscgab/manga-ocr-nar-small-distil
 // nar_vocabulary_6817.json.
 export const DISTIL_VOCAB_ASSET = 'src/offscreen/ml/dicts/distil-vocab.json';
+
+// Opus-MT tokenizer vocabs, bundled (JSON {vocab: [[piece, score], ...],
+// unk_id}). From Xenova/opus-mt-ja-en and Xenova/opus-mt-en-zh
+// tokenizer.json (vocab only — the rest of the tokenizer config is not
+// needed; the Unigram Viterbi in ml/opus-mt.js implements the rest).
+export const OPUS_MT_JA_EN_VOCAB_ASSET = 'src/offscreen/ml/dicts/opus-mt-ja-en-vocab.json';
+export const OPUS_MT_EN_ZH_VOCAB_ASSET = 'src/offscreen/ml/dicts/opus-mt-en-zh-vocab.json';
 
 export const ALL_FILES = MODEL_GROUPS.flatMap(g =>
   g.files.map(f => ({ ...f, group: g.id, groupLabel: g.label })));
