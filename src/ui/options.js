@@ -391,11 +391,37 @@ $('azureRetireDismiss').onclick = async () => {
   if (s) { s.azureRetireDismissed = true; lastSettings = s; await persistSettings(s); }
   hideAzureRetireModal();
 };
+// Gemini setup steps: shown when the user picks Gemini (or clicks Check
+// Gemini connection) with no API key set yet. The steps and buttons reuse
+// the Azure modal's locale keys — the text is identical and already
+// translated in all locales. Only the title and body are new keys.
+function geminiKeySet() {
+  const field = ($('geminiKey') && $('geminiKey').value) || '';
+  if (field.trim()) return true;
+  return !!((lastSettings && lastSettings.geminiApiKey) || '').trim();
+}
+function showGeminiSetupModal() {
+  if (lastSettings && lastSettings.geminiSetupDismissed) return;
+  const m = $('geminiSetupModal');
+  if (m) m.style.display = 'flex';
+}
+function hideGeminiSetupModal() {
+  const m = $('geminiSetupModal');
+  if (m) m.style.display = 'none';
+}
+$('geminiSetupClose').onclick = hideGeminiSetupModal;
+$('geminiSetupModal').onclick = e => { if (e.target === $('geminiSetupModal')) hideGeminiSetupModal(); };
+$('geminiSetupDismiss').onclick = async () => {
+  const s = collect();
+  if (s) { s.geminiSetupDismissed = true; lastSettings = s; await persistSettings(s); }
+  hideGeminiSetupModal();
+};
 // Picking Azure as the engine shows the notice (programmatic .value sets
 // from applyToForm do not fire 'change', so loading the page with Azure
 // already selected does not pop it up).
 $('backend').addEventListener('change', e => {
   if (e.target.value === 'azure') showAzureRetireModal();
+  if (e.target.value === 'gemini' && !geminiKeySet()) showGeminiSetupModal();
   showEngineFields();
 });
 
@@ -446,6 +472,9 @@ $('checkLmStudio').onclick = async () => {
 };
 
 $('checkGemini').onclick = async () => {
+  // No key yet: show the setup steps instead of running a check that
+  // can only fail.
+  if (!geminiKeySet()) { showGeminiSetupModal(); return; }
   const btn = $('checkGemini'), out = $('geminiResult');
   btn.disabled = true; out.className = 'check-result'; out.textContent = checkingText();
   try {

@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS = {
   azureRegion: '',
   azureRetireDismissed: false, // Azure retirement notice: once dismissed, never show it again (2.2.17)
   azureRetireUpdateShown: false, // Azure retirement notice: shown once after an update to users already on Azure (2.3.1)
+  geminiSetupDismissed: false, // Gemini setup steps: once dismissed, never show them again
   geminiApiKey: '', // Google AI Studio key for the Gemini backend (gemini-3.5-flash-lite, 500 req/day free)
   lmStudioUrl: 'http://127.0.0.1:1234', // LM Studio server (bare host:port; flavour adds its path)
   lmStudioKey: '',

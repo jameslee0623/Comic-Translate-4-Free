@@ -515,5 +515,11 @@
   },
   "pro_get_short": {
     "message": "Get Pro"
+  },
+  "gemini_setup_title": {
+    "message": "Set up Gemini"
+  },
+  "gemini_setup_body": {
+    "message": "Gemini needs an API key to translate."
   }
 }
