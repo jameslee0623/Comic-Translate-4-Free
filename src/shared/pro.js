@@ -40,17 +40,35 @@ export async function getProUsageCount() {
   } catch { return 0; }
 }
 
-// Add n auto/pre-translate images to today's count. No-op for n <= 0.
-// Cache hits are never counted — only newly translated images reach here.
-export async function addProUsage(n) {
-  if (!n || n <= 0) return;
+// Add finished auto/pre-translate images to today's count — distinct
+// images only, by URL. A re-translation of the same image is free, so the
+// quota matches the cache's distinct-image count. A cancelled run never
+// reaches here (it throws before counting). Returns new images counted.
+export async function addProUsageForImages(keys) {
+  const list = (Array.isArray(keys) ? keys : [keys]).map(k => String(k || '')).filter(Boolean);
+  if (!list.length) return 0;
   try {
     const stored = await chrome.storage.local.get(USAGE_KEY);
     const rec = stored[USAGE_KEY];
     const today = dateStr();
-    const count = (rec && rec.date === today && Number.isFinite(rec.count) ? rec.count : 0) + n;
-    await chrome.storage.local.set({ [USAGE_KEY]: { date: today, count } });
-  } catch {}
+    let count = 0;
+    let keySet = new Set();
+    if (rec && rec.date === today) {
+      count = Number.isFinite(rec.count) ? Math.max(0, rec.count) : 0;
+      keySet = new Set(Array.isArray(rec.keys) ? rec.keys : []);
+    }
+    let added = 0;
+    for (const k of list) {
+      if (keySet.has(k)) continue;
+      keySet.add(k);
+      added++;
+    }
+    if (!added) return 0;
+    // Bound the stored keys (the daily limit is 50, so 200 is generous).
+    const keysArr = [...keySet].slice(-200);
+    await chrome.storage.local.set({ [USAGE_KEY]: { date: today, count: count + added, keys: keysArr } });
+    return added;
+  } catch { return 0; }
 }
 
 // Pro is active when a license key + instance are stored and the last

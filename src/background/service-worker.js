@@ -4,7 +4,7 @@
 import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings } from '../shared/settings.js';
-import { canAutoOrPre, addProUsage, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
+import { canAutoOrPre, addProUsageForImages, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
   boxIoU, clampBox, dedupAndMergeSeams, mergeBoxesByCost,
@@ -2441,8 +2441,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     await writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, settings, sourceTabId, 'replace');
     diagPush('pre-translate: done ' + imageUrl.slice(0, 80));
     // Freemium: one newly translated image against the free daily limit.
-    // Pro users are not counted.
-    if (!proIsActive(settings)) await addProUsage(1);
+    // Pro users are not counted. Distinct images only — a re-translation
+    // of the same URL is free.
+    if (!proIsActive(settings)) await addProUsageForImages([imageUrl]);
   } finally {
     for (const k of pxKeys.splice(0)) await pixelDrop(k);
   }
@@ -2708,7 +2709,7 @@ async function runPipeline(tabId, opts = {}) {
           }), MSG_TIMEOUT_MS, 'run summary');
         } catch {}
         if (settings.debugMode) await sendDiagLog(tabId, runId);
-        result = { runId, ok: true, images: 0, failed: [], resumed: !!opts.resume, alreadyDone };
+        result = { runId, ok: true, images: 0, imageSrcs: [], failed: [], resumed: !!opts.resume, alreadyDone };
         return result;
       }
     }
@@ -2765,6 +2766,10 @@ async function runPipeline(tabId, opts = {}) {
       diagPush('permission gate: all hosts permitted: ' + (gateHosts.join(', ') || 'none'));
     }
     const doneImgs = [], failedImgs = [];
+    // URLs of the finished images, for the free daily quota — the quota
+    // counts distinct images only, so a re-translation of the same URL
+    // is free (see addProUsageForImages).
+    const doneSrcs = [];
     // Per-picture failure detail for the run-end missed accounting (size,
     // host, reason) — failedImgs only carries the message string.
     const missedDetail = [];
@@ -3484,6 +3489,7 @@ async function runPipeline(tabId, opts = {}) {
       try {
         const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0);
         doneImgs.push(imgIdx + 1);
+        if (img.src) doneSrcs.push(img.src);
         if (r && r.doneExtra) lastDoneExtra = r.doneExtra;
       } catch (e) {
         // Only a USER cancel aborts the whole run. A per-image failure —
@@ -3504,6 +3510,7 @@ async function runPipeline(tabId, opts = {}) {
             const pre = await fallbackCaptureViaTab(tabId, e.fallbackUrl);
             const r2 = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, pre);
             doneImgs.push(imgIdx + 1);
+            if (img.src) doneSrcs.push(img.src);
             if (r2 && r2.doneExtra) lastDoneExtra = r2.doneExtra;
             recovered = true;
           } catch (e2) {
@@ -3560,7 +3567,7 @@ async function runPipeline(tabId, opts = {}) {
     // handles its own errors and never touches this run's result).
     try { pretranslateNextPage(tabId, tabUrl, settings); } catch {}
     if (settings.debugMode) await sendDiagLog(tabId, runId);
-    result = { runId, ok: true, images: doneImgs.length, failed: failedImgs, ...(opts.resume ? { resumed: true, alreadyDone } : {}) };
+    result = { runId, ok: true, images: doneImgs.length, imageSrcs: doneSrcs, failed: failedImgs, ...(opts.resume ? { resumed: true, alreadyDone } : {}) };
   } catch (e) {
     let msg;
     // A user-cancelled run stays 'cancelled' even if the in-flight work
@@ -3924,10 +3931,11 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     autoFired.set(tabId, { url, at: now });
     await cancelRunsForTab(tabId);
     const r = await runPipeline(tabId, { auto: true });
-    // Freemium: count newly translated images against the free daily limit.
-    // Pro users are not counted. Cache hits translate 0 images, so they
-    // never consume the limit.
-    if (r.ok && !proIsActive(settings)) await addProUsage(r.images || 0);
+    // Freemium: count finished, distinct images against the free daily
+    // limit. Pro users are not counted. Cache hits translate 0 images,
+    // so they never consume the limit. A run cancelled in the middle
+    // throws above, so it counts nothing.
+    if (r.ok && !proIsActive(settings)) await addProUsageForImages(r.imageSrcs || []);
     if (!r.ok && !r.cancelled) {
       console.warn('[ct] auto-translate failed:', String(r.error).slice(0, 160));
       // 2.3.5: a failed auto run must not consume the dedupe window.
