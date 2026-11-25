@@ -36,12 +36,22 @@ jobs:
       - name: Build Firefox zip
         run: ./build.sh firefox
 
+      # The phone installs from a .xpi file (Firefox Android "Install
+      # extension from file"). An .xpi is the same zip with a new name,
+      # so copy it here — James downloads the .xpi straight from the
+      # GitHub release, no file from Muse and no renaming on the phone.
+      - name: Make Firefox xpi (same file, .xpi name for phone install)
+        run: |
+          VERSION=$(node -p "require('./manifest.firefox.json').version")
+          cp "dist/comic-translate-4-free-v${VERSION}-firefox.zip" "dist/comic-translate-4-free-v${VERSION}-firefox.xpi"
+
       - name: Upload Firefox zip as artifact
         uses: actions/upload-artifact@v4
         with:
           name: firefox-zip-${{ github.sha }}
           path: |
             dist/*-firefox.zip
+            dist/*-firefox.xpi
           if-no-files-found: error
 
       - name: Update the Firefox release
@@ -51,10 +61,11 @@ jobs:
         run: |
           VERSION=$(node -p "require('./manifest.firefox.json').version")
           ZIP="dist/comic-translate-4-free-v${VERSION}-firefox.zip"
-          # Replace the old zip (keep only the latest build in the release)
+          XPI="dist/comic-translate-4-free-v${VERSION}-firefox.xpi"
+          # Replace the old files (keep only the latest build in the release)
           for asset in $(gh release view Firefox --json assets --jq '.assets[].name' 2>/dev/null); do
             gh release delete-asset Firefox "$asset" --yes
           done
-          gh release upload Firefox "$ZIP" --clobber
-          NOTES=$(printf 'Latest Firefox build: v%s.\n\nThis tag always points to the newest Firefox release. The zip here is the current Firefox build.' "$VERSION")
+          gh release upload Firefox "$ZIP" "$XPI" --clobber
+          NOTES=$(printf 'Latest Firefox build: v%s.\n\nThis tag always points to the newest Firefox release. The zip here is the current Firefox build. The .xpi is the same file, renamed for installing on Firefox for Android from file.' "$VERSION")
           gh release edit Firefox --title "Firefox v$VERSION" --notes "$NOTES"
