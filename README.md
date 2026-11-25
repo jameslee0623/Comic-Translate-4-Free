@@ -43,11 +43,12 @@ Comic Translate 4 Free translates manga and comic pages automatically as you bro
 
 ## ✨ Features
 
-- Automatic translation — open a manga page on an allowed site and the translated version appears in place, no button click needed.
+- Automatic translation (Pro) — open a manga page on an allowed site and the translated version appears in place, no button click needed. Free for 50 images a day; unlimited with Pro.
 - Every picture on the page — auto-translate handles all pictures on a page (up to 50 per run), not just the main image.
-- Pre-translate the next page — while you read the current page, the next page's picture is translated in the background, so it is ready the moment you open it (one picture only; on by default, turn it off in Settings).
+- Pre-translate the next page (Pro) — while you read the current page, the next page's picture is translated in the background, so it is ready the moment you open it (one picture only; on by default, turn it off in Settings). Free for 50 images a day; unlimited with Pro.
+- Engine failover (Pro) — if the selected translation engine fails, the extension automatically tries another one. Free for 50 images a day; unlimited with Pro.
 - Right-click any image — choose "Send to Comic Translate 4 Free" to translate a specific picture, even one smaller than the minimum size.
-- 114 target languages via Google Translate, Gemini, Azure Translator, or your own local LM Studio server.
+- 114 target languages via Google Translator, Gemini, Azure Translator, or your own local LM Studio server.
 - Source language auto-detect — Japanese, English, Simplified/Traditional Chinese identified automatically from the OCR'd text.
 - Long-strip / webtoon support — tall pages are processed in overlapping segments so text stays sharp.
 - 17 UI languages — the extension interface follows your browser's language setting.
@@ -91,8 +92,7 @@ Tips:
   ![Right-click to send an image](docs/images/right-click.png)
 
 - If a site blocks downloads (HTTP 403), the extension automatically retries via a background tab.
-- Pick your translation engine in Settings: Google (free, no key), Gemini (free API key — better manga translation, recommended), Azure Translator (being retired — 2M characters/month free), or LM Studio (local server).
-- Enable Debug mode in Settings to inspect every pipeline stage.
+- Pick your translation engine in Settings: Google Translator (no key), Gemini (key required, recommended — better manga translation), Azure Translator (being retired), or LM Studio (local server).
 
 ---
 
@@ -100,7 +100,7 @@ Tips:
 
 Gemini gives the best manga translations. To use it as the translation engine:
 
-1. Open [Google AI Studio](https://aistudio.google.com/apikey) and click "Create API key" — free, no credit card needed
+1. Open [Google AI Studio](https://aistudio.google.com/apikey) and click "Create API key"
 2. Pick or create a Google Cloud project if asked
 3. Copy the key
 4. Paste it into the Gemini API key field in the extension's Settings, then click "Check Gemini connection"
@@ -108,11 +108,12 @@ Gemini gives the best manga translations. To use it as the translation engine:
 
 ---
 
-## ❤️ Support this project
+## 💎 Pro
 
-If this extension is useful to you, consider supporting its development:
+Manual translate is always free and unlimited. Auto-translate, pre-translate, and engine failover are Pro features — free for 50 images a day, unlimited with a Pro subscription.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/month or $30/year
+- Buy a license key, paste it into the License key field in the extension's Settings, and click Activate Pro. The key works on 2 browsers.
 
 ---
 
@@ -122,7 +123,7 @@ If this extension is useful to you, consider supporting its development:
 - Large sessions — translating dozens of images in one session can restart the extension in the background. If that happens, the run resumes automatically from where it left off.
 - Firefox — models run in the background page (no offscreen documents), sharing memory with everything else. Restart the browser if you see "no available backend found".
 - Firefox is slower than Chrome — Firefox extensions cannot use shared memory for multi-threading (SharedArrayBuffer), so the model runs on one CPU thread. This is a Firefox platform limit, not an extension bug ([Mozilla bug 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate uses the unofficial free endpoint and may be rate-limited.
+- Google Translator uses the unofficial free endpoint and may be rate-limited.
 
 ---
 
