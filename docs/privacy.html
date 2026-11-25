@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Comic Translate 4 Free</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 0; font: 15px/1.6 system-ui, sans-serif; background: #141417; color: #e8e8ea; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+  nav { max-width: 760px; margin: 0 auto; padding: 16px 20px 0; font-size: 14px; }
+  nav a { color: #8ab4f8; text-decoration: none; margin-right: 18px; }
+  nav a:hover { text-decoration: underline; }
+  h1 { font-size: 26px; color: #fff; margin: 8px 0 4px; }
+  h2 { font-size: 19px; color: #fff; margin: 28px 0 8px; }
+  h3 { font-size: 16px; color: #fff; margin: 20px 0 6px; }
+  p, li { color: #d6d6da; }
+  a { color: #8ab4f8; }
+  code { background: #232327; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid #3a3a40; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #232327; color: #fff; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  @media (max-width: 600px) {
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { display: none; }
+    tr { margin-bottom: 12px; border: 1px solid #3a3a40; border-radius: 8px; }
+    td { border: none; border-bottom: 1px solid #2e2e33; }
+    td:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+<nav><a href="index.html">Comic Translate 4 Free</a><a href="terms.html">Terms and Conditions</a><a href="privacy.html">Privacy Policy</a><a href="pricing.html">Pricing</a></nav>
+<main>
+<h1>Privacy Policy — Comic Translate 4 Free</h1>
+<p>Last updated: November 25, 2026</p>
+<p>Comic Translate 4 Free is a browser extension that translates text inside comic
+and manga page images. This policy explains what data the extension handles and
+where that data goes.</p>
+<h2>The short version</h2>
+<ul>
+<li>The developer collects <strong>no data</strong>. There are no analytics, no tracking, no
+  accounts, and no developer-run servers. Nothing you do with the extension is
+  reported back to anyone.</li>
+<li>All machine learning — text detection, OCR, and inpainting — runs <strong>locally
+  in your browser</strong>. Comic images never leave your device for processing.</li>
+<li>The only data that ever leaves your browser is the <strong>recognized text</strong> sent
+  to the translation service <strong>you choose</strong> in settings, so it can be
+  translated.</li>
+</ul>
+<h2>Data processed locally (never transmitted)</h2>
+<ul>
+<li><strong>Comic page images.</strong> The extension reads the comic/manga image on the page
+  you are viewing and processes it entirely on your device (detecting text
+  regions, recognizing characters, erasing original text, rendering
+  translations).</li>
+<li><strong>Your settings.</strong> Source and target languages, translation backend and API
+  keys, the allowed-sites list, model download state, and UI preferences are
+  stored locally in your browser (<code>chrome.storage</code>). They are never sent
+  anywhere.</li>
+<li><strong>Pro usage count.</strong> How many images you translated today while a Pro
+  feature was on (for the free 50-images-a-day limit) is stored locally in
+  your browser. It is never sent anywhere.</li>
+<li><strong>Pro license key.</strong> If you buy Pro, your license key is stored locally in
+  your browser. It is sent only to Dodo Payments, to check that it is valid
+  (see below).</li>
+<li><strong>Downloaded ML models.</strong> The text detector, OCR, and inpainting models
+  (~340 MB total) are downloaded once from Hugging Face and cached in your
+  browser (IndexedDB) so translation works offline afterwards.</li>
+<li><strong>Translated page cache.</strong> Pages you translate are cached for the current
+  browser session only, so revisits load instantly. The cache is wiped when the
+  browser closes.</li>
+</ul>
+<h2>Data transmitted to third parties</h2>
+<p>To translate text, the extension must send the <strong>recognized text</strong> (and nothing
+else — no images, no page URLs, no personal information) to the translation
+service you selected in settings:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>What is sent</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Google Translate (default, free, no key)</td>
+<td>Recognized text, source and target language codes</td>
+<td>Subject to Google's privacy policy</td>
+</tr>
+<tr>
+<td>Gemini (key required, recommended)</td>
+<td>Same as above, plus your API key authenticates the request</td>
+<td>Subject to Google's privacy policy; key is stored locally</td>
+</tr>
+<tr>
+<td>Azure Translator</td>
+<td>Same as above, plus your API key authenticates the request</td>
+<td>Subject to Microsoft's privacy policy; key is stored locally</td>
+</tr>
+<tr>
+<td>LM Studio</td>
+<td>Same as above</td>
+<td>Sent to the server URL you configured — commonly your own local machine, in which case data never leaves your device</td>
+</tr>
+</tbody>
+</table>
+<h2>Pro subscriptions (Dodo Payments)</h2>
+<p>Pro is an optional paid subscription ($3/month or $30/year) that unlocks
+unlimited auto-translate, pre-translate, and engine failover. Payments are
+processed by Dodo Payments, the merchant of record. The extension never sees
+or stores your payment details — card numbers, billing addresses, and
+payment history live with Dodo, under Dodo's privacy policy.</p>
+<p>To check your Pro access, the extension sends your license key (and a
+random per-browser installation id) to Dodo's license servers when you
+activate Pro, and re-checks once a day while Pro is active. Nothing else
+is sent to Dodo.</p>
+<p>Image downloads are ordinary web requests: when the extension reads the page's
+image from its host (or its CDN) or downloads models from Hugging Face, those
+servers see the same request metadata any browser fetch would reveal. No
+extension-specific identifiers are attached.</p>
+<h2>Permissions and why they are needed</h2>
+<p>The extension requests browser permissions only to perform its single purpose —
+translating comic images in place. Details are listed in the Chrome Web Store
+and Firefox Add-ons listings. In particular, website content is accessed solely
+to find and translate the comic image on pages you allow; the site-access gate
+means translation never runs on sites you have not approved.</p>
+<h2>Data retention</h2>
+<p>The developer retains nothing because nothing is collected. Locally stored data
+(settings, cached models, session page cache) lives only in your browser: you
+can clear the page cache from the options page, remove downloaded models from
+the options page, and erase everything by removing the extension.</p>
+<h2>Children</h2>
+<p>The extension is a general-purpose translation tool and is not directed at
+children. Since no data is collected, there is nothing to delete on request —
+but a parent or guardian can remove the extension and its local data at any
+time via the browser.</p>
+<h2>Changes to this policy</h2>
+<p>If the extension's data practices change, this policy will be updated and the
+change noted in the release notes. Continued use of the extension after a
+change constitutes acceptance of the updated policy.</p>
+<h2>Contact</h2>
+<p>Comic Translate 4 Free is licensed under the PolyForm Noncommercial License 1.0.0. For questions about this policy,
+open an issue at https://github.com/jameslee0623/Comic-Translate-4-Free.</p>
+</main>
+</body>
+</html>
