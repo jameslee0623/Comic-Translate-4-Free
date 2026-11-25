@@ -521,5 +521,14 @@
   },
   "gemini_setup_body": {
     "message": "Gemini needs an API key to translate."
+  },
+  "model_distil": {
+    "message": "OCR distil (Japanese test)"
+  },
+  "ocr_distil_test": {
+    "message": "Use distil OCR for Japanese (test)"
+  },
+  "ocr_distil_test_hint": {
+    "message": "Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR."
   }
 }

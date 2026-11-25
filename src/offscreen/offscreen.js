@@ -4,9 +4,10 @@
 // Verified: ort 1.30 threaded WASM runs here with numThreads=1 and no COOP/COEP
 // (chrome-extension: pages get SharedArrayBuffer without crossOriginIsolated).
 import { MSG, openDb, idbGet } from '../shared/contracts.js';
-import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET } from '../shared/model-specs.js';
+import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET, DISTIL_VOCAB_ASSET } from '../shared/model-specs.js';
 import { Detector } from './ml/detector.js';
 import { BaberuOCR } from './ml/baberu.js';
+import { DistilOCR } from './ml/distil.js';
 import { meanBrightness } from '../shared/image-ops.js';
 import { Inpainter } from './ml/inpaint.js';
 import { tileOrigins, TILE_MAX } from '../shared/textblock.js';
@@ -482,6 +483,7 @@ async function runThreadBenchmark() {
 
 const detector = new Detector();
 const baberu = new BaberuOCR();
+const distil = new DistilOCR();
 const inpainter = new Inpainter();
 
 // Groups whose model file was re-downloaded while a run was using the
@@ -491,10 +493,11 @@ const inpainter = new Inpainter();
 const staleGroups = new Set();
 
 // Drop loaded ORT sessions so the next inference re-reads model files from
-// IndexedDB. group: 'detector' | 'ocr-baberu' | 'inpaint' | '*'.
+// IndexedDB. group: 'detector' | 'ocr-baberu' | 'ocr-distil' | 'inpaint' | '*'.
 async function resetGroup(group) {
   if (group === 'detector' || group === '*') await detector.reset();
   if (group === 'ocr-baberu' || group === '*') await baberu.reset();
+  if (group === 'ocr-distil' || group === '*') await distil.reset();
   if (group === 'inpaint' || group === '*') await inpainter.reset();
 }
 
@@ -567,6 +570,9 @@ async function loadBaberu(providers) {
   await baberu.loadPre(await modelBuffer('ocr-baberu-prefill-v12'), providers);
   await baberu.loadStep(await modelBuffer('ocr-baberu-step-v12'), providers);
 }
+async function loadDistil(providers) {
+  await distil.load(await modelBuffer('ocr-distil-u8s8'), providers);
+}
 async function loadWithWebgpuFallback(kind, loadFn) {
   // 1.4.0 (m2): NO in-worker WASM fallback. Try WebGPU alone; on
   // creation failure, reset the group once (dispose any half-loaded
@@ -621,8 +627,8 @@ async function ensureModel(kind) {
     // before loading the next model. A released model reloads on demand
     // (ensureModel checks .loaded), so this only costs reload time.
     if (isLowMemoryDevice()) {
-      if (kind === 'ocr-baberu') await resetGroup('detector');
-      else if (kind === 'inpaint') await resetGroup('ocr-baberu');
+      if (kind === 'ocr-baberu' || kind === 'ocr-distil') await resetGroup('detector');
+      else if (kind === 'inpaint') { await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); }
     }
     if (kind === 'detector' && !detector.loaded) {
       await detector.load(await modelBuffer('detector'), ['wasm']);
@@ -632,6 +638,12 @@ async function ensureModel(kind) {
         await loadWithWebgpuFallback(kind, loadBaberu);
       } catch (e) { await baberu.reset(); throw e; }
       baberu.setVocab(vocabJson);
+    } else if (kind === 'ocr-distil' && !distil.loaded) {
+      const vocabJson = await assetText(DISTIL_VOCAB_ASSET);
+      try {
+        await loadWithWebgpuFallback(kind, loadDistil);
+      } catch (e) { await distil.reset(); throw e; }
+      distil.setVocab(vocabJson);
     } else if (kind === 'inpaint' && !inpainter.loaded) {
       await loadWithWebgpuFallback(kind, async (providers) => {
         await inpainter.load(await modelBuffer('inpaint'), providers);
@@ -1022,10 +1034,14 @@ const handlers = {
     return { ok: true, boxes, ms: Math.round(performance.now() - t0), inputMean: +meanBrightness(buf).toFixed(4) };
   },
 
-  async [MSG.ML_OCR]({ crops, runId, sourceLang }) {
+  async [MSG.ML_OCR]({ crops, runId, sourceLang, useDistil }) {
     throwIfCancelled(runId);
-    // OCR engine follows the source language — all languages use Baberu.
-    const engine = ocrEngineForLang(sourceLang || 'ja');
+    // Distil test (2026-11-25): when the test setting is on and the source
+    // is Japanese (or auto — his manga pages are Japanese), OCR with the
+    // distil model instead of Baberu. English/Chinese sources stay on
+    // Baberu (distil reads Japanese only).
+    const useDistilForRun = !!useDistil && (!sourceLang || sourceLang === 'ja' || sourceLang === 'auto');
+    const engine = useDistilForRun ? 'ocr-distil' : ocrEngineForLang(sourceLang || 'ja');
     // DIAG (2.0.9): time the model load separately — it runs before t0
     // and is invisible in r.ms, so the SW split can tell load from run
     // (same as inpaint loadMs in 2.0.5).
@@ -1071,35 +1087,70 @@ const handlers = {
           results.push({ id: c.id, text: '', chars: 0, chunks: 0, hitCeiling: false, stopped: 'eos', skipped: true, ms: Math.round(performance.now() - cT0) });
           continue;
         }
-        // Baberu v1.1 reads up to ~256 chars; the chunked path is a rare
-        // fallback for over-long crops, re-OCR'd in overlapping pieces.
+        // Distil reads one box in a single forward pass (max 65 chars).
+        // A box longer than that comes back truncated (no EOS) — re-read
+        // it with Baberu, which handles up to ~256 chars. Baberu v1.1
+        // reads up to ~256 chars; the chunked path is a rare fallback
+        // for over-long crops, re-OCR'd in overlapping pieces.
         let r;
-        try {
-          r = await baberu.ocrChunked(u8, c.width, c.height, {
-            lang: sourceLang || 'ja',
-            shouldAbort: () => cancelledRuns.has(runId),
-          });
-        } catch (e) {
-          // OOM recovery: drop the inpainter (206MB, not needed for OCR)
-          // first to free memory, then retry this crop once. Baberu is
-          // WASM-only (GPU OCR was tried in 2.1.6 and reverted in 2.1.8:
-          // it finished but ran ~2x slower than WASM — the
-          // autoregressive step loop is latency-bound, not throughput-
-          // bound — so there is no GPU downgrade path here).
-          if (!isOom(e) || c._oomRetried) {
-            // Debug (2.1.7, kept through the 2.1.8 revert): name the
-            // crop that broke, so a failing run shows which crop it was
-            // stuck on. Cancellations pass through untagged — the SW
-            // detects them from the run's cancelled flag, not the message.
-            if (e && e.cancelled) throw e;
-            throw new Error('ocr crop ' + c.id + ' (' + c.width + 'x' + c.height + '): ' + String((e && e.message) || e));
+        if (engine === 'ocr-distil') {
+          // OOM recovery, same as Baberu below: drop the inpainter first
+          // to free memory, then retry this crop once.
+          let d;
+          try {
+            d = await distil.ocr(u8, c.width, c.height, {
+              shouldAbort: () => cancelledRuns.has(runId),
+            });
+          } catch (e) {
+            if (!isOom(e) || c._oomRetried) {
+              if (e && e.cancelled) throw e;
+              throw new Error('ocr crop ' + c.id + ' (' + c.width + 'x' + c.height + '): ' + String((e && e.message) || e));
+            }
+            await resetGroup('inpaint');
+            c._oomRetried = true;
+            d = await distil.ocr(u8, c.width, c.height, {
+              shouldAbort: () => cancelledRuns.has(runId),
+            });
           }
-          await resetGroup('inpaint');
-          c._oomRetried = true;
-          r = await baberu.ocrChunked(u8, c.width, c.height, {
-            lang: sourceLang || 'ja',
-            shouldAbort: () => cancelledRuns.has(runId),
-          });
+          if (d.truncated) {
+            // Long box — distil cut it off at 65 chars. Load Baberu
+            // (only when a truncation actually happens) and re-read.
+            await ensureModel('ocr-baberu');
+            r = await baberu.ocrChunked(u8, c.width, c.height, {
+              lang: sourceLang || 'ja',
+              shouldAbort: () => cancelledRuns.has(runId),
+            });
+          } else {
+            r = { text: d.text, chunks: 1, hitCeiling: false, stopped: 'eos' };
+          }
+        } else {
+          try {
+            r = await baberu.ocrChunked(u8, c.width, c.height, {
+              lang: sourceLang || 'ja',
+              shouldAbort: () => cancelledRuns.has(runId),
+            });
+          } catch (e) {
+            // OOM recovery: drop the inpainter (206MB, not needed for OCR)
+            // first to free memory, then retry this crop once. Baberu is
+            // WASM-only (GPU OCR was tried in 2.1.6 and reverted in 2.1.8:
+            // it finished but ran ~2x slower than WASM — the
+            // autoregressive step loop is latency-bound, not throughput-
+            // bound — so there is no GPU downgrade path here).
+            if (!isOom(e) || c._oomRetried) {
+              // Debug (2.1.7, kept through the 2.1.8 revert): name the
+              // crop that broke, so a failing run shows which crop it was
+              // stuck on. Cancellations pass through untagged — the SW
+              // detects them from the run's cancelled flag, not the message.
+              if (e && e.cancelled) throw e;
+              throw new Error('ocr crop ' + c.id + ' (' + c.width + 'x' + c.height + '): ' + String((e && e.message) || e));
+            }
+            await resetGroup('inpaint');
+            c._oomRetried = true;
+            r = await baberu.ocrChunked(u8, c.width, c.height, {
+              lang: sourceLang || 'ja',
+              shouldAbort: () => cancelledRuns.has(runId),
+            });
+          }
         }
         results.push({ id: c.id, text: r.text, chars: r.text.length, chunks: r.chunks, hitCeiling: r.hitCeiling, stopped: r.stopped, ms: Math.round(performance.now() - cT0) });
       }

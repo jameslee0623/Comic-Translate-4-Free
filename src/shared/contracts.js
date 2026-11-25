@@ -26,7 +26,7 @@ export const MSG = {
   ML_PING: 'ml/ping',                    // {} -> {ok, loaded:{detector,baberu,inpaint}}
   ML_ENSURE: 'ml/ensure',                // {model:'detector'|'ocr-baberu'|'inpaint'} -> {ok} | {ok:false,error}
   ML_DETECT: 'ml/detect',                // {key,width,height,threshold,runId} -> {ok, boxes:[{xyxy,label,score}], ms, inputMean}
-  ML_OCR: 'ml/ocr',                      // {crops:[{id,key,width,height}], sourceLang, runId} -> {ok, results:[{id,text,chars,chunks,hitCeiling}], ms, engine}
+  ML_OCR: 'ml/ocr',                      // {crops:[{id,key,width,height}], sourceLang, runId, useDistil} -> {ok, results:[{id,text,chars,chunks,hitCeiling}], ms, engine}
   ML_INPAINT: 'ml/inpaint',              // {patches:[{id,key,maskKey,width,height}], runId} -> {ok, results:[{id,key,width,height}], ms}
   ML_DOWNLOAD: 'ml/download',            // {fileId} -> {ok, bytes} (progress via MODEL_PROGRESS)
   ML_RESET: 'ml/reset',                  // {group} -> {ok} (drop loaded sessions)

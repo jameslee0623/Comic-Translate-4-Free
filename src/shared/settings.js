@@ -3,6 +3,7 @@
 
 export const DEFAULT_SETTINGS = {
   sourceLang: 'auto', // 'auto' = detect from the OCR'd text; or 'ja' | 'en' | 'zh-CN' | 'zh-TW'
+  ocrDistilTest: false, // distil OCR test (2026-11-25): when on, Japanese (or auto) pages OCR with the small distil model instead of Baberu; EN/ZH stay on Baberu
   targetLang: 'en', // static fallback only — with no stored value, readSettingsRaw()/getSettings() use the browser language instead (browserTargetLang, below)
   translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm'
   backendFailover: true, // if the selected backend fails, try another (default on, 2026-10-26)

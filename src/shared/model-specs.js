@@ -35,6 +35,19 @@ export const MODEL_GROUPS = [
         url: hf('genshiai-daichi/baberu-ocr', 'onnx/decoder_step_int8.onnx') },
     ],
   },
+  {
+    // Distil OCR test (2026-11-25): manga-ocr-nar-small-distil, Japanese
+    // only, one forward pass per box (non-autoregressive) — the phone
+    // speed test against Baberu. u8s8 is the ARM + x86-with-VNNI int8
+    // encoding (phones are ARM, so this is the right one for the test;
+    // x86 without VNNI would want u8u8). Optional, like Baberu: only
+    // downloaded when the user enables the distil test.
+    id: 'ocr-distil', labelKey: 'model_distil', label: 'OCR distil (Japanese test)',
+    files: [
+      { id: 'ocr-distil-u8s8', file: 'manga_ocr_nar_small_distil_int8_u8s8.onnx', bytes: 31397540,
+        url: hf('muscgab/manga-ocr-nar-small-distil', 'onnx/manga_ocr_nar_small_distil_int8_u8s8.onnx') },
+    ],
+  },
 ];
 
 // OCR engine routing by source language (LANGS in shared/settings.js):
@@ -50,6 +63,11 @@ export function ocrEngineForLang(lang) {
 // Baberu character vocab, bundled (JSON array; id>=4 -> charset[id-4]).
 // From genshiai-daichi/baberu-ocr tokenizer/vocab.json.
 export const BABERU_VOCAB_ASSET = 'src/offscreen/ml/dicts/baberu-vocab.json';
+
+// Distil character vocab, bundled (JSON {characters: [...]}; id 6817 is
+// end of text). From muscgab/manga-ocr-nar-small-distil
+// nar_vocabulary_6817.json.
+export const DISTIL_VOCAB_ASSET = 'src/offscreen/ml/dicts/distil-vocab.json';
 
 export const ALL_FILES = MODEL_GROUPS.flatMap(g =>
   g.files.map(f => ({ ...f, group: g.id, groupLabel: g.label })));

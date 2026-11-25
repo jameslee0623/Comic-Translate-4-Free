@@ -2299,7 +2299,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     }
     if (crops.length) {
       const r = await callMlChecked(runId, {
-        type: MSG.ML_OCR, runId, sourceLang: settings.sourceLang,
+        type: MSG.ML_OCR, runId, sourceLang: settings.sourceLang, useDistil: settings.ocrDistilTest,
         crops: crops.map(({ id, key, width, height }) => ({ id, key, width, height })),
       });
       for (const res of r.results) blocks[res.id].text = res.text;
@@ -2956,7 +2956,7 @@ async function runPipeline(tabId, opts = {}) {
           // itself stays: it measures and saves the best count, and single
           // OCR reads it on every run.
           const r = await callMlChecked(runId, {
-            type: MSG.ML_OCR, runId, sourceLang: settings.sourceLang,
+            type: MSG.ML_OCR, runId, sourceLang: settings.sourceLang, useDistil: settings.ocrDistilTest,
             crops: crops.map(({ id, key, width, height }) => ({ id, key, width, height })),
           });
           ocrCallMs = Math.round(performance.now() - ocrCallT0);

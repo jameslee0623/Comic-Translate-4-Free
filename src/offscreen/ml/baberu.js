@@ -57,7 +57,7 @@ const STD = [0.229, 0.224, 0.225];
 
 // Bicubic (Catmull-Rom) resize of RGBA, like PIL BICUBIC which the reference
 // preprocessing uses.
-function resizeBicubicRGBA(src, sw, sh, dw, dh) {
+export function resizeBicubicRGBA(src, sw, sh, dw, dh) {
   const out = new Float32Array(dw * dh * 4);
   const xr = sw / dw, yr = sh / dh;
   const kernel = t => {
