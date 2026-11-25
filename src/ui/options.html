@@ -194,6 +194,8 @@
   <p class="hint" data-i18n="ocr_distil_test_hint">Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR.</p>
   <div class="row"><span class="rowtitle"><label for="localTranslateTest" data-i18n="local_translate_test">Use local translation for Chinese (test)</label></span><label class="switch"><input type="checkbox" id="localTranslateTest"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="local_translate_test_hint">Translates on this device with a downloaded model, no internet needed. Japanese and English to Chinese only for now. Needs the local models downloaded below.</p>
+  <div class="row"><span class="rowtitle"><label for="bypassInpaint" data-i18n="bypass_inpaint">Bypass inpaint (test)</label></span><label class="switch"><input type="checkbox" id="bypassInpaint"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="bypass_inpaint_hint">Skips the inpainter. Translated text renders over the original image. Use it to test on a device that runs out of memory.</p>
 
   <h2 id="diagSection">Diagnostic log</h2>
   <div class="row" style="justify-content:space-between;flex-direction:row"><button id="refreshDiagLog" style="font-size:13px">Refresh</button><button id="copyDiagLog" style="font-size:13px">Copy</button></div>

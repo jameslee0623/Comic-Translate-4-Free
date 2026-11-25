@@ -25,11 +25,9 @@ import { baseDomain, displayHost, hostOf, isSiteAllowed, imageHostOrigins, origi
 import { urlShape, applyPattern, patternNumber, observeRules, observeLinkRules, observePicLinkRules, activeRuleFor, activeLinkTexts, activePicLinkRule, noteLearnResult } from '../shared/next-page-learn.js';
 
 // NO-INPAINT test build (Orion): when true, LaMa is never loaded and the
-// translated text renders over the original image. Default false — a
-// release build never sets this. The test XPI flips it to true in the
-// dist copy only (src stays false), so the flag can never leak into a
-// release by accident.
-const NO_INPAINT = false;
+// Bypass-inpaint is a Debug setting now (settings.bypassInpaint), not a
+// build flag. When on, LaMa never loads and the translated text renders
+// over the original image. Default false.
 
 // Translated-page cache is session-scoped: initPageCache() wipes the store on
 // every browser startup (via a chrome.storage.session marker) and the
@@ -229,8 +227,6 @@ async function loadGpuInpaintDead() {
   } catch {}
 }
 loadGpuInpaintDead().catch(() => {});
-// NO-INPAINT test build marker: the pasted log must say which build it is.
-if (NO_INPAINT) diagPush('NO-INPAINT test build — LaMa inpaint disabled, text renders over the original');
 
 // 2.3.15/1.7.15: device + browser line in the diag log, so a pasted log
 // says which device and browser it came from — no need to ask the user
@@ -2382,9 +2378,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     };
     const runMaskInpaint = async () => {
       checkCancelled(runId);
-      // NO-INPAINT test build: skip LaMa entirely — the page cache gets
+      // Bypass-inpaint (Debug setting): skip LaMa entirely — the page cache gets
       // the original image, and the text renders over it.
-      if (NO_INPAINT) return new Uint8ClampedArray(rgba);
+      if (settings.bypassInpaint) return new Uint8ClampedArray(rgba);
       const pageGray = toGrayU8(rgba, w, h);
       const { mask: fullMask, entries } = generateMask(rgba, w, h, pageGray, blocks, 5);
       const spreadMap = await readInpaintSpread();
@@ -2609,8 +2605,8 @@ async function runPipeline(tabId, opts = {}) {
     // WASM heap. A fragmented heap can't provide the contiguous block LaMa needs.
     // (2.2.19: moved after the model gate — the preload is an ML call, and
     // no ML runs before the models are ready.)
-    // NO-INPAINT test build: never load LaMa at all.
-    if (directHandlers() && !NO_INPAINT) {
+    // Bypass-inpaint (Debug setting): never load LaMa at all.
+    if (directHandlers() && !settings.bypassInpaint) {
       persistDiagStage(runId, 'lama-preload');
       try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
     }
@@ -3142,10 +3138,10 @@ async function runPipeline(tabId, opts = {}) {
       };
       const runInpaint = async ({ fullMask, entries, maskMs }) => {
         checkCancelled(runId);
-        // NO-INPAINT test build: skip LaMa entirely — the translated text
+        // Bypass-inpaint (Debug setting): skip LaMa entirely — the translated text
         // renders over the original image. The model is never loaded, so
         // a device that dies loading LaMa stays alive.
-        if (NO_INPAINT) {
+        if (settings.bypassInpaint) {
           parProgress('inpaint', 1);
           return { inpainted: new Uint8ClampedArray(rgba), inpaintMs: 0, maskMs, totalInpaintMs: 0 };
         }
@@ -3375,6 +3371,23 @@ async function runPipeline(tabId, opts = {}) {
       // the offscreen document on its own thread).
       let translateOut, inpaintOut;
       if (directHandlers()) {
+        // Local Opus-MT test (2026-11-25): the translate worker runs in
+        // its own realm, so the SW-side local translator never reaches
+        // it — 'local' (as primary or via failover) would throw there
+        // and fall back to Google. When the local test could be used
+        // (test on + Traditional Chinese target), run translateBlocks in
+        // the SW instead, where the translator is wired — and run it
+        // BEFORE mask/inpaint, not in parallel: the ML host shares this
+        // thread with inpaint, so local translate (WASM) must not run
+        // while inpaint holds the thread. Online backends keep the
+        // worker path below (their network I/O is not blocked by WASM).
+        const localTestOn = !!(effSettings.localTranslateTest) &&
+          (String(effSettings.targetLang || 'zh-TW') === 'zh-TW' || String(effSettings.targetLang || '') === 'zh_TW');
+        if (localTestOn) {
+          translateOut = await runTranslate();
+          const maskRes = await runMask();
+          inpaintOut = await runInpaint(maskRes);
+        } else {
         // Firefox: translation runs on a Web Worker (own thread) and ML runs
         // on the ML worker — the main thread only orchestrates, so it stays
         // free to monitor and restart both. (Mask is synchronous JS on the
@@ -3471,6 +3484,7 @@ async function runPipeline(tabId, opts = {}) {
           ms: translateMs,
         });
         translateOut = { translateMs };
+        } // end worker path (local test off)
       } else {
         const maskP = runMask();
         const inpaintP = maskP.then(runInpaint);

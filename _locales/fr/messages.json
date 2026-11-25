@@ -525,8 +525,8 @@
   "model_distil": {
     "message": "OCR distil (Japanese test)"
   },
-  "model_mt_ja_en": {
-    "message": "Local translate (Japanese to English)"
+  "model_mt_ja_zh": {
+    "message": "Local translate (Japanese to Chinese)"
   },
   "model_mt_en_zh": {
     "message": "Local translate (English to Chinese)"
@@ -542,5 +542,11 @@
   },
   "local_translate_test_hint": {
     "message": "Translates on this device with a downloaded model, no internet needed. Japanese and English to Chinese only for now. Needs the local models downloaded below."
+  },
+  "bypass_inpaint": {
+    "message": "Bypass inpaint (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Skips the inpainter. Translated text renders over the original image. Use it to test on a device that runs out of memory."
   }
 }

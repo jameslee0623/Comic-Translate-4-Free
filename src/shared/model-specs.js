@@ -49,28 +49,33 @@ export const MODEL_GROUPS = [
     ],
   },
   {
-    // Local translate test (2026-11-25): Opus-MT, Japanese -> English.
-    // There is no direct ja->zh ONNX model (Xenova has none, and
-    // Helsinki-NLP only ships ja->zh as PyTorch), so Japanese goes
-    // ja->en->zh — this group plus 'mt-en-zh' below, ~332MB for the pair.
-    // Quantized (uint8 dynamic) files: the int8 decoder is ~3x bigger
-    // for no clear benefit. Optional: only downloaded when the user
-    // enables the local translate test. Weights Apache-2.0.
-    id: 'mt-ja-en', labelKey: 'model_mt_ja_en', label: 'Local translate (Japanese to English)',
+    // Local translate test (2026-11-25): Opus-MT, Japanese -> Chinese,
+    // DIRECT one hop. There is no Xenova ONNX ja-zh, and Helsinki-NLP's
+    // opus-mt-ja-zh was delisted from Hugging Face, so the PyTorch
+    // model shun89/opus-mt-ja-zh (the re-host of the delisted Helsinki
+    // model, Apache-2.0) was converted to ONNX here with optimum and
+    // quantized to uint8 (see ~/workspace/.opus-test/jazh-onnx/).
+    // ~235MB for this group. It is a BPE model (BPETokenizer in
+    // ml/opus-mt.js). Optional: only downloaded when the user enables
+    // the local translate test.
+    // HOSTING: the three files below must be uploaded to the Hugging
+    // Face repo jameslee0623/opus-mt-ja-zh-onnx before the download
+    // works (no HF token is available on this machine to upload them).
+    // The files are ready at ~/workspace/.opus-test/jazh-onnx/.
+    id: 'mt-ja-zh', labelKey: 'model_mt_ja_zh', label: 'Local translate (Japanese to Chinese)',
     files: [
-      { id: 'mt-ja-en-encoder', file: 'encoder_model_quantized.onnx', bytes: 50705822,
-        url: hf('Xenova/opus-mt-ja-en', 'onnx/encoder_model_quantized.onnx') },
-      { id: 'mt-ja-en-decoder', file: 'decoder_model_quantized.onnx', bytes: 57631042,
-        url: hf('Xenova/opus-mt-ja-en', 'onnx/decoder_model_quantized.onnx') },
-      { id: 'mt-ja-en-decoder-past', file: 'decoder_with_past_model_quantized.onnx', bytes: 54359578,
-        url: hf('Xenova/opus-mt-ja-en', 'onnx/decoder_with_past_model_quantized.onnx') },
+      { id: 'mt-ja-zh-encoder', file: 'encoder_model_quantized.onnx', bytes: 52721418,
+        url: hf('jameslee0623/opus-mt-ja-zh-onnx', 'encoder_model_quantized.onnx') },
+      { id: 'mt-ja-zh-decoder', file: 'decoder_model_quantized.onnx', bytes: 92838792,
+        url: hf('jameslee0623/opus-mt-ja-zh-onnx', 'decoder_model_quantized.onnx') },
+      { id: 'mt-ja-zh-decoder-past', file: 'decoder_with_past_model_quantized.onnx', bytes: 89626842,
+        url: hf('jameslee0623/opus-mt-ja-zh-onnx', 'decoder_with_past_model_quantized.onnx') },
     ],
   },
   {
     // Local translate test (2026-11-25): Opus-MT, English -> Simplified
     // Chinese (OpenCC converts it to Traditional afterwards). Direct
-    // for English sources; the second hop for Japanese sources.
-    // Optional, like 'mt-ja-en'. Weights Apache-2.0.
+    // for English sources. Optional, like 'mt-ja-zh'. Weights Apache-2.0.
     id: 'mt-en-zh', labelKey: 'model_mt_en_zh', label: 'Local translate (English to Chinese)',
     files: [
       { id: 'mt-en-zh-encoder', file: 'encoder_model_quantized.onnx', bytes: 52899742,
@@ -103,10 +108,13 @@ export const BABERU_VOCAB_ASSET = 'src/offscreen/ml/dicts/baberu-vocab.json';
 export const DISTIL_VOCAB_ASSET = 'src/offscreen/ml/dicts/distil-vocab.json';
 
 // Opus-MT tokenizer vocabs, bundled (JSON {vocab: [[piece, score], ...],
-// unk_id}). From Xenova/opus-mt-ja-en and Xenova/opus-mt-en-zh
-// tokenizer.json (vocab only — the rest of the tokenizer config is not
-// needed; the Unigram Viterbi in ml/opus-mt.js implements the rest).
-export const OPUS_MT_JA_EN_VOCAB_ASSET = 'src/offscreen/ml/dicts/opus-mt-ja-en-vocab.json';
+// unk_id}). The en-zh vocab is from Xenova/opus-mt-en-zh tokenizer.json
+// (vocab only — the rest of the tokenizer config is not needed; the
+// Unigram Viterbi in ml/opus-mt.js implements the rest). The ja-zh
+// vocab is extracted from shun89/opus-mt-ja-zh source.spm (BPE —
+// BPETokenizer in ml/opus-mt.js; the scores in the file are the
+// negative piece rank, kept for format parity only).
+export const OPUS_MT_JA_ZH_VOCAB_ASSET = 'src/offscreen/ml/dicts/opus-mt-ja-zh-vocab.json';
 export const OPUS_MT_EN_ZH_VOCAB_ASSET = 'src/offscreen/ml/dicts/opus-mt-en-zh-vocab.json';
 
 export const ALL_FILES = MODEL_GROUPS.flatMap(g =>

@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS = {
   sourceLang: 'auto', // 'auto' = detect from the OCR'd text; or 'ja' | 'en' | 'zh-CN' | 'zh-TW'
   ocrDistilTest: false, // distil OCR test (2026-11-25): when on, Japanese (or auto) pages OCR with the small distil model instead of Baberu; EN/ZH stay on Baberu
   localTranslateTest: false, // local translation test (2026-11-25): when on, Japanese/English to Chinese translates on-device with Opus-MT + OpenCC, no internet needed; hidden in the Debug section
+  bypassInpaint: false, // bypass inpaint test (2026-11-25): when on, LaMa never loads and the translated text renders over the original image; hidden in the Debug section
   targetLang: 'en', // static fallback only — with no stored value, readSettingsRaw()/getSettings() use the browser language instead (browserTargetLang, below)
   translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm' | 'local' (local = Opus-MT test, needs localTranslateTest on)
   backendFailover: true, // if the selected backend fails, try another (default on, 2026-10-26)

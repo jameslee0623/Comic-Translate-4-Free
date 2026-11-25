@@ -4,11 +4,11 @@
 // Verified: ort 1.30 threaded WASM runs here with numThreads=1 and no COOP/COEP
 // (chrome-extension: pages get SharedArrayBuffer without crossOriginIsolated).
 import { MSG, openDb, idbGet } from '../shared/contracts.js';
-import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET, DISTIL_VOCAB_ASSET, OPUS_MT_JA_EN_VOCAB_ASSET, OPUS_MT_EN_ZH_VOCAB_ASSET } from '../shared/model-specs.js';
+import { ALL_FILES, downloadFileToIdb, readChunked, ocrEngineForLang, BABERU_VOCAB_ASSET, DISTIL_VOCAB_ASSET, OPUS_MT_JA_ZH_VOCAB_ASSET, OPUS_MT_EN_ZH_VOCAB_ASSET } from '../shared/model-specs.js';
 import { Detector } from './ml/detector.js';
 import { BaberuOCR } from './ml/baberu.js';
 import { DistilOCR } from './ml/distil.js';
-import { OpusMT } from './ml/opus-mt.js';
+import { OpusMT, BPETokenizer } from './ml/opus-mt.js';
 import { toTraditionalTW } from './ml/opencc.js';
 import { meanBrightness } from '../shared/image-ops.js';
 import { Inpainter } from './ml/inpaint.js';
@@ -487,10 +487,12 @@ const detector = new Detector();
 const baberu = new BaberuOCR();
 const distil = new DistilOCR();
 const inpainter = new Inpainter();
-// Local translate test (2026-11-25): Opus-MT. ja-en starts the decoder
-// from 60715 (<pad>), en-zh from 65000 (the configs'
-// decoder_start_token_id).
-const mtJaEn = new OpusMT(60715);
+// Local translate test (2026-11-25): Opus-MT. Both directions start the
+// decoder from 65000 (<pad>, the configs' decoder_start_token_id).
+// ja-zh is a BPE model, so it gets a BPETokenizer; en-zh is Unigram
+// (the OpusMT default). Only ONE direction is ever loaded at a time —
+// RAM on the phone is the constraint, not storage (see ML_TRANSLATE).
+const mtJaZh = new OpusMT(65000, new BPETokenizer());
 const mtEnZh = new OpusMT(65000);
 
 // Groups whose model file was re-downloaded while a run was using the
@@ -500,13 +502,13 @@ const mtEnZh = new OpusMT(65000);
 const staleGroups = new Set();
 
 // Drop loaded ORT sessions so the next inference re-reads model files from
-// IndexedDB. group: 'detector' | 'ocr-baberu' | 'ocr-distil' | 'inpaint' | 'mt-ja-en' | 'mt-en-zh' | '*'.
+// IndexedDB. group: 'detector' | 'ocr-baberu' | 'ocr-distil' | 'inpaint' | 'mt-ja-zh' | 'mt-en-zh' | '*'.
 async function resetGroup(group) {
   if (group === 'detector' || group === '*') await detector.reset();
   if (group === 'ocr-baberu' || group === '*') await baberu.reset();
   if (group === 'ocr-distil' || group === '*') await distil.reset();
   if (group === 'inpaint' || group === '*') await inpainter.reset();
-  if (group === 'mt-ja-en' || group === '*') await mtJaEn.reset();
+  if (group === 'mt-ja-zh' || group === '*') await mtJaZh.reset();
   if (group === 'mt-en-zh' || group === '*') await mtEnZh.reset();
 }
 
@@ -582,13 +584,13 @@ async function loadBaberu(providers) {
 async function loadDistil(providers) {
   await distil.load(await modelBuffer('ocr-distil-u8s8'), providers);
 }
-async function loadMtJaEn(providers) {
-  // Fetch one graph at a time so the three buffers (~163MB) are never
+async function loadMtJaZh(providers) {
+  // Fetch one graph at a time so the three buffers (~235MB) are never
   // all resident at once (same reason as loadBaberu above).
-  await mtJaEn.load(
-    await modelBuffer('mt-ja-en-encoder'),
-    await modelBuffer('mt-ja-en-decoder'),
-    await modelBuffer('mt-ja-en-decoder-past'), providers);
+  await mtJaZh.load(
+    await modelBuffer('mt-ja-zh-encoder'),
+    await modelBuffer('mt-ja-zh-decoder'),
+    await modelBuffer('mt-ja-zh-decoder-past'), providers);
 }
 async function loadMtEnZh(providers) {
   await mtEnZh.load(
@@ -651,8 +653,8 @@ async function ensureModel(kind) {
     // (ensureModel checks .loaded), so this only costs reload time.
     if (isLowMemoryDevice()) {
       if (kind === 'ocr-baberu' || kind === 'ocr-distil') await resetGroup('detector');
-      else if (kind === 'mt-ja-en' || kind === 'mt-en-zh') { await resetGroup('detector'); await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); }
-      else if (kind === 'inpaint') { await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); await resetGroup('mt-ja-en'); await resetGroup('mt-en-zh'); }
+      else if (kind === 'mt-ja-zh' || kind === 'mt-en-zh') { await resetGroup('detector'); await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); await resetGroup(kind === 'mt-ja-zh' ? 'mt-en-zh' : 'mt-ja-zh'); }
+      else if (kind === 'inpaint') { await resetGroup('ocr-baberu'); await resetGroup('ocr-distil'); await resetGroup('mt-ja-zh'); await resetGroup('mt-en-zh'); }
     }
     if (kind === 'detector' && !detector.loaded) {
       await detector.load(await modelBuffer('detector'), ['wasm']);
@@ -668,14 +670,14 @@ async function ensureModel(kind) {
         await loadWithWebgpuFallback(kind, loadDistil);
       } catch (e) { await distil.reset(); throw e; }
       distil.setVocab(vocabJson);
-    } else if (kind === 'mt-ja-en' && !mtJaEn.loaded) {
+    } else if (kind === 'mt-ja-zh' && !mtJaZh.loaded) {
       // Local translate test: MT is WASM-only (the autoregressive step
       // loop is latency-bound, like Baberu — GPU was ~2x slower there).
-      const vocabJson = await assetText(OPUS_MT_JA_EN_VOCAB_ASSET);
+      const vocabJson = await assetText(OPUS_MT_JA_ZH_VOCAB_ASSET);
       try {
-        await loadWithWebgpuFallback(kind, loadMtJaEn);
-      } catch (e) { await mtJaEn.reset(); throw e; }
-      mtJaEn.setVocab(vocabJson);
+        await loadWithWebgpuFallback(kind, loadMtJaZh);
+      } catch (e) { await mtJaZh.reset(); throw e; }
+      mtJaZh.setVocab(vocabJson);
     } else if (kind === 'mt-en-zh' && !mtEnZh.loaded) {
       const vocabJson = await assetText(OPUS_MT_EN_ZH_VOCAB_ASSET);
       try {
@@ -1206,12 +1208,16 @@ const handlers = {
   },
 
   // ML_TRANSLATE {texts, sourceLang, targetLang, runId} — local translate
-  // test (2026-11-25): Opus-MT on-device, no internet. ja -> en -> zh
-  // (two hops: no direct ja->zh ONNX exists), en -> zh direct, then
-  // OpenCC s2twp to Traditional (Taiwan). Target must be zh-TW; any
-  // other target or source throws so the SW fails over to an online
+  // test (2026-11-25): Opus-MT on-device, no internet. ja -> zh DIRECT
+  // one hop (shun89/opus-mt-ja-zh converted to ONNX), en -> zh direct,
+  // then OpenCC s2twp to Traditional (Taiwan). Target must be zh-TW;
+  // any other target or source throws so the SW fails over to an online
   // backend. Texts run sequentially: one text already fills the WASM
   // threads (same finding as OCR, 2.0.10), two would just share them.
+  // RAM: only the ONE direction the source needs is loaded — a ja run
+  // never holds the en-zh model too (the two-hop version loaded both,
+  // 332MB at once). The other direction is released by resetGroup
+  // under low memory, like the OCR engines.
   async [MSG.ML_TRANSLATE]({ texts, sourceLang, targetLang, runId }) {
     throwIfCancelled(runId);
     const t0 = performance.now();
@@ -1224,8 +1230,13 @@ const handlers = {
       throw new Error('local translation only supports Japanese and English sources, not ' + src);
     }
     const loadT0 = performance.now();
-    if (src === 'ja') await ensureModel('mt-ja-en');
-    await ensureModel('mt-en-zh');
+    // RAM: release the OTHER direction first, so only one MT model is
+    // ever held at a time (a ja run never keeps en-zh resident from an
+    // earlier English page, and vice versa). The reload cost is only
+    // paid when the source language actually switches.
+    if (src === 'ja') await mtEnZh.reset(); else await mtJaZh.reset();
+    if (src === 'ja') await ensureModel('mt-ja-zh');
+    else await ensureModel('mt-en-zh');
     const loadMs = Math.round(performance.now() - loadT0);
     throwIfCancelled(runId);
     const shouldAbort = () => cancelledRuns.has(runId);
@@ -1236,9 +1247,7 @@ const handlers = {
         if (!text || !String(text).trim()) { results.push(''); continue; }
         let zh;
         if (src === 'ja') {
-          const en = await mtJaEn.translate(text, { shouldAbort });
-          if (shouldAbort()) throw new Error('cancelled');
-          zh = (await mtEnZh.translate(en.text, { shouldAbort })).text;
+          zh = (await mtJaZh.translate(text, { shouldAbort })).text;
         } else {
           zh = (await mtEnZh.translate(text, { shouldAbort })).text;
         }
