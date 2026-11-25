@@ -2442,10 +2442,11 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     diagPush('pre-translate: done ' + imageUrl.slice(0, 80));
     // Freemium: one newly translated image against the free daily limit.
     // Pro users are not counted. Distinct images only — a re-translation
-    // of the same URL is free. Pre-translate only runs when it is on, so
-    // a Pro feature is always on here, but the gate keeps the rule in one
-    // place (anyProFeatureOn).
-    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages([imageUrl]);
+    // of the same URL is free. A long strip counts as the normal comic
+    // pages it spans (w/h are the image's pixel size here). Pre-translate
+    // only runs when it is on, so a Pro feature is always on here, but
+    // the gate keeps the rule in one place (anyProFeatureOn).
+    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages([{ key: imageUrl, w, h }]);
   } finally {
     for (const k of pxKeys.splice(0)) await pixelDrop(k);
   }
@@ -2772,6 +2773,9 @@ async function runPipeline(tabId, opts = {}) {
     // counts distinct images only, so a re-translation of the same URL
     // is free (see addProUsageForImages).
     const doneSrcs = [];
+    // Same finished images with their size, for the quota count — a long
+    // strip counts as the normal comic pages it spans, not as one image.
+    const doneCountEntries = [];
     // Per-picture failure detail for the run-end missed accounting (size,
     // host, reason) — failedImgs only carries the message string.
     const missedDetail = [];
@@ -3491,7 +3495,7 @@ async function runPipeline(tabId, opts = {}) {
       try {
         const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0);
         doneImgs.push(imgIdx + 1);
-        if (img.src) doneSrcs.push(img.src);
+        if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
         if (r && r.doneExtra) lastDoneExtra = r.doneExtra;
       } catch (e) {
         // Only a USER cancel aborts the whole run. A per-image failure —
@@ -3512,7 +3516,7 @@ async function runPipeline(tabId, opts = {}) {
             const pre = await fallbackCaptureViaTab(tabId, e.fallbackUrl);
             const r2 = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, pre);
             doneImgs.push(imgIdx + 1);
-            if (img.src) doneSrcs.push(img.src);
+            if (img.src) { doneSrcs.push(img.src); doneCountEntries.push({ key: img.src, w: img.w, h: img.h }); }
             if (r2 && r2.doneExtra) lastDoneExtra = r2.doneExtra;
             recovered = true;
           } catch (e2) {
@@ -3576,7 +3580,7 @@ async function runPipeline(tabId, opts = {}) {
     // A run cancelled in the middle throws above, so it counts nothing.
     // This covers auto and manual runs alike — the auto handler no longer
     // counts separately.
-    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages(doneSrcs);
+    if (!proIsActive(settings) && anyProFeatureOn(settings)) await addProUsageForImages(doneCountEntries);
   } catch (e) {
     let msg;
     // A user-cancelled run stays 'cancelled' even if the in-flight work

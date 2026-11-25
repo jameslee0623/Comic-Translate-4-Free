@@ -2,11 +2,25 @@
 // Free: 50 images/day while any Pro feature is on (auto-translate,
 // pre-translate, engine failover). A translation is free only when all
 // Pro features are off. Pro: unlimited, unlocked by a Dodo license key.
+// A long strip counts as the normal comic pages it spans (a strip 3
+// pages long counts as 3, 5 pages as 5), not as one image.
 // Dodo's license endpoints are public (no API key), so the extension calls
 // them directly. The business_id check at activation stops a key bought
 // from any other Dodo seller from unlocking Pro here.
 
 export const PRO_FREE_DAILY_LIMIT = 50;
+
+// A normal comic/manga page is about 1.5x taller than wide (3:2 — the
+// standard tankobon / US comic page ratio). A long strip (webtoon) is
+// many pages tall, so it counts as that many images against the free
+// daily limit: pages = height / (width * 1.5), rounded, at least 1.
+export const PRO_PAGE_RATIO = 1.5;
+
+export function pagesForImage(w, h) {
+  const W = Number(w), H = Number(h);
+  if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) return 1;
+  return Math.max(1, Math.round(H / (W * PRO_PAGE_RATIO)));
+}
 
 // --- Dodo setup: James fills these in after creating the Pro product ---
 // DODO_BUSINESS_ID: the business id shown in the Dodo dashboard.
@@ -55,8 +69,23 @@ export function anyProFeatureOn(settings) {
 // images only, by URL. A re-translation of the same image is free, so the
 // quota matches the cache's distinct-image count. A cancelled run never
 // reaches here (it throws before counting). Returns new images counted.
-export async function addProUsageForImages(keys) {
-  const list = (Array.isArray(keys) ? keys : [keys]).map(k => String(k || '')).filter(Boolean);
+export async function addProUsageForImages(entries) {
+  // Each entry is a URL string (counts as 1 image) or { key/url/src, w, h }
+  // (counts as the normal comic pages the image spans — a long strip 3
+  // pages long counts as 3, 5 pages as 5; see pagesForImage). Distinct
+  // images only: a re-translation of the same URL is free, however many
+  // pages it spans.
+  const list = (Array.isArray(entries) ? entries : [entries])
+    .map(e => {
+      if (typeof e === 'string') return { key: e, pages: 1 };
+      if (e && typeof e === 'object') {
+        const key = String(e.key || e.url || e.src || '');
+        if (!key) return null;
+        return { key, pages: pagesForImage(e.w, e.h) };
+      }
+      return null;
+    })
+    .filter(Boolean);
   if (!list.length) return 0;
   try {
     const stored = await chrome.storage.local.get(USAGE_KEY);
@@ -69,10 +98,10 @@ export async function addProUsageForImages(keys) {
       keySet = new Set(Array.isArray(rec.keys) ? rec.keys : []);
     }
     let added = 0;
-    for (const k of list) {
-      if (keySet.has(k)) continue;
-      keySet.add(k);
-      added++;
+    for (const { key, pages } of list) {
+      if (keySet.has(key)) continue;
+      keySet.add(key);
+      added += pages;
     }
     if (!added) return 0;
     // Bound the stored keys (the daily limit is 50, so 200 is generous).

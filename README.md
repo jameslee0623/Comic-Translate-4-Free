@@ -110,7 +110,7 @@ Gemini gives the best manga translations. To use it as the translation engine:
 
 ## 💎 Pro
 
-Translations count toward the free 50 images a day while any Pro feature is on. Turn all Pro features off and translating is free and unlimited. Auto-translate, pre-translate, and engine failover are Pro features — free for 50 images a day, unlimited with a Pro subscription.
+Translations count toward the free 50 images a day while any Pro feature is on. A long strip counts as the normal comic pages it spans (a strip 3 pages long counts as 3, 5 pages as 5). Turn all Pro features off and translating is free and unlimited. Auto-translate, pre-translate, and engine failover are Pro features — free for 50 images a day, unlimited with a Pro subscription.
 
 - $3/month or $30/year
 - Buy a license key, paste it into the License key field in the extension's Settings, and click Activate Pro. The key works on 2 browsers.
