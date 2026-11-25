@@ -445,7 +445,12 @@ async function syncAutoStartRegistrations() {
       id: AUTO_START_SCRIPT_ID,
       matches,
       js: ['src/content/content.js'],
-      runAt: 'document_idle',
+      // document_end, not document_idle: the auto-start must fire as soon
+      // as the DOM is parsed, not after the browser goes idle (on an
+      // image-heavy reader page 'idle' can be seconds after the main
+      // picture is visible). The pipeline force-loads images itself, so
+      // starting early is safe.
+      runAt: 'document_end',
     }]);
   } catch {}
 }
@@ -3919,14 +3924,12 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     // Inject the content script on page load for allowed sites, even
     // when auto-translate is off: it carries the anti-right-click
     // override, so it must be on the page BEFORE the user right-clicks
-    // a picture. Best-effort (a chrome:// tab or a revoked permission
-    // throws) — a later runPipeline injection is a no-op thanks to the
-    // script's double-injection guard, and a failed inject here never
-    // blocks auto-translate.
+    // a picture. Fire-and-forget (not awaited): the registered script
+    // is already on the page at document_end, so this is a redundant
+    // no-op — but awaiting it stalled the run start by up to 5s on a
+    // busy tab, and a failed inject here never blocks auto-translate.
     if (injectFirst) {
-      try {
-        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
-      } catch {}
+      withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection').catch(() => {});
     }
     // AUTO DIAGNOSTIC (2.3.3): log every auto decision for an allowed
     // site — on Vivaldi the page-load signal may never arrive (the
