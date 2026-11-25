@@ -319,6 +319,9 @@
   "required_badge": {
     "message": "لازمی"
   },
+  "reset_free_usage": {
+    "message": "Reset free usage today"
+  },
   "saved": {
     "message": "محفوظ ہو گیا ✓"
   },

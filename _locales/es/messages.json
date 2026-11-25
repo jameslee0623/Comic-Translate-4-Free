@@ -319,6 +319,9 @@
   "required_badge": {
     "message": "obligatorio"
   },
+  "reset_free_usage": {
+    "message": "Reset free usage today"
+  },
   "saved": {
     "message": "Guardado ✓"
   },

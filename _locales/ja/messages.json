@@ -200,6 +200,9 @@
   "required_badge": {
     "message": "必須"
   },
+  "reset_free_usage": {
+    "message": "Reset free usage today"
+  },
   "saved": {
     "message": "保存しました ✓"
   },

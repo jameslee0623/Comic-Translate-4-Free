@@ -2,7 +2,7 @@
 import { BUILD } from '../shared/version.js';
 import { storeUrlForFirefox } from '../shared/contracts.js';
 import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings } from '../shared/settings.js';
-import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
+import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, resetProUsageToday, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
 const $ = id => document.getElementById(id);
 // Defaults live in shared/settings.js — single source of truth.
 const DEFAULTS = DEFAULT_SETTINGS;
@@ -206,6 +206,17 @@ async function load() {
   // no Refresh button any more — switching to the tab is the refresh.
   window.addEventListener('focus', refreshDiagLog);
   $('copyDiagLog').onclick = copyDiagLog;
+  // Reset free usage (Debug only): clears today's count so testing can
+  // continue past the 50/day limit while Dodo screening is pending.
+  // refreshPro() re-reads the count and unlocks the Pro checkboxes.
+  const resetBtn = $('resetFreeUsage');
+  if (resetBtn) resetBtn.onclick = async () => {
+    await resetProUsageToday().catch(() => {});
+    await refreshPro().catch(() => {});
+    const old = resetBtn.textContent;
+    resetBtn.textContent = 'Reset ✓';
+    setTimeout(() => { resetBtn.textContent = old; }, 1500);
+  };
   $('clearCache').onclick = onClearCacheClick;
   refreshCacheStats();
   refreshPro();

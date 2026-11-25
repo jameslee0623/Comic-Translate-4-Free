@@ -200,6 +200,9 @@
   "required_badge": {
     "message": "obligatoriu"
   },
+  "reset_free_usage": {
+    "message": "Reset free usage today"
+  },
   "saved": {
     "message": "Salvat ✓"
   },
