@@ -52,6 +52,7 @@ export const MSG = {
   // content -> SW
   OPEN_LINK: 'ct/open-link',             // {url} -> {ok} (support popup buttons; SW allowlists the URL and opens a tab)
   AUTO_START: 'ct/auto-start',           // {} (content -> SW one-way: page loaded on an allowed site; ask for an auto run)
+  SET_DEBUG_MODE: 'ct/set-debug-mode',   // {on} (content -> SW one-way: debug panel Hide button; set debugMode in settings, same as the Settings switch)
 };
 
 // Store pages for the "5 stars" button — the per-browser URL. The content

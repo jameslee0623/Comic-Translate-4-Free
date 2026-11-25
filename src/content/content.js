@@ -805,6 +805,25 @@
 
   // ------------------------------------------------------------ status pill
   let pill = null, pillTimer = null;
+  let lastPillHtml = '', lastPillSticky = false; // latest pill content, so it can be re-shown when the debug panel closes
+  // The debug panel and the pill are a toggle: when the panel is showing
+  // the pill stays hidden (its text is mirrored into the panel instead);
+  // when the panel is hidden the pill shows. Tap the pill to reopen the
+  // panel (only while debug mode is still on).
+  function isDebugPanelVisible() {
+    try { return !!(debugPanel && debugPanel.style.display && debugPanel.style.display !== 'none'); } catch { return false; }
+  }
+  function showPillFromLast() {
+    if (!lastPillHtml) return;
+    try {
+      const p = ensurePill();
+      p.innerHTML = lastPillHtml;
+      p.style.display = 'block';
+      p.style.borderColor = '#444';
+      clearTimeout(pillTimer);
+      if (!lastPillSticky) pillTimer = setTimeout(() => { p.style.display = 'none'; }, 4000);
+    } catch { /* never break the page */ }
+  }
   function ensurePill() {
     if (pill) {
       // The debug overlay shares the pill's max z-index but is appended
@@ -818,7 +837,28 @@
     pill.id = 'ct-pill';
     pill.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;background:#1c1c22;color:#eee;' +
       'font:13px/1.4 sans-serif;padding:10px 14px;border-radius:10px;border:1px solid #444;' +
-      'box-shadow:0 4px 16px rgba(0,0,0,.5);display:none;max-width:340px;white-space:pre-wrap;';
+      'box-shadow:0 4px 16px rgba(0,0,0,.5);display:none;max-width:340px;white-space:pre-wrap;cursor:pointer;';
+    // Tap the pill to reopen the debug panel (only while debug mode is on).
+    // Clicks on buttons/links inside the pill (Allow, dismiss) keep their
+    // own handlers and do not reopen the panel.
+    pill.addEventListener('click', e => {
+      try {
+        if (e.target !== pill) return;
+        if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+        chrome.storage.local.get('settings', res => {
+          try {
+            const s = (res && res.settings) || {};
+            if (!s.debugMode) return;
+            if (!overlay || !debugPanel) return;
+            overlay.style.display = 'flex';
+            debugPanel.style.display = 'flex';
+            debugPanelSuppressed = false;
+            if (dbgBtn) dbgBtn.textContent = 'Hide';
+            pill.style.display = 'none';
+          } catch {}
+        });
+      } catch {}
+    });
     document.documentElement.appendChild(pill);
     return pill;
   }
@@ -830,10 +870,19 @@
   }
   function showPill(html, sticky) {
     const p = ensurePill();
+    lastPillHtml = html;
+    lastPillSticky = !!sticky;
     p.innerHTML = html;
+    mirrorPillStatus(p.textContent);
+    // Panel/pill toggle: when the debug panel is showing, the pill stays
+    // hidden (its text is mirrored into the panel above). Only show the
+    // pill when the panel is hidden.
+    if (isDebugPanelVisible()) {
+      p.style.display = 'none';
+      return;
+    }
     p.style.display = 'block';
     p.style.borderColor = '#444';
-    mirrorPillStatus(p.textContent);
     clearTimeout(pillTimer);
     if (!sticky) pillTimer = setTimeout(() => { p.style.display = 'none'; }, 4000);
   }
@@ -862,10 +911,18 @@
     }
     html += ' <a href="#" id="ct-pill-x" style="color:#8ab4f8;margin-left:8px">' +
       esc(dismissLabel()) + '</a>';
+    lastPillHtml = html;
+    lastPillSticky = true;
     p.innerHTML = html;
-    p.style.display = 'block';
-    p.style.borderColor = '#a33';
     mirrorPillStatus(p.textContent);
+    // Panel/pill toggle: when the debug panel is showing, the pill stays
+    // hidden (its text is mirrored into the panel above).
+    if (isDebugPanelVisible()) {
+      p.style.display = 'none';
+    } else {
+      p.style.display = 'block';
+    }
+    p.style.borderColor = '#a33';
     const x = document.getElementById('ct-pill-x');
     if (x) x.onclick = e => { e.preventDefault(); p.style.display = 'none'; };
     const g = document.getElementById('ct-pill-grant');
@@ -1215,7 +1272,7 @@
   const stageOrder = ['capture', 'detect', 'blocks', 'ocr', 'mask', 'inpaint', 'translate', 'render', 'diaglog'];
   let currentRunId = null;
   let latestRunId = null;   // run the service worker last started for this tab
-  let debugPanelSuppressed = false; // user hid the panel with the Debug toggle; auto-show stays off until a new run
+  let debugPanelSuppressed = false; // user hid the panel with X; auto-show stays off until a new run or a pill tap
 
   // FIX3: content-script-held keep-alive Port. FIX2's self-connect Port
   // (both ends in the background) did not prevent the background dying
@@ -1291,15 +1348,24 @@
     title.textContent = 'Comic Translate 4 Free';
     title.style.cssText = 'font-weight:600;margin-right:8px;';
     bar.appendChild(title);
-    const dbgBtnEl = mkBtn('Debug: off', () => {
-      const on = debugPanel.style.display === 'none';
-      debugPanel.style.display = on ? 'flex' : 'none';
-      dbgBtnEl.textContent = on ? 'Debug: on' : 'Debug: off';
-      debugPanelSuppressed = !on;
+    // Two buttons on top of the debug panel (James's spec):
+    // Hide — same as the debug switch in Settings (turns debug mode off).
+    // Hides the panel AND the Settings Debug section until the version
+    // number is clicked 5 times. Persists via the service worker.
+    const hideBtnEl = mkBtn('Hide', () => {
+      try {
+        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+          chrome.runtime.sendMessage({ type: 'ct/set-debug-mode', on: false });
+        }
+      } catch {}
+      hideOverlayTemp();
     });
-    dbgBtn = dbgBtnEl;
+    dbgBtn = hideBtnEl;
     bar.appendChild(dbgBtn);
-    bar.appendChild(mkBtn('✕ Close', closeOverlay));
+    // X — close the panel temporarily, debug mode stays on (so the user
+    // can click the page). Tap the pill to reopen it, or it auto-shows
+    // on the next run. Does NOT remove the overlay, only hides it.
+    bar.appendChild(mkBtn('✕', () => { hideOverlayTemp(); }));
     overlay.appendChild(bar);
     const wrap = document.createElement('div');
     wrap.style.cssText = 'flex:1;display:flex;min-height:0;width:100%;justify-content:flex-end;';
@@ -1328,6 +1394,19 @@
     wrap.appendChild(debugPanel);
     overlay.appendChild(wrap);
     document.documentElement.appendChild(overlay);
+  }
+
+  // X button (temporary close): hide the overlay but keep debug mode on
+  // and keep the overlay in the DOM, so the pill can reopen it. The pill
+  // shows when the panel is hidden (they are a toggle). Does not remove
+  // the overlay — closeOverlay() below is the full teardown.
+  function hideOverlayTemp() {
+    try {
+      debugPanelSuppressed = true;
+      if (overlay) overlay.style.display = 'none';
+      if (debugPanel) debugPanel.style.display = 'none';
+      showPillFromLast();
+    } catch {}
   }
 
   function closeOverlay() {
@@ -1666,7 +1745,8 @@
       if (msg.debug && !debugPanelSuppressed) {
         overlay.style.display = 'flex';
         debugPanel.style.display = 'flex';
-        if (dbgBtn) dbgBtn.textContent = 'Debug: on';
+        // Panel/pill toggle: the panel just showed, so hide the pill.
+        if (pill) pill.style.display = 'none';
       }
       renderDebugTab(msg.stage);
       sendResponse({ ok: true });
@@ -1778,7 +1858,8 @@
             ensureOverlay();
             overlay.style.display = 'flex';
             debugPanel.style.display = 'flex';
-            if (dbgBtn) dbgBtn.textContent = 'Debug: on';
+            // Panel/pill toggle: the panel just showed, so hide the pill.
+            if (pill) pill.style.display = 'none';
             renderDebugTab('render');
           }
           sendResponse({ ok: true, replaced, ...(renderMissDiag ? { diag: renderMissDiag } : {}) });

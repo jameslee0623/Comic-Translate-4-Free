@@ -3,7 +3,7 @@
 // the offscreen document; pure-JS stages (blocks, mask) run here.
 import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
-import { getSettings } from '../shared/settings.js';
+import { getSettings, updateSettingsField } from '../shared/settings.js';
 import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
@@ -4271,6 +4271,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const tab = sender && sender.tab;
       if (tab && tab.id !== undefined && tab.id !== null) maybeAutoStart(tab.id, tab, 'content', false);
     } catch {}
+    return false;
+  }
+  // Debug panel Hide button (content -> SW, one-way). Same as turning
+  // the debug switch off in Settings: sets debugMode=false in storage,
+  // so the Settings Debug section hides too (options.js re-applies on
+  // storage change) and emitDebug stops sending panel messages. The
+  // panel is already hidden on the content side; this only persists it.
+  if (msg && msg.type === MSG.SET_DEBUG_MODE) {
+    try { updateSettingsField('debugMode', !!msg.on); } catch {}
     return false;
   }
   // 2.3.15: re-register the content script after a grant change
