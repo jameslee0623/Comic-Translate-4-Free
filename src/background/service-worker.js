@@ -89,12 +89,12 @@ function benchTracePush(line) {
 // 2.1.55: persisted diag log. diagPush alone is in-memory, so when the
 // background restarts mid-run the log is wiped and orphan recovery can
 // only say the log "is lost" — the one time the log matters most. Every
-// diag line is also appended to storage.local 'diagTrace' (last 200
+// diag line is also appended to storage.local 'diagTrace' (last 2000
 // lines, chained and fire-and-forget like benchTrace, so it never blocks
 // the pipeline). Orphan/alarm recovery replays those lines into the
 // panel log, so the user sees what the background was doing before it
-// died. 200 lines covers ~13 pictures at ~15 lines each — the last thing
-// before the crash is what matters.
+// died. 2000 lines matches the in-memory buffer, so the Settings copy
+// gets a full run (~1700 lines worst case), not just the last 13 pictures.
 const DIAG_TRACE_KEY = 'diagTrace';
 let diagTraceChain = Promise.resolve();
 function diagTracePersist(line) {
@@ -103,7 +103,7 @@ function diagTracePersist(line) {
       const saved = await chrome.storage.local.get(DIAG_TRACE_KEY);
       const arr = (saved && Array.isArray(saved[DIAG_TRACE_KEY])) ? saved[DIAG_TRACE_KEY] : [];
       arr.push(String(line));
-      await chrome.storage.local.set({ [DIAG_TRACE_KEY]: arr.slice(-200) });
+      await chrome.storage.local.set({ [DIAG_TRACE_KEY]: arr.slice(-2000) });
     } catch {}
   }).catch(() => {});
 }

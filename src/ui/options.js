@@ -605,7 +605,7 @@ async function onClearCacheClick() {
 // 2.3.13/1.7.13: the diagnostic log, read straight from storage — NO
 // background needed. After a Translate crash the background is dead, so
 // the on-page panel can never appear and the log was unreachable. This
-// reads the persisted diagTrace (last 200 lines, survives a process kill)
+// reads the persisted diagTrace (last 2000 lines, survives a process kill)
 // and the active-run records (which hold the fine stage each run died
 // at) directly from chrome.storage.local, so the log is here even when
 // the background is dead. No sendMessage anywhere in this path.
