@@ -30,10 +30,20 @@ export const DODO_CHECKOUT_URL = 'https://checkout.dodopayments.com/buy/pdc_0Nsh
 export const DODO_ACTIVATE_URL = 'https://live.dodopayments.com/licenses/activate';
 export const DODO_VALIDATE_URL = 'https://live.dodopayments.com/licenses/validate';
 export const DODO_DEACTIVATE_URL = 'https://live.dodopayments.com/licenses/deactivate';
-// Pro product id (from the checkout URL above). The activate response
-// carries it as product.product_id when the key is tied to a product —
-// a key for a different product of the same business must not unlock Pro.
-export const DODO_PRODUCT_ID = 'pdc_0NshS3ePj2aiNr7Cj03d9';
+// Pro product ids accepted at activation. Dodo's activate response carries
+// the key's product as product.product_id. James (2026-11-26): the
+// collection id covers the 2 paid plans, so it stays in the list; the two
+// paid single-product ids are a safety net in case Dodo returns the single
+// product id for a paid key instead of the collection id; the free product
+// is outside the collection but its keys unlock Pro for James and his
+// friends, so it is listed too. A key for any other product of the same
+// business must not unlock Pro.
+export const DODO_PRODUCT_IDS = [
+  'pdc_0NshS3ePj2aiNr7Cj03d9', // Pro collection (monthly + annual) — checkout URL
+  'pdt_0NshpHpVeof17P0j3FQc3', // free product, for James and his friends
+  'pdt_0NshP40zDKoQGS0LmrNzw', // Pro Annual
+  'pdt_0NshOPdURVUBjPoj1CLMA', // Pro Monthly
+];
 
 // Dodo fetch timeout (15 s, matching a third-party Dodo client's default;
 // the SDKs default to 60 s). All three license calls use it — before this
@@ -341,12 +351,14 @@ export async function activateProLicense(key) {
       // key is tied to a product (Dodo docs list a `product` object;
       // product_id confirmed by the official SDK types and a third-party
       // client). A key for a different product of the same business must
-      // not unlock Pro. When the product object (or its id) is absent,
-      // the check is skipped — absence must not block activation.
+      // not unlock Pro — the accepted ids are DODO_PRODUCT_IDS (collection
+      // + free + Pro Annual + Pro Monthly). When the product object (or its
+      // id) is absent, the check is skipped — absence must not block
+      // activation.
       if (data.product && typeof data.product === 'object') {
         const pid = typeof data.product.product_id === 'string' ? data.product.product_id
           : (typeof data.product.id === 'string' ? data.product.id : '');
-        if (pid && pid !== DODO_PRODUCT_ID) {
+        if (pid && !DODO_PRODUCT_IDS.includes(pid)) {
           dodoLog('activate product mismatch: got ' + pid);
           if (instanceId) await dodoReleaseSeat(licenseKey, instanceId);
           return { ok: false, error: 'this key is not for the Pro subscription — check you bought the right product' };
