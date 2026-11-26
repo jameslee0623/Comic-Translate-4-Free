@@ -196,6 +196,16 @@ function parseRetryDelaySeconds(v) {
   return ((Number(m[1] || 0) * 60) + Number(m[2] || 0)) * 1000;
 }
 
+// TEMPORARY (James, 2026-11-26): the source-language guard and the Gemini
+// second chance are BOTH OFF so a real failing case can be captured from
+// the log (James will send the OCR text the next time Gemini returns
+// Japanese). The guard still DETECTS (see applySourceLanguageGuard) but
+// never throws, so bad output is rendered on the page instead of failing
+// over to Google — that is the cost of capturing the case. Re-enable by
+// setting both flags back to true (one line each).
+const SOURCE_LANG_GUARD_ENABLED = false;
+const GEMINI_SECOND_CHANCE_ENABLED = false;
+
 // Source-language guard, shared by Gemini and LM Studio (audit 3b item 14).
 // Returns { bad, why, badCount, kanjiOnly } or null when the output is clean.
 // An empty translation for a non-empty source counts as bad. When the
@@ -230,6 +240,14 @@ function applySourceLanguageGuard(out, texts, settings, backend) {
     tlog(`${backend}: kanji-only output, cannot rule out untranslated kanji — accepted`);
     return out;
   }
+  // TEMPORARY (James, 2026-11-26): guard OFF — log the would-be failure
+  // WITH the first bad source text (flattened to one line, truncated), so
+  // the failing OCR can be copied from the diagnostic log, then return
+  // the output as-is instead of throwing. The bad text will be rendered
+  // on the page. Re-enable with SOURCE_LANG_GUARD_ENABLED above.
+  const srcText = String(texts[hit.bad] || '').replace(/\s+/g, ' ').slice(0, 200);
+  tlog(`${backend} guard OFF — would have failed (${hit.why}), ${hit.badCount} of ${out.length} entries bad; source[${hit.bad}]: ${srcText}`);
+  if (!SOURCE_LANG_GUARD_ENABLED) return out;
   tlog(`${backend} returned source-language output (${hit.why}) — ${hit.badCount} of ${out.length} entries bad, failing over`);
   const err = new Error(`${backend}: returned source-language text (${hit.why}), failing over`);
   // Guard-failure marker: lets the Gemini path tell a bad-content reply
@@ -1170,6 +1188,8 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
   // were translated. Shared guard (see checkSourceLanguageOutput):
   // kana in the output, identity with the source, or an empty entry
   // for a non-empty source all fail the batch.
+  // TEMPORARY (James, 2026-11-26): second chance OFF — see
+  // GEMINI_SECOND_CHANCE_ENABLED. A guard failure now throws at once.
   // Second chance (James, 2026-11-26): the prompt already says "do not
   // return the source language", but Gemini sometimes does anyway — so
   // one guard failure earns ONE retry with a correction note naming
@@ -1180,7 +1200,9 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
   try {
     return applySourceLanguageGuard(out, texts, settings, 'gemini');
   } catch (e) {
-    if (e && e.guardFailure && !guardRetried) {
+    // TEMPORARY (James, 2026-11-26): second chance OFF — see
+    // GEMINI_SECOND_CHANCE_ENABLED. Re-enable by setting it true.
+    if (e && e.guardFailure && !guardRetried && GEMINI_SECOND_CHANCE_ENABLED) {
       const rem = remainingMs(deadlineAt);
       if (rem <= GEMINI_GUARD_RETRY_MIN_MS) {
         tlog(`gemini: guard failed (${e.guardWhy}) but only ${Math.max(0, Math.round(rem))}ms remain — failing over instead of retrying`);
