@@ -400,6 +400,7 @@
       uid: ensureImgUid(im),
       src: wasTranslated ? im.dataset.ctOriginal : cur,
       w: Math.round(r.width), h: Math.round(r.height),
+      nw: im.naturalWidth || 0, nh: im.naturalHeight || 0,
       translated: wasTranslated,
     };
   }
@@ -659,8 +660,20 @@
       uid: ensureImgUid(im),
       src: wasTranslated ? im.dataset.ctOriginal : cur,
       w: Math.round(im.getBoundingClientRect().width), h: Math.round(im.getBoundingClientRect().height),
+      nw: im.naturalWidth || 0, nh: im.naturalHeight || 0,
       translated: wasTranslated,
     };
+  }
+
+  // Name a page-fetch HTTP failure distinctly, so the worker can tell a
+  // dead link (404), a rate limit (429) and a permanent rejection
+  // (400/413/414/418) apart from a generic failure — and never prompts
+  // for a grant for any of them.
+  function pageFetchHttpMessage(status) {
+    if (status === 404) return 'this image link no longer exists on the server (HTTP 404) — reload the page for a fresh link';
+    if (status === 429) return 'image host is rate-limiting (HTTP 429), retry later';
+    if (status === 400 || status === 405 || status === 413 || status === 414 || status === 418) return `server rejected this image URL (HTTP ${status})`;
+    return 'HTTP ' + status;
   }
 
   // Canvas capture for one <img> element. Throws (tainted canvas) when the
@@ -1665,9 +1678,25 @@
           // credentials:'include' — send the page's cookies like its own
           // <img> does. Cookie-gated image hosts 403 without them.
           const res = await fetch(msg.srcUrl, { credentials: 'include' });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          const blob = await res.blob();
+          if (!res.ok) throw new Error(pageFetchHttpMessage(res.status));
+          // Content-Type before decode: an HTML/JSON error page served
+          // as 200 fails here, not at decode, with its real type named.
+          const ctype = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+          if (ctype && !/^image\//.test(ctype) && ctype !== 'application/octet-stream') {
+            throw new Error(`server returned ${ctype}, not an image`);
+          }
+          const expectedLen = Number(res.headers.get('content-length') || 0) || null;
+          let blob = await res.blob();
           if (!blob.size) throw new Error('empty response body');
+          if (expectedLen && blob.size < expectedLen) {
+            // Truncated body: retry the same tier once, then report the
+            // shortfall instead of decoding a partial image.
+            const res2 = await fetch(msg.srcUrl, { credentials: 'include' });
+            if (!res2.ok) throw new Error(pageFetchHttpMessage(res2.status));
+            blob = await res2.blob();
+            if (!blob.size) throw new Error('empty response body');
+            if (blob.size < expectedLen) throw new Error(`truncated response body (expected ${expectedLen} got ${blob.size})`);
+          }
           const dataUrl = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
@@ -1675,7 +1704,19 @@
             reader.readAsDataURL(blob);
           });
           sendResponse({ ok: true, dataUrl });
-        } catch (e) { sendResponse({ ok: false, error: String((e && e.message) || e).slice(0, 120) }); }
+        } catch (e) {
+          // A fetch TypeError with no status is the expected CORS
+          // signature in the page: the host blocks cross-origin reads.
+          // Name it so the worker does not mistake it for a missing
+          // grant; offline is named too. Guard on the message so a
+          // TypeError from elsewhere is not misread as a network failure.
+          if (e instanceof TypeError && /failed to fetch|networkerror|network error|load failed/i.test(String((e && e.message) || ''))) {
+            const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+            sendResponse({ ok: false, error: offline ? 'could not reach the image host — check the connection' : 'network/CORS failure (no HTTP status): ' + String(e.message).slice(0, 60) });
+            return;
+          }
+          sendResponse({ ok: false, error: String((e && e.message) || e).slice(0, 120) });
+        }
       })();
       return true;
     }

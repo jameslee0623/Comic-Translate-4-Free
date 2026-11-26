@@ -597,6 +597,75 @@ async function dataUrlToRGBA(dataUrl, maxPixels = CAPTURE_MAX_PIXELS) {
   return bitmapToRGBA(await createImageBitmap(blob), maxPixels);
 }
 
+// Parse a Retry-After header value (seconds or HTTP-date) into ms, or
+// null when absent/unparseable. Local copy of the translators.js
+// retryAfterMs logic: that helper is not exported, and translators.js
+// belongs to another worker — do not import it here. Used for image-host
+// 429s only.
+function parseRetryAfterMs(headers) {
+  if (!headers || typeof headers.get !== 'function') return null;
+  const v = headers.get('Retry-After');
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const secs = Number(s);
+  if (Number.isFinite(secs) && secs >= 0) return secs * 1000;
+  const t = Date.parse(s);
+  if (Number.isFinite(t)) return Math.max(0, t - Date.now());
+  return null;
+}
+
+// Image hosts that answered 429, in memory only: hostname -> timestamp ms
+// until which the host is rate-limited. Set only from a real 429 (until
+// its Retry-After, or the 5 s backoff when none was sent). Never set for
+// 5xx, timeouts or decode failures.
+const imageHostRateLimited = new Map();
+
+// Name a fetch TypeError (no HTTP status exists): offline is offline, the
+// rest is a network/CORS failure — never a grant problem, and never a
+// server refusal.
+function networkOrCorsError(e) {
+  const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+  const msg = offline
+    ? 'could not reach the image host — check the connection'
+    : 'network/CORS failure (no HTTP status)';
+  const err = new Error(msg + (e && e.message ? ': ' + String(e.message).slice(0, 60) : ''));
+  err.isNetworkError = true;
+  return err;
+}
+
+// Build the error for a non-2xx image response, with the HTTP status on
+// it (.status) so callers can branch on 404/429 without parsing text.
+// Reads a bounded slice of the error body (first 200 chars, tags
+// stripped) into the DIAG log only — never shown to the user, and never
+// the full page. A Cloudflare challenge page, a JSON error and a plain
+// 404 page then read differently in the log instead of all being bare
+// "HTTP <n>".
+async function imageHttpError(res) {
+  const st = res.status;
+  let snippet = '';
+  try {
+    const text = await res.text();
+    if (text) {
+      const isHtml = /<!doctype html|<html/i.test(text.slice(0, 200));
+      snippet = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (st >= 500 && st < 600 && isHtml) snippet = 'server error page: ' + snippet;
+    }
+  } catch { /* body unreadable — status alone is enough */ }
+  const cfRay = res.headers.get('cf-ray') || '';
+  const ra = res.headers.get('retry-after');
+  if (snippet || cfRay || ra) diagPush(`worker-fetch: HTTP ${st}${cfRay ? ' cf-ray ' + cfRay : ''}${ra ? ' retry-after ' + ra : ''}${snippet ? ' body: ' + snippet.slice(0, 200) : ''}`);
+  let msg;
+  if (st === 404) msg = 'this image link no longer exists on the server (HTTP 404) — reload the page for a fresh link';
+  else if (st === 429) msg = 'image host is rate-limiting (HTTP 429), retry later';
+  else if (st === 401 || st === 403) msg = 'image download failed: HTTP ' + st;
+  else if (st >= 400 && st < 500) msg = `server rejected this image URL (HTTP ${st})`;
+  else msg = 'image download failed: HTTP ' + st;
+  const e = new Error(msg);
+  e.status = st;
+  return e;
+}
+
 // Direct download of the page image (needs the host permission the popup
 // requests on click). Full resolution, no viewport limits.
 // Referrer strategy: try WITHOUT a Referer first, then with the page origin.
@@ -637,29 +706,154 @@ async function fetchImagePixels(url, referrer) {
   // 30s per attempt on any tier. No event exists: fetch has no progress
   // or stall signal, so an AbortController timer is the only way to bound it.
   const CAPTURE_FETCH_TIMEOUT_MS = 30000;
+  // 429 in-run wait cap (5 s): a Retry-After at or under this is waited
+  // out once, then the same attempt is retried once. A longer Retry-After
+  // fails fast instead of stalling the run — the host is marked
+  // rate-limited until that time. With no Retry-After, one 5 s backoff
+  // then fail (no retry). 5 s is unverified (audit proposal), not a
+  // measured recovery time.
+  const RATE_LIMIT_WAIT_CAP_MS = 5000;
+  // 5xx/408 retry wait (2 s — inside the audit's 2–5 s range; the exact
+  // value is unverified, not measured).
+  const TRANSIENT_RETRY_WAIT_MS = 2000;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
   let lastErr = new Error('image download failed');
-  for (const init of tries) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, CAPTURE_FETCH_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, { ...init, signal: ctrl.signal });
-      if (!res.ok) {
-        lastErr = new Error('image download failed: HTTP ' + res.status);
-        if (res.status !== 403) break;
-        continue;
+  // A host that rate-limited us recently fails fast without another
+  // request — retrying into a 429 makes the limit worse.
+  const rateHost = hostOf(url) || '';
+  const limitedUntil = rateHost ? imageHostRateLimited.get(rateHost) : 0;
+  if (limitedUntil && Date.now() < limitedUntil) {
+    throw Object.assign(new Error('image host is rate-limiting (HTTP 429), retry later'), { status: 429 });
+  }
+  for (let vi = 0; vi < tries.length; vi++) {
+    const init = tries[vi];
+    // One same-variant retry for transient failures (5xx/408, a 429 with
+    // a short Retry-After, a truncated body, a network TypeError). The
+    // flag is per referrer variant: the with-Referer variant is a
+    // different request, not a retry of the no-Referer one.
+    let retried = false;
+    let fatal = null;
+    while (true) {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, CAPTURE_FETCH_TIMEOUT_MS);
+      try {
+        const res = await fetch(url, { ...init, signal: ctrl.signal });
+        // Redirect: log only. Real reader CDNs redirect across
+        // subdomains, so a cross-origin redirect is not refused here
+        // (unverified whether any host needs blocking — log, do not block).
+        if (res.url && res.url !== url) diagPush(`worker-fetch: redirected ${url.slice(0, 80)} -> ${res.url.slice(0, 120)}`);
+        if (!res.ok) {
+          lastErr = await imageHttpError(res);
+          const st = res.status;
+          if (st === 429) {
+            const ra = parseRetryAfterMs(res.headers);
+            if (ra != null && ra <= RATE_LIMIT_WAIT_CAP_MS && !retried) {
+              retried = true;
+              diagPush(`worker-fetch: HTTP 429, retry-after ${Math.round(ra / 1000)}s — waiting once, then retrying`);
+              await wait(ra);
+              continue;
+            }
+            if (ra != null) {
+              if (rateHost) imageHostRateLimited.set(rateHost, Date.now() + ra);
+              diagPush(`worker-fetch: HTTP 429, retry-after ${Math.round(ra / 1000)}s exceeds the 5s in-run cap — failing fast, host marked rate-limited`);
+            } else {
+              diagPush('worker-fetch: HTTP 429 with no Retry-After — one 5s backoff, then failing');
+              await wait(5000);
+              if (rateHost) imageHostRateLimited.set(rateHost, Date.now() + 5000);
+            }
+            fatal = lastErr;
+            break;
+          }
+          if (st === 408 || (st >= 500 && st < 600)) {
+            if (!retried) {
+              retried = true;
+              diagPush(`worker-fetch: HTTP ${st} — retrying once after ${TRANSIENT_RETRY_WAIT_MS / 1000}s`);
+              await wait(TRANSIENT_RETRY_WAIT_MS);
+              continue;
+            }
+            // Retried once already: fall through to the next tier (the
+            // error path / fallback tab), not the other referrer variant
+            // — a server error will not clear with a different Referer.
+            fatal = lastErr;
+            break;
+          }
+          // 401 gets the same second referrer attempt as 403 (a
+          // missing/incorrect Referer or cookie can cause 401 on some
+          // hosts — unverified, so the attempt is cheap and safe).
+          if (st === 401 || st === 403) break;
+          // Permanent 4xx (400/404/414/...) and anything else: no retry,
+          // no second referrer attempt.
+          fatal = lastErr;
+          break;
+        }
+        // 2xx: check Content-Type before spending the decode budget — an
+        // HTML/JSON error page served as 200 fails here, not at decode.
+        const ctype = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        if (ctype && !/^image\//.test(ctype) && ctype !== 'application/octet-stream') {
+          fatal = Object.assign(new Error(`server returned ${ctype}, not an image`), { status: res.status });
+          break;
+        }
+        const expectedLen = Number(res.headers.get('content-length') || 0) || null;
+        // The body read shares the same 30s timeout: a server that sends
+        // headers then stalls mid-body used to hang the run at
+        // "capture-worker-fetch" forever — the old code cleared the timer
+        // as soon as headers arrived, so res.blob() had no timeout at all.
+        // Aborting the signal rejects the in-flight blob() read.
+        const blob = await res.blob();
+        if (!blob.size) {
+          fatal = Object.assign(new Error('empty response body'), { status: res.status });
+          break;
+        }
+        if (expectedLen && blob.size < expectedLen) {
+          diagPush(`worker-fetch: truncated body, expected ${expectedLen} got ${blob.size} for ${url.slice(0, 80)}`);
+          if (!retried) { retried = true; continue; }
+          fatal = Object.assign(new Error(`truncated response body (expected ${expectedLen} got ${blob.size})`), { status: res.status });
+          break;
+        }
+        return { ...bitmapToRGBA(await createImageBitmap(blob)), bytes: blob.size };
+      } catch (e) {
+        if (e && e.name === 'AbortError') {
+          // Timeout of try 1 must NOT forfeit try 2 (a stalled
+          // no-Referer request must not lose the with-Referer attempt):
+          // break to the next referrer variant instead of throwing.
+          lastErr = Object.assign(new Error('image download timed out after 30s'), { timedOut: true });
+          break;
+        }
+        // A fetch TypeError is a network/CORS failure (no HTTP status).
+        // Guard on the message so a TypeError from decode is not
+        // misread as a network failure: Chrome says "Failed to fetch",
+        // Firefox "NetworkError when attempting to fetch resource.",
+        // Safari "Load failed".
+        if (e instanceof TypeError && /failed to fetch|networkerror|network error|load failed/i.test(String((e && e.message) || ''))) {
+          if (!retried) {
+            retried = true;
+            diagPush('worker-fetch: network/CORS failure (no HTTP status) — retrying once after 1s');
+            await wait(1000);
+            continue;
+          }
+          // Retried once already: fail. The other referrer variant
+          // would hit the same network/CORS failure, so it is not tried.
+          lastErr = networkOrCorsError(e);
+          fatal = lastErr;
+          break;
+        }
+        // Anything else (decode failure, or a terminal error thrown
+        // above): fail the fetch. A decode/empty-body failure after
+        // bytes arrived never marks the host dead.
+        lastErr = e;
+        fatal = e;
+        break;
+      } finally {
+        clearTimeout(timer);
       }
-      // The body read shares the same 30s timeout: a server that sends
-      // headers then stalls mid-body used to hang the run at
-      // "capture-worker-fetch" forever — the old code cleared the timer
-      // as soon as headers arrived, so res.blob() had no timeout at all.
-      // Aborting the signal rejects the in-flight blob() read.
-      const blob = await res.blob();
-      return { ...bitmapToRGBA(await createImageBitmap(blob)), bytes: blob.size };
-    } catch (e) {
-      if (e && e.name === 'AbortError') { lastErr = new Error('image download timed out after 30s'); break; }
-      lastErr = e; break;
-    } finally {
-      clearTimeout(timer);
+    }
+    if (fatal) throw fatal;
+    // 401/403 only: wait 1 s before the second (with-Referer) attempt —
+    // a WAF that just refused the no-Referer request may still be
+    // deciding. This wait sits AFTER try 1 already failed, so the common
+    // path (try 1 succeeds) never reaches it and is not slowed.
+    if (vi + 1 < tries.length && lastErr && (lastErr.status === 401 || lastErr.status === 403)) {
+      await wait(1000);
     }
   }
   throw lastErr;
@@ -768,9 +962,95 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
 // capture re-learns it).
 const pageFetchDead = new Map(); // hostname -> timestamp ms of last page-fetch failure
 const PAGE_FETCH_DEAD_MS = 30 * 60 * 1000;
+// Short skip (5 min) for transient page-fetch failures (429/5xx/timeout).
+// 5 min is unverified — a judgment call, not a measured recovery time —
+// so it is short on purpose: a transient failure must not poison the
+// host for 30 min.
+const pageFetchDeadShort = new Map(); // hostname -> timestamp ms
+const PAGE_FETCH_DEAD_SHORT_MS = 5 * 60 * 1000;
+// Consecutive same-status streak per host: one 404 does not poison the
+// host, two in a row does (the "repeated same-status failure" rule).
+const pageFetchFailStreak = new Map(); // hostname -> { status, n }
+
+// Classify a page-fetch failure before deciding whether the host is
+// skipped next time. Only a CORS/TypeError failure (the expected
+// signature of a CORS-blocked host) or a repeated same-status failure
+// earns the 30-min skip; transient 429/5xx/timeout earns a short 5-min
+// skip; a decode/empty-body/wrong-type failure after bytes arrived never
+// marks the host dead. Logs the reason either way.
+function markPageFetchDead(host, errText) {
+  const text = String(errText || '');
+  const m = /HTTP (\d{3})/.exec(text);
+  const status = m ? Number(m[1]) : 0;
+  if (/could not reach the image host/i.test(text)) {
+    diagPush(`page-fetch: host ${host} not marked dead (offline/network, not a host block)`);
+    return;
+  }
+  if (/Failed to fetch|network\/CORS failure|TypeError/i.test(text)) {
+    pageFetchDead.set(host, Date.now());
+    diagPush(`page-fetch: host ${host} marked dead for 30 min (CORS/TypeError failure)`);
+    return;
+  }
+  if (status === 429 || (status >= 500 && status < 600) || /timed out after 30s/.test(text)) {
+    pageFetchDeadShort.set(host, Date.now());
+    diagPush(`page-fetch: host ${host} skipped for 5 min (transient ${status || 'timeout'})`);
+    return;
+  }
+  if (status) {
+    const prev = pageFetchFailStreak.get(host);
+    const n = (prev && prev.status === status) ? prev.n + 1 : 1;
+    pageFetchFailStreak.set(host, { status, n });
+    if (n >= 2) {
+      pageFetchDead.set(host, Date.now());
+      diagPush(`page-fetch: host ${host} marked dead for 30 min (repeated HTTP ${status})`);
+    }
+    return;
+  }
+  // Decode / empty-body / wrong-type failures after bytes arrived: never
+  // mark the host dead.
+  diagPush(`page-fetch: host ${host} not marked dead (${text.slice(0, 60)})`);
+}
+
+// Per-image overall cap across capture tiers (120 s). 120 s is
+// unverified — a judgment call, not a measured latency — it bounds the
+// worst case (30 s page-canvas + 30 s page-fetch + 60 s worker-fetch)
+// so one picture cannot stall the run for ~250 s. Checked between tiers
+// only; an in-flight tier is not aborted by it. The 30 s per-attempt
+// timers are unchanged (James's design).
+const LOAD_IMAGE_OVERALL_CAP_MS = 120000;
+
+// Decoded-dimension sanity: after a network decode, reject a picture
+// whose decoded size disagrees wildly with the size the page reported
+// for it (e.g. a 1x1 tracking pixel served instead of the large picture
+// the page shows). Only applies when the page reported a real (non-zero)
+// size. Bitmaps are downscaled to 6.5 MP first, so the comparison uses
+// ratios, not absolute pixels: a huge original legitimately decodes
+// smaller. No SVG special case (unverified — see audit). Returns an
+// error string, or null when the sizes agree.
+function decodedSizeMismatch(w, h, info) {
+  const ew = (info && (info.nw || info.w)) || 0;
+  const eh = (info && (info.nh || info.h)) || 0;
+  if (!ew || !eh) return null;
+  const expMax = Math.max(ew, eh);
+  const decMax = Math.max(w, h);
+  if (expMax < 120 || decMax === 0) return null;
+  const areaRatio = (w * h) / (ew * eh);
+  if (decMax <= 2 || (decMax < expMax * 0.1 && areaRatio < 0.001)) {
+    return `server returned a different image than the page shows (decoded ${w}x${h}, page shows ${ew}x${eh})`;
+  }
+  return null;
+}
+
 async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {}) {
   const failures = [];
   const attempts = [];
+  const capStart = performance.now();
+  const capExceeded = () => (performance.now() - capStart) >= LOAD_IMAGE_OVERALL_CAP_MS;
+  // Name the tier that consumed the budget, for the log.
+  const capFailure = () => {
+    const worst = attempts.reduce((a, b) => ((b.ms || 0) > (a.ms || 0) ? b : a), { tier: 'page-canvas', ms: 0 });
+    return `overall 120s capture budget exhausted (consumed mostly by ${worst.tier}, ${worst.ms}ms)`;
+  };
   if (!info.translated) {
     const a0 = performance.now();
     if (opts.runId) persistDiagStage(opts.runId, 'capture-page-canvas');
@@ -811,8 +1091,13 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   let fetchHost = '';
   try { fetchHost = new URL(info.src).hostname.toLowerCase(); } catch {}
   const deadSince = fetchHost ? pageFetchDead.get(fetchHost) : 0;
-  const skipPageFetch = !!(deadSince && (Date.now() - deadSince) < PAGE_FETCH_DEAD_MS);
-  if (skipPageFetch) {
+  const deadShortSince = fetchHost ? pageFetchDeadShort.get(fetchHost) : 0;
+  const skipPageFetch = !!(deadSince && (Date.now() - deadSince) < PAGE_FETCH_DEAD_MS) ||
+    !!(deadShortSince && (Date.now() - deadShortSince) < PAGE_FETCH_DEAD_SHORT_MS);
+  if (capExceeded()) {
+    failures.push('page download skipped (' + capFailure() + ')');
+    attempts.push({ tier: 'page-fetch', ms: 0, ok: false, error: 'page download skipped (overall capture budget exhausted)' });
+  } else if (skipPageFetch) {
     failures.push('page download skipped (host failed recently)');
     attempts.push({ tier: 'page-fetch', ms: 0, ok: false, error: 'page download skipped (host failed recently)' });
   } else {
@@ -830,26 +1115,47 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     ]);
     if (f && f.ok && typeof f.dataUrl === 'string' && f.dataUrl.startsWith('data:')) {
       const { rgba, w, h } = await dataUrlToRGBA(f.dataUrl);
-      const b64 = f.dataUrl.split(',')[1] || '';
-      // The host works now — clear any earlier failure so it is not skipped.
-      if (fetchHost) pageFetchDead.delete(fetchHost);
-      attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: true, bytes: Math.round(b64.length * 3 / 4) });
-      return { rgba, w, h, mode: 'replace', tier: 'page-fetch', attempts };
+      const mismatch = decodedSizeMismatch(w, h, info);
+      if (mismatch) {
+        failures.push('page download: ' + mismatch);
+        diagPush('capture: ' + mismatch + ' (page-fetch)');
+      } else {
+        const b64 = f.dataUrl.split(',')[1] || '';
+        // The host works now — clear any earlier failure so it is not skipped.
+        if (fetchHost) { pageFetchDead.delete(fetchHost); pageFetchDeadShort.delete(fetchHost); pageFetchFailStreak.delete(fetchHost); }
+        attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: true, bytes: Math.round(b64.length * 3 / 4) });
+        return { rgba, w, h, mode: 'replace', tier: 'page-fetch', attempts };
+      }
+    } else {
+      failures.push('page download: ' + String((f && f.error) || 'no bytes').slice(0, 100));
     }
-    failures.push('page download: ' + String((f && f.error) || 'no bytes').slice(0, 100));
   } catch (e) { failures.push('page download: ' + String((e && e.message) || e).slice(0, 100)); }
   attempts.push({ tier: 'page-fetch', ms: Math.round(performance.now() - b0), ok: false, error: failures[failures.length - 1] });
-  // Remember the failure so the next capture from this host skips it.
-  if (fetchHost) pageFetchDead.set(fetchHost, Date.now());
+  // Remember the failure so the next capture from this host skips it —
+  // but only for the failures that justify a skip (see markPageFetchDead):
+  // a CORS/TypeError failure, a repeated same-status failure, or (short)
+  // a transient 429/5xx/timeout. Never a decode/empty-body failure.
+  if (fetchHost) markPageFetchDead(fetchHost, failures[failures.length - 1]);
   }
   const c0 = performance.now();
   if (opts.runId) persistDiagStage(opts.runId, 'capture-worker-fetch');
+  if (capExceeded()) {
+    failures.push('download skipped (' + capFailure() + ')');
+    attempts.push({ tier: 'worker-fetch', ms: 0, ok: false, error: 'download skipped (overall capture budget exhausted)' });
+  } else {
   try {
     const { rgba, w, h, bytes } = await fetchImagePixels(info.src, tabUrl);
-    attempts.push({ tier: 'worker-fetch', ms: Math.round(performance.now() - c0), ok: true, bytes });
-    return { rgba, w, h, mode: 'replace', tier: 'worker-fetch', attempts };
+    const mismatch = decodedSizeMismatch(w, h, info);
+    if (mismatch) {
+      failures.push('download: ' + mismatch);
+      diagPush('capture: ' + mismatch + ' (worker-fetch)');
+    } else {
+      attempts.push({ tier: 'worker-fetch', ms: Math.round(performance.now() - c0), ok: true, bytes });
+      return { rgba, w, h, mode: 'replace', tier: 'worker-fetch', attempts };
+    }
   } catch (e) { failures.push('download: ' + String((e && e.message) || e).slice(0, 120)); }
   attempts.push({ tier: 'worker-fetch', ms: Math.round(performance.now() - c0), ok: false, error: failures[failures.length - 1] });
+  }
   let imgHost = '';
   try { imgHost = new URL(info.src).hostname; } catch { /* keep it empty */ }
   // Name the base domain, not the exact host: on sites with random per-visit
@@ -858,13 +1164,25 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   const imgHostLabel = imgHost ? displayHost(imgHost) : '';
   // An HTTP status means the request went out — access was granted and the
   // SERVER refused it. Don't send the user on another grant-access errand.
-  const serverRefused = /HTTP (401|403)/.test(failures.join(';'));
+  const failText = failures.join('; ');
+  const serverRefused = /HTTP (401|403)/.test(failText);
+  // Distinct failures that are NOT permission problems, so no grant
+  // prompt: a dead link (404), a rate limit (429), a permanent rejection
+  // (400/413/414/418/...), a CORS/network failure with no HTTP status, or
+  // being offline. A 5xx or a timeout is not a permission problem either.
+  const notFound = /HTTP 404/.test(failText);
+  const rateLimited = /HTTP 429/.test(failText);
+  const permanent4xx = /HTTP (400|405|413|414|418)/.test(failText);
+  const corsFailure = /network\/CORS failure|Failed to fetch/i.test(failText);
+  const offlineFailure = /could not reach the image host/i.test(failText);
+  const serverError = /HTTP 5\d\d/.test(failText);
+  const timedOut = /timed out after 30s/.test(failText);
   // A revisit of an already-translated page downloads the ORIGINAL url the
   // content script stashed. Some hosts hand out expiring image links
   // (keystamp=...), so on revisit that saved link is dead — the fix is a
   // page reload for a fresh link, not another access grant.
   const staleOriginal = !!info.translated;
-  const grantable = !serverRefused && !!imgHost && !staleOriginal;
+  const grantable = !serverRefused && !notFound && !rateLimited && !permanent4xx && !corsFailure && !offlineFailure && !serverError && !timedOut && !!imgHost && !staleOriginal;
   // For auto-translate 403s (not manual sends — those trigger the automatic
   // background-tab fallback), lead with the bypass: right-click the picture
   // and use "Send to Comic Translate 4 Free". Localized via i18n (the menu
@@ -875,23 +1193,44 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
         || 'Tip: right-click the picture and choose "Send to Comic Translate 4 Free" to bypass this block.')
       + '\n\n'
     : '';
+  const explanation =
+    notFound
+      ? `This image link no longer exists on the server (HTTP 404) — reload the page for a fresh link.`
+      : rateLimited
+        ? `The image host is rate-limiting downloads (HTTP 429) — wait a bit and retry later.`
+        : permanent4xx
+          ? `The image server rejected this image URL — reload the page for a fresh link and try again.`
+          : offlineFailure
+            ? `Could not reach the image host — check the connection and try again.`
+            : corsFailure
+              ? `The download was blocked before it got an answer (cross-origin restrictions or a network failure), not by a missing permission. Reload the page and try again; if it persists, the host may block automated downloads.`
+              : serverError
+                ? `The image server returned an error — wait a bit and retry later.`
+                : timedOut
+                  ? `The image download timed out — the server may be slow; wait a bit and retry.`
+                  : serverRefused
+                    ? `The image server${imgHostLabel ? ' (' + imgHostLabel + ')' : ''} refused the download${staleOriginal ? ' — the saved image link has likely expired' : ' even though access was granted'}. The page's own download attempt was blocked before it got an answer (cross-origin restrictions), and the background download got an HTTP refusal — this points to bot protection (e.g. Cloudflare) telling our automated download apart from the page's own image load, rather than a permission problem. This can be intermittent (works sometimes, blocked other times). Reload the page and try again; if it persists, wait a bit and retry — repeated attempts can trigger rate limiting.`
+                    : imgHost
+                      ? staleOriginal
+                        ? `The picture lives on ${imgHostLabel} but its saved image link no longer loads (these links expire, or the access grant was revoked) — reload the page for a fresh link and translate again; if the popup offers it, grant access to ${imgHostLabel} first.`
+                        : `The picture is hosted on ${imgHostLabel} — click "Allow ${imgHostLabel}" in the notice on the page, or grant it from the extension popup ("Grant access to ${imgHostLabel}").`
+                      : `If the picture is hosted on another site, open the extension popup on this page and click "Grant access".`;
   const err = new Error(
     bypassTip +
     `couldn't read the page's picture (${failures.join('; ')}). ` +
-    (serverRefused
-      ? `The image server${imgHostLabel ? ' (' + imgHostLabel + ')' : ''} refused the download${staleOriginal ? ' — the saved image link has likely expired' : ' even though access was granted'}. The page's own download attempt was blocked before it got an answer (cross-origin restrictions), and the background download got an HTTP refusal — this points to bot protection (e.g. Cloudflare) telling our automated download apart from the page's own image load, rather than a permission problem. This can be intermittent (works sometimes, blocked other times). Reload the page and try again; if it persists, wait a bit and retry — repeated attempts can trigger rate limiting.`
-      : imgHost
-        ? staleOriginal
-          ? `The picture lives on ${imgHostLabel} but its saved image link no longer loads (these links expire, or the access grant was revoked) — reload the page for a fresh link and translate again; if the popup offers it, grant access to ${imgHostLabel} first.`
-          : `The picture is hosted on ${imgHostLabel} — click "Allow ${imgHostLabel}" in the notice on the page, or grant it from the extension popup ("Grant access to ${imgHostLabel}").`
-        : `If the picture is hosted on another site, open the extension popup on this page and click "Grant access".`));
+    explanation);
   // The pill renders an "Allow <host>" button for this case (see broadcastError).
   if (grantable) err.grantHost = imgHost;
-  // A server refusal (403) can be worked around by opening the image URL
+  // A server refusal (401/403) can be worked around by opening the image URL
   // directly in a tab: there it's same-origin, so the canvas tier reads it
   // with no download. The manual-send handler uses this for an automatic
-  // background-tab fallback.
-  if (serverRefused && info.src) err.fallbackUrl = info.src;
+  // background-tab fallback. A timeout of both worker-fetch attempts, or a
+  // 5xx after its retry, falls through to the tab the same way (a tab load
+  // uses a different network path). Never for 404 (dead link) or 429
+  // (the tab would hit the same rate limit).
+  const workerTimedOut = /download: image download timed out after 30s/.test(failText);
+  const workerServerError = /download: image download failed: HTTP 5\d\d/.test(failText);
+  if ((serverRefused || workerTimedOut || workerServerError) && info.src) err.fallbackUrl = info.src;
   throw err;
 }
 
@@ -2265,7 +2604,27 @@ async function runPretranslate(job, sourceTabId, settings) {
     const to = setTimeout(() => ctrl.abort(), 15000);
     try {
       const res = await fetch(nextUrl, { credentials: 'include', signal: ctrl.signal, headers: { Accept: 'text/html,*/*' } });
-      if (!res.ok) throw new Error('next page fetch failed: HTTP ' + res.status);
+      if (!res.ok) {
+        // 429: read Retry-After and score the learned rule as a miss
+        // WITHOUT retrying immediately — the catch below scores the miss;
+        // retrying into a rate limit now would make it worse.
+        if (res.status === 429) {
+          const ra = parseRetryAfterMs(res.headers);
+          diagPush(`pre-translate: next page rate-limited (HTTP 429)${ra != null ? ', retry after ' + Math.round(ra / 1000) + 's' : ', no Retry-After'} — scoring a miss, not retrying`);
+          throw new Error('next page fetch rate-limited: HTTP 429');
+        }
+        // 404/410: the next page does not exist — a miss for the learned
+        // rule, not a generic failure.
+        if (res.status === 404 || res.status === 410) {
+          diagPush(`pre-translate: next page does not exist (HTTP ${res.status}) — scoring a miss`);
+          throw new Error('next page does not exist: HTTP ' + res.status);
+        }
+        throw new Error('next page fetch failed: HTTP ' + res.status);
+      }
+      // Content-Type: an HTML error page served as 200 must not be
+      // parsed as the next page.
+      const pageCtype = (res.headers.get('content-type') || '').toLowerCase();
+      if (pageCtype && !pageCtype.includes('text/html')) throw new Error('next page returned ' + pageCtype.split(';')[0].trim() + ', not HTML');
       const len = Number(res.headers.get('content-length') || 0);
       if (len > 5 * 1024 * 1024) throw new Error('next page too big');
       html = await res.text();
@@ -2335,6 +2694,13 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     try {
       ({ rgba, w, h } = await fetchImagePixels(imageUrl, pageUrl));
     } catch (e) {
+      // A dead link (404) or a rate-limited host (429) must not open a
+      // background tab: the tab would hit the same dead/rate-limited URL.
+      // Skip the candidate instead.
+      if (e && (e.status === 404 || e.status === 429)) {
+        diagPush('pre-translate: picture download failed, skipping (' + (e.status === 404 ? 'image link no longer exists, HTTP 404' : 'image host rate-limiting, HTTP 429') + '): ' + imageUrl.slice(0, 80));
+        return;
+      }
       try {
         ({ rgba, w, h } = await fallbackCaptureViaTab(sourceTabId, imageUrl, true));
         diagPush('pre-translate: worker-fetch blocked, read via background tab');
@@ -4334,6 +4700,12 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
     diagPush(`background-tab read failed (attempt ${attemptNo}): image ${imgHost}${imgPath} tab ${tabHost}${tabPath} err ${String((e && e.message) || e).slice(0, 120)}`);
   };
   const isMissingHost = (e) => /Missing host permission for the tab/i.test(String((e && e.message) || e));
+  // Label for an error-page tab URL: host+path when there is one (a
+  // server error page), else the whole URL (about:neterror has no host).
+  const errorPageLabel = (u) => {
+    try { const p = new URL(u); if (p.host) return p.host + p.pathname; } catch {}
+    return String(u).slice(0, 120);
+  };
   // One attempt: open the image in a background tab, wait for the picture
   // to load, inject the content script and read the pixels.
   const attempt = async () => {
@@ -4385,7 +4757,8 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
           if (u && u !== 'about:blank') {
             // Error page (about:neterror, …): the load already failed, it
             // will never reach the picture — fail at once with the real address.
-            const e = new Error('Missing host permission for the tab');
+            // This is an error page, not a missing permission: name it so.
+            const e = new Error('the image tab loaded an error page at ' + errorPageLabel(u));
             e.tabUrl = u;
             finishErr(e);
           }
@@ -4407,14 +4780,19 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
       let tabUrl = '';
       try { const t = await chrome.tabs.get(newTabId); tabUrl = (t && t.url) || ''; } catch {}
       if (tabUrl && !/^https?:\/\//i.test(tabUrl)) {
-        const e = new Error('Missing host permission for the tab');
+        const e = new Error('the image tab loaded an error page at ' + errorPageLabel(tabUrl));
         e.tabUrl = tabUrl;
         throw e;
       }
+      // Log the final tab URL against the requested URL: a redirect to a
+      // different host is diagnosable from the log even when the read
+      // itself succeeds (a redirect to an error page fails below, and
+      // logFailure names both URLs there too).
+      if (tabUrl && tabUrl !== imageUrl) diagPush(`background-tab: final tab URL ${tabUrl.slice(0, 120)} vs requested ${imageUrl.slice(0, 120)}`);
       await withTimeout(chrome.scripting.executeScript({ target: { tabId: newTabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
       const p = await withTimeout(chrome.tabs.sendMessage(newTabId, { type: 'ct/get-image-pixels', srcUrl: imageUrl }), DATA_TIMEOUT_MS, 'get-image-pixels');
       if (!p || !p.ok || typeof p.dataUrl !== 'string') {
-        throw new Error((p && p.error) || 'could not read the image');
+        throw new Error(((p && p.error) || 'could not read the image') + (tabUrl ? ` (tab showed ${tabUrl.slice(0, 120)})` : ''));
       }
       return await dataUrlToRGBA(p.dataUrl);
     } catch (e) {
