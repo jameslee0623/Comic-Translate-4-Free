@@ -15,7 +15,21 @@
   // lines, so this and the page-load listener can only fire once per
   // page. Top frame only: iframes must not start runs.
   if (window.top === window.self) {
-    try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+    // Prerender activation (2.4.2): Vivaldi (and Chrome) pre-load the
+    // next page in the background. This script runs while the document
+    // is still prerendered — the tab is not active, so the background
+    // skips the AUTO_START. When the user opens the page, the browser
+    // activates it (no reload, no 'complete', no fresh injection), so
+    // no trigger ever fires. Wait for the prerenderingchange event
+    // and send AUTO_START on activation. A normal load has
+    // document.prerendering false and sends at once.
+    if (document.prerendering) {
+      document.addEventListener('prerenderingchange', () => {
+        try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+      }, { once: true });
+    } else {
+      try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+    }
     // Same-document URL change (reader "next" via history.pushState):
     // the URL changes but the document never reloads, so there is no
     // tabs.onUpdated 'complete' and no fresh content-script injection.
