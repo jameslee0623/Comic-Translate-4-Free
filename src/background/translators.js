@@ -1762,11 +1762,23 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   // which was false because azureStillToCome was the literal false.
   // azureConsumed is KEPT: since the Google-primary failover (below) can
   // now try Azure once, a consumed Azure attempt is live again.
-  // PRIMARY CAP: deliberately NOT imposed here. The per-attempt timeout
-  // (15s) + backoff caps in the backend loops are the safe fix for
-  // uncapped retries; whether the primary should get only 20s of the
-  // 30s (leaving 10s for failover) is a design decision for James —
-  // .58 deliberately gave the primary the full 30s.
+  // PRIMARY CAP (James, 2026-11-26): the primary gets at most 15s of the
+  // 30s budget, so a dead primary cannot eat the whole budget and leave
+  // nothing for Google failover. 15s is half the 30s budget, leaving 15s
+  // for failover; measured healthy replies are 1-4s (Gemini 1-3s, Google
+  // ~4s a page), so 15s is generous for a working backend. The cap is
+  // enforced by the backend retry loops themselves: they stop when the
+  // deadline passes and throw a timeout error, which the catch below
+  // fails over to Google. The caller's signal is NOT aborted by this
+  // cap, so failover runs in normal (non-rescue) mode with the remaining
+  // 15s of the budget. (The old dead timer — it only fired when
+  // primaryCapMs < deadlineMs, false since azureStillToCome=false — is
+  // gone; this deadline IS the cap.)
+  // PRIMARY_CAP_MS: total wall time for the primary only, not per
+  // attempt (the per-attempt 15s timeout in the backend loops is
+  // separate). Capped by deadlineMs so a caller with a smaller budget
+  // keeps it.
+  const PRIMARY_CAP_MS = 15000;
   let azureConsumed = false;
   // translateBlocks state: the primary result, the last error (primary
   // or fallback, for the combined throw), and which backend actually
@@ -1781,7 +1793,7 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   // retry loops, so their per-attempt timers and backoff caps can be
   // computed against the same budget LM Studio gets as deadlineMs.
   const startDateMs = Date.now();
-  const primaryDeadlineAt = startDateMs + deadlineMs;
+  const primaryDeadlineAt = startDateMs + Math.min(PRIMARY_CAP_MS, deadlineMs);
   const runBackend = async (b, attemptDeadlineMs, sig = signal, deadlineAt = primaryDeadlineAt) => {
     if (b === 'azure') return await azure(texts, settings, sig, deadlineAt);
     if (b === 'gemini') return await gemini(texts, settings, sig, deadlineAt);
