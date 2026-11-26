@@ -405,6 +405,9 @@
   "rate_store": {
     "message": "⭐ स्टोर में रेट करें"
   },
+  "redeem_free_trial": {
+    "message": "🎁 निःशुल्क परीक्षण रिडीम करें"
+  },
   "support_modal_title": {
     "message": "Comic Translate 4 Free पसंद आ रहा है?"
   },

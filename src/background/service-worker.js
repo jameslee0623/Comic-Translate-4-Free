@@ -1,10 +1,10 @@
 // Background service worker: pipeline orchestration, model management,
 // translation APIs, capture, debug emission. ML inference itself lives in
 // the offscreen document; pure-JS stages (blocks, mask) run here.
-import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
+import { MSG, STORE_URLS, FEEDBACK_MAILTO } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings, updateSettingsField } from '../shared/settings.js';
-import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
+import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense, DODO_CHECKOUT_URL } from '../shared/pro.js';
 import { recordBenchRun } from '../shared/bench.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
@@ -2293,39 +2293,37 @@ ensureModelWatchdog();
 // a duplicate start.
 restoreModelDownloadInflight();
 
-// One-time support popup: after 50 translated pictures in total, offer the
-// store rating / support / feedback once, in the middle of the page.
-// Pure decision (extracted by support-popup-test.mjs): total counts every
-// picture a run finished, including cache hits and resumed runs; show is
-// true only the first time the total reaches the threshold.
+// One-time support popup: the FIRST time the user hits the 50/day free
+// limit, offer the store rating / free trial / feedback once, in the middle
+// of the page. One-time only — the flag is set only when the content script
+// confirms the modal actually rendered (it returns ok:true), so a render
+// failure does not lose the popup forever (2.2.12). Old installs may still
+// carry { translatedTotal, shown } from the old 50-lifetime trigger; the
+// `shown` flag is honoured either way, so a user who already saw the popup
+// once never sees it again.
 const SUPPORT_POPUP_KEY = 'ctSupportPopup';
-function supportPopupDecision(state, added) {
-  const total = (state && typeof state.translatedTotal === 'number' ? state.translatedTotal : 0) + (added || 0);
-  const shown = !!(state && state.shown);
-  return { total, show: !shown && total >= SUPPORT_POPUP_THRESHOLD };
-}
-async function maybeShowSupportPopup(tabId, translatedCount) {
-  if (!translatedCount) return;
-  let state = {};
+let supportPopupSendInFlight = false; // one send at a time — two tabs hitting the limit together must not both render
+async function maybeShowSupportPopupAtLimit(tabId) {
+  if (supportPopupSendInFlight) return;
+  let shown = false;
   try {
     const saved = await chrome.storage.local.get(SUPPORT_POPUP_KEY);
-    state = (saved && saved[SUPPORT_POPUP_KEY]) || {};
-  } catch { /* storage read failed — try again after the next run */ return; }
-  const { total, show } = supportPopupDecision(state, translatedCount);
-  let shown = !!state.shown;
-  if (show) {
-    try {
-      // Resolves only if the tab's content script is listening. If the tab
-      // is gone, shown stays false and the next run tries again — the user
-      // must actually see the popup once.
-      // 2.2.12: only mark shown when the content script confirms the modal
-      // actually rendered (it returns ok:true). The old code marked it on
-      // delivery, so a render failure lost the one-time popup forever.
-      const resp = await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT }), MSG_TIMEOUT_MS, 'show support');
-      if (resp && resp.ok) shown = true;
-    } catch { /* tab gone / no content script — retry after the next run */ }
-  }
-  try { await chrome.storage.local.set({ [SUPPORT_POPUP_KEY]: { translatedTotal: total, shown } }); } catch {}
+    shown = !!((saved && saved[SUPPORT_POPUP_KEY]) || {}).shown;
+  } catch { /* storage read failed — try again at the next limit hit */ return; }
+  if (shown) return;
+  supportPopupSendInFlight = true;
+  try {
+    // Resolves only if the tab's content script is listening. If the tab
+    // is gone, shown stays false and the next limit hit tries again — the
+    // user must actually see the popup once. The checkout URL rides along
+    // so the content script (a classic script, no imports) can turn the
+    // Rate button into a Redeem button without a second source of truth.
+    const resp = await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT, checkoutUrl: DODO_CHECKOUT_URL }), MSG_TIMEOUT_MS, 'show support');
+    if (resp && resp.ok) shown = true;
+  } catch { /* tab gone / no content script — retry at the next limit hit */ }
+  finally { supportPopupSendInFlight = false; }
+  if (!shown) return;
+  try { await chrome.storage.local.set({ [SUPPORT_POPUP_KEY]: { shown: true } }); } catch {}
 }
 
 // Shared page-cache lookup (normal runs + pre-translation): Tier 1 first,
@@ -4298,9 +4296,6 @@ async function runPipeline(tabId, opts = {}) {
         ...(opts.resume ? { resumed: true, alreadyDone } : {}),
       }), MSG_TIMEOUT_MS, 'run summary');
     } catch { /* content script may have been removed mid-run */ }
-    // One-time support popup (best-effort — a failure here must never fail
-    // the run, which already succeeded).
-    try { await maybeShowSupportPopup(tabId, doneImgs.length); } catch {}
     // Pre-translate the next page (best-effort, fire-and-forget — the job
     // handles its own errors and never touches this run's result).
     try { pretranslateNextPage(tabId, tabUrl, settings); } catch {}
@@ -4704,6 +4699,12 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
           error: 'Free limit reached: ' + gate.used + '/' + gate.limit + ' auto-translate images today. Get Pro in Settings for unlimited auto-translate.',
         }), MSG_TIMEOUT_MS, 'free limit notice');
       } catch {}
+      // First time the free limit is hit, show the one-time support popup
+      // (Rate it in store → Redeem free trial). Fire-and-forget: it must
+      // never block or slow this return, and it no-ops once the popup has
+      // been shown. The pre-translate limit skip does not trigger it — the
+      // user never sees that one, so a popup there would surprise them.
+      try { maybeShowSupportPopupAtLimit(tabId).catch(() => {}); } catch {}
       return;
     }
     if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
@@ -5201,10 +5202,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   // Support popup buttons (content script). Only the popup's own links may
   // be opened this way — anything else is refused, so a compromised page
-  // can never use this channel to open an arbitrary URL.
+  // can never use this channel to open an arbitrary URL. The checkout URL
+  // is allowlisted so the Redeem button can open the Pro checkout.
   if (msg && msg.type === MSG.OPEN_LINK && typeof msg.url === 'string') {
     const ok = msg.url === STORE_URLS.chrome || msg.url === STORE_URLS.firefox ||
-      msg.url === FEEDBACK_MAILTO;
+      msg.url === FEEDBACK_MAILTO || msg.url === DODO_CHECKOUT_URL;
     if (!ok) { sendResponse({ ok: false, error: 'not an allowed link' }); return false; }
     (async () => {
       try { await chrome.tabs.create({ url: msg.url, active: true }); sendResponse({ ok: true }); }

@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ Đánh giá trên cửa hàng"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Nhận dùng thử miễn phí"
+  },
   "support_modal_title": {
     "message": "Bạn có thích Comic Translate 4 Free không?"
   },

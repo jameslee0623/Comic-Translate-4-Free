@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ স্টোরে রেট করুন"
   },
+  "redeem_free_trial": {
+    "message": "🎁 বিনামূল্যে ট্রায়াল রিডিম করুন"
+  },
   "support_modal_title": {
     "message": "Comic Translate 4 Free কি ভালো লাগছে?"
   },

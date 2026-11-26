@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ Notez-la sur la boutique"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Profiter de l'essai gratuit"
+  },
   "support_modal_title": {
     "message": "Vous aimez Comic Translate 4 Free ?"
   },

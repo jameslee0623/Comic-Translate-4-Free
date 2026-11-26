@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ Evaluează-o în magazin"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Valorifică perioada gratuită de probă"
+  },
   "support_modal_title": {
     "message": "Îți place Comic Translate 4 Free?"
   },

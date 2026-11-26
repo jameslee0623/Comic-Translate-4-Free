@@ -1017,12 +1017,14 @@
     return PILL_MSG_FALLBACK[key] || key;
   }
   // ------------------------------------------------------------ one-time support popup
-  // Shown once, after the extension has translated 50 pictures in total
-  // (the SW counts and sends 'ct/show-support'). Centered over a dimmed
-  // page, X top right, three buttons. Only X closes it (2.2.20): the
+  // Shown once, the first time the user hits the 50/day free limit
+  // (the SW sends 'ct/show-support'). Centered over a dimmed
+  // page, X top right, two buttons. Only X closes it (2.2.20): the
   // buttons open their link and leave the modal open, backdrop click
   // and Escape do nothing. It never shows again: the SW marks it shown
   // only when the content script confirms the modal actually rendered.
+  // The Rate button turns into "Redeem free trial" after it is clicked
+  // (and renders as Redeem from the start if the user rated before).
   let supportModal = null;
   function supportStoreUrl() {
     // Same two URLs as STORE_URLS in shared/contracts.js (classic script,
@@ -1046,7 +1048,27 @@
     try { if (supportModal) supportModal.remove(); } catch { /* already gone */ }
     supportModal = null;
   }
-  function showSupportModal() {
+  // "Rated" flag for the support popup: once the user clicks "Rate it in
+  // store", the button becomes "Redeem free trial" — in this render and in
+  // any later render of the modal. Stored in chrome.storage.local (the
+  // content script's own key; the SW never needs it).
+  function supportRated() {
+    return new Promise((resolve) => {
+      try {
+        if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return resolve(false);
+        chrome.storage.local.get('ctSupportRated', (res) => {
+          try { resolve(!!(res && res.ctSupportRated)); } catch { resolve(false); }
+        });
+      } catch { resolve(false); }
+    });
+  }
+  function markSupportRated() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+      chrome.storage.local.set({ ctSupportRated: true }, () => {});
+    } catch { /* best-effort — the button still transforms in this render */ }
+  }
+  function showSupportModal(rated, checkoutUrl) {
     if (supportModal) return false; // already showing
     const wrap = document.createElement('div');
     wrap.id = 'ct-support-modal';
@@ -1081,7 +1103,32 @@
       };
       return b;
     };
-    btns.appendChild(mkBtn('rate_store', '⭐ 5 stars at store', supportStoreUrl()));
+    // Rate button: first click opens the store and turns this button into
+    // "Redeem free trial" (which opens the Pro checkout). If the user
+    // already rated (stored flag), it renders as Redeem from the start.
+    // Without a checkout URL it stays a plain Rate button — a missing URL
+    // must never produce a dead Redeem button.
+    let rateIsRedeem = !!rated;
+    const hasCheckout = typeof checkoutUrl === 'string' && !!checkoutUrl;
+    const rateBtn = document.createElement('button');
+    const setRateLabel = () => {
+      rateBtn.textContent = supportMsg(rateIsRedeem ? 'redeem_free_trial' : 'rate_store', rateIsRedeem ? '🎁 Redeem free trial' : '⭐ 5 stars at store');
+    };
+    rateBtn.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
+    setRateLabel();
+    rateBtn.onclick = () => {
+      if (rateIsRedeem) {
+        try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: checkoutUrl }); } catch { /* link open failed — modal stays */ }
+        return;
+      }
+      try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: supportStoreUrl() }); } catch { /* link open failed — modal stays */ }
+      if (hasCheckout) {
+        try { markSupportRated(); } catch {}
+        rateIsRedeem = true;
+        setRateLabel();
+      }
+    };
+    btns.appendChild(rateBtn);
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback'));
     card.appendChild(x);
     card.appendChild(title);
@@ -1727,14 +1774,22 @@
       return false;
     }
     if (msg.type === 'ct/show-support') {
-      // One-time support popup (SW counted 50 translated pictures).
-      // 2.2.12: report whether the modal actually rendered — the old code
-      // sent ok:true even when showSupportModal threw, so the SW marked it
-      // shown on delivery and a render failure lost the one-time popup.
-      let shown = false;
-      try { shown = showSupportModal() === true; } catch { shown = false; }
-      sendResponse({ ok: shown });
-      return false;
+      // One-time support popup (SW sends it the first time the free daily
+      // limit is hit). 2.2.12: report whether the modal actually rendered
+      // — the old code sent ok:true even when showSupportModal threw, so
+      // the SW marked it shown on delivery and a render failure lost the
+      // one-time popup. The render is async (it reads the stored "rated"
+      // flag first), so return true to keep the channel open.
+      (async () => {
+        let shown = false;
+        try {
+          const rated = await supportRated();
+          const checkoutUrl = typeof msg.checkoutUrl === 'string' ? msg.checkoutUrl : '';
+          shown = showSupportModal(rated, checkoutUrl) === true;
+        } catch { shown = false; }
+        try { sendResponse({ ok: shown }); } catch {}
+      })();
+      return true;
     }
     if (msg.type === 'ct/next-page-url') {
       // Pre-translation: what is the next page from here? Learned link

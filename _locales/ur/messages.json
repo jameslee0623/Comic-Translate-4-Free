@@ -405,6 +405,9 @@
   "rate_store": {
     "message": "⭐ اسٹور میں درجہ بندی کریں"
   },
+  "redeem_free_trial": {
+    "message": "🎁 مفت ٹرائل حاصل کریں"
+  },
   "support_modal_title": {
     "message": "Comic Translate 4 Free پسند آ رہا ہے؟"
   },

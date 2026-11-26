@@ -405,6 +405,9 @@
   "rate_store": {
     "message": "⭐ Valórala en la tienda"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Canjear prueba gratuita"
+  },
   "support_modal_title": {
     "message": "¿Te gusta Comic Translate 4 Free?"
   },

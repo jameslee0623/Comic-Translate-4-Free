@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ Beri nilai di toko"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Tukarkan uji coba gratis"
+  },
   "support_modal_title": {
     "message": "Menikmati Comic Translate 4 Free?"
   },

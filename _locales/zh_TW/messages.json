@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ 在商店評分"
   },
+  "redeem_free_trial": {
+    "message": "🎁 兌換免費試用"
+  },
   "support_modal_title": {
     "message": "喜歡 Comic Translate 4 Free 嗎？"
   },

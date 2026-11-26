@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ ストアで評価する"
   },
+  "redeem_free_trial": {
+    "message": "🎁 無料トライアルを使う"
+  },
   "support_modal_title": {
     "message": "Comic Translate 4 Free を楽しんでいますか？"
   },

@@ -46,7 +46,7 @@ export const MSG = {
   RENDER: 'ct/render',                   // {runId, mode, imageDataUrl, width, height, blocks, timings, debug, srcUrl?}
   DEBUG_STAGE: 'ct/debug-stage',          // {runId, stage, payload, debug}
   PILL_NOTICE: 'ct/pill-notice',         // {text, sticky} (custom pill message, e.g. fallback status)
-  SHOW_SUPPORT: 'ct/show-support',       // {} -> {ok} (one-time support popup after 50 translated pictures)
+  SHOW_SUPPORT: 'ct/show-support',       // {checkoutUrl} -> {ok} (one-time support popup the first time the free daily limit is hit)
   NEXT_PAGE_URL: 'ct/next-page-url',     // {learnedTexts?} -> {url|null, learnedText?} (pre-translation: what is the next page?)
   LINK_CLICKED: 'ct/link-clicked',       // {text, href} (content -> SW: a link was clicked; feeds learned next-page link text)
   // content -> SW
@@ -66,10 +66,6 @@ export const FEEDBACK_MAILTO = 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Tra
 export function storeUrlForFirefox(isFirefox) {
   return isFirefox ? STORE_URLS.firefox : STORE_URLS.chrome;
 }
-// One-time support popup: show once the extension has translated this many
-// pictures in total (across runs and pages). Never shown twice.
-export const SUPPORT_POPUP_THRESHOLD = 50;
-
 // IndexedDB: db 'ct-db', store 'models' (keyPath 'id').
 // Record: {id, data:ArrayBuffer, bytes, downloadedAt}
 // v2 adds store 'page-cache' (keyPath 'id') for translated pages; see

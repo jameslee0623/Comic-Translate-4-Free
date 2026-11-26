@@ -366,6 +366,9 @@
   "rate_store": {
     "message": "⭐ Rate it in the store"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Redeem free trial"
+  },
   "support_modal_title": {
     "message": "Enjoying Comic Translate 4 Free?"
   },

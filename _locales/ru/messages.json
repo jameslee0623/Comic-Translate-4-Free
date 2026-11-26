@@ -405,6 +405,9 @@
   "rate_store": {
     "message": "⭐ Оцените в магазине"
   },
+  "redeem_free_trial": {
+    "message": "🎁 Активировать бесплатный пробный период"
+  },
   "support_modal_title": {
     "message": "Нравится Comic Translate 4 Free?"
   },

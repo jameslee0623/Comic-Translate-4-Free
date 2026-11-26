@@ -405,6 +405,9 @@
   "rate_store": {
     "message": "⭐ قيّمه في المتجر"
   },
+  "redeem_free_trial": {
+    "message": "🎁 استرداد التجربة المجانية"
+  },
   "support_modal_title": {
     "message": "هل يعجبك Comic Translate 4 Free؟"
   },
