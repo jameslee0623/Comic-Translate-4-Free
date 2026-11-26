@@ -530,7 +530,7 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro가 활성화되었습니다"
+    "message": "Pro가 활성화되었습니다 — 지원해 주셔서 감사합니다!"
   },
   "pro_activating": {
     "message": "활성화 중…"

@@ -530,7 +530,7 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro активирован"
+    "message": "Pro активирован — спасибо за вашу поддержку!"
   },
   "pro_activating": {
     "message": "активация…"

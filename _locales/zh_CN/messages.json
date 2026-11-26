@@ -530,7 +530,7 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro 已啟用"
+    "message": "Pro 已啟用 — 感謝您的支持！"
   },
   "pro_activating": {
     "message": "正在啟用…"

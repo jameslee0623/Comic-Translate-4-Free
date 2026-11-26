@@ -530,7 +530,7 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro activated",
+    "message": "Pro activated — thank you for your support!",
     "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
   },
   "pro_activating": {

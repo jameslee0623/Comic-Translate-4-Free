@@ -530,7 +530,7 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro が有効になりました"
+    "message": "Pro が有効になりました — ご支援ありがとうございます！"
   },
   "pro_activating": {
     "message": "有効化中…"
