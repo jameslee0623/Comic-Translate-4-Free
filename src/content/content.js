@@ -88,10 +88,10 @@
   // the icon goes away. A long-press fires `contextmenu`; a mouse
   // right-click fires it too, so tell them apart by the last touch: only
   // a touch within the last 1.5s counts as a long-press (desktop
-  // right-click keeps using the working menu item, no icon). The icon is
-  // a plain button, not the browser menu — it does not suppress the
-  // native menu, it floats above it (max z-index) and disappears on tap,
-  // on a tap elsewhere, on scroll, or after 8s.
+  // right-click keeps using the working menu item, no icon). The pill
+  // replaces the browser menu: preventDefault() stops it from opening
+  // under the pill. The icon disappears on tap, on a tap elsewhere, on
+  // scroll, or after 8s.
   let lpIcon = null, lpIconTimer = null, lpLastTouch = null;
   function hideLpIcon() {
     try {
@@ -121,6 +121,11 @@
       if (!lpLastTouch || Date.now() - lpLastTouch.at > 1500) return;
       const src = img.currentSrc || img.src || '';
       if (!src) return;
+      // Long-press on a picture: suppress the browser's own menu — the
+      // pill replaces it. Only reached for a real long-press (a mouse
+      // right-click has no recent touchstart, so it returned above and
+      // the menu still shows with the extension item).
+      try { e.preventDefault(); } catch {}
       const btn = document.createElement('button');
       btn.id = 'ct-lp-icon';
       let title = 'Translate this image';
