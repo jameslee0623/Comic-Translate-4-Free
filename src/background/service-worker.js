@@ -5263,6 +5263,20 @@ async function handleTranslateImage(tabId, srcUrl) {
       } catch { /* no page access: stay silent */ }
       return;
     }
+    // One tab at a time (2.3.87, James): a right-click send must not start
+    // a second run while another tab is translating. Show the reason on
+    // the page's pill (same pattern as the site-not-allowed branch above).
+    // Never cancels the other tab's run.
+    if (foregroundRunState(tabId).other) {
+      try {
+        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
+        await withTimeout(chrome.tabs.sendMessage(tabId, {
+          type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
+          error: 'Another tab is already translating — wait for it to finish.',
+        }), MSG_TIMEOUT_MS, 'run progress notice');
+      } catch { /* no page access: stay silent */ }
+      return;
+    }
     // Any in-flight run for this tab is dropped first — the new request wins.
     await cancelRunsForTab(tabId);
     const r = await runPipeline(tabId, { srcUrl });
@@ -5702,6 +5716,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // it idle (~30s) or at the 5-minute per-event cap mid-run. The ML
           // alarm backup (ml-bridge.js) and inpaint progress keep-alive cover
           // that; without them a killed worker meant a frozen pill, no error.
+          // One tab at a time (2.3.87, James): refuse to start a second run
+          // while another tab is translating. The popup button is grayed
+          // out, but a stale popup (opened before the other run started)
+          // can still send this — the guard here makes the rule airtight.
+          // Never cancels the other tab's run.
+          if (foregroundRunState(tab.id).other) {
+            sendResponse({ ok: false, error: 'Another tab is already translating — wait for it to finish or cancel it from the popup.' });
+            break;
+          }
           // Any in-flight run for this tab is dropped first — the new request wins.
           await cancelRunsForTab(tab.id);
           const r = await runPipeline(tab.id);
