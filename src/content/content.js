@@ -130,13 +130,28 @@
       } catch {}
       btn.title = title;
       btn.setAttribute('aria-label', title);
-      btn.textContent = 'A文';
-      // Above the finger so it stays visible, clamped inside the viewport.
-      const x = Math.max(8, Math.min(window.innerWidth - 64, (e.clientX || 0) - 28));
-      const y = Math.max(8, Math.min(window.innerHeight - 64, (e.clientY || 0) - 84));
-      btn.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:56px;height:56px;z-index:2147483647;' +
-        'background:#1c1c22;color:#fff;font:700 20px/1 sans-serif;border:2px solid #4a90d9;border-radius:50%;' +
-        'box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer;padding:0;text-align:center;';
+      // The extension's own icon + the words "Translate this image":
+      // the icon alone is not clear enough on a manga page.
+      try {
+        const im = document.createElement('img');
+        im.src = chrome.runtime.getURL('icons/icon48.png');
+        im.alt = '';
+        im.style.cssText = 'width:24px;height:24px;border:0;display:block;pointer-events:none;flex:0 0 auto;';
+        btn.appendChild(im);
+        const sp = document.createElement('span');
+        sp.textContent = title;
+        sp.style.cssText = 'white-space:nowrap;pointer-events:none;';
+        btn.appendChild(sp);
+      } catch {}
+      // Above the finger so it stays visible, centred on the touch point
+      // and clamped inside the viewport.
+      const bw = 210;
+      const x = Math.max(8, Math.min(window.innerWidth - bw - 8, (e.clientX || 0) - bw / 2));
+      const y = Math.max(8, Math.min(window.innerHeight - 56, (e.clientY || 0) - 76));
+      btn.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;z-index:2147483647;' +
+        'display:flex;align-items:center;gap:8px;background:#1c1c22;color:#fff;font:700 15px/1 sans-serif;' +
+        'border:2px solid #4a90d9;border-radius:28px;padding:8px 14px;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer;';
       btn.addEventListener('click', ev => {
         try { ev.stopPropagation(); ev.preventDefault(); } catch {}
         hideLpIcon();
