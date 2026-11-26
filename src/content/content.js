@@ -2046,7 +2046,7 @@
           allTimings.render = Math.round(performance.now() - renderT0);
           // Stage times only — tier, ocrEngine and blockCount are NOT times
           // (tier/ocrEngine are strings, blockCount is a count of blocks),
-          // so they show without "ms" and must stay out of the sums:
+          // so they stay out of the time breakdown and out of the sums:
           // adding a string to a number concatenates, which turned seqMs
           // into garbage and hid the "parallelism saved" line.
           const TIME_KEYS = new Set(['capture', 'detect', 'blocks', 'ocr', 'translate', 'mask', 'inpaint', 'render']);
@@ -2063,7 +2063,7 @@
           lastRunTimes = {
             totalMs,
             seqMs,
-            breakdown: Object.entries(allTimings).filter(([k]) => k !== 'total').map(([k, v]) => `${k} ${v}${TIME_KEYS.has(k) ? 'ms' : ''}`).join(' · '),
+            breakdown: Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k)).map(([k, v]) => `${k} ${v}ms`).join(' · '),
           };
           if (debug && !debugPanelSuppressed) {
             ensureOverlay();
