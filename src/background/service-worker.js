@@ -4960,11 +4960,25 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
         }
       }
     }
+    // Record the fire SYNCHRONOUSLY here, BEFORE the gate await below.
+    // The dedupe check and this record are one synchronous block (no await
+    // between them), so a second 'complete' event (page + a slow iframe)
+    // landing in the same tick sees the record at its dedupe check and
+    // returns instead of starting a second run. Before this move the record
+    // was set after the gate await, so both events passed the dedupe and
+    // both started — the second one's cancelRunsForTab then killed the
+    // first one's just-started run ('cancelled' in the log).
+    autoFired.set(tabId, { url, at: now });
     // Freemium gate: auto-translate counts against the 50/day free limit
     // unless Pro is active. Manual translate is always free and never gated.
     // A stale Pro validation re-checks in the background (never blocks the run).
     const gate = await canAutoOrPre(settings);
     if (!gate.ok) {
+      // The gate failed, so no run starts: delete the record we just set,
+      // so a gate failure does not consume the 2-min dedupe window. Only
+      // clear our own record (same url), so a newer fire's record survives.
+      const cur = autoFired.get(tabId);
+      if (cur && cur.url === url) autoFired.delete(tabId);
       diagPush('auto diag skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)');
       try {
         await withTimeout(chrome.tabs.sendMessage(tabId, {
@@ -4983,14 +4997,9 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
     diagPush('auto diag start: ' + url.slice(0, 120) + srcTag);
     // New page: drop whatever the tab was doing and start fresh immediately.
-    // A stale run must never finish on top of the new page.
-    // Record the fire SYNCHRONOUSLY here, before the await below: two
-    // 'complete' events (page + a slow iframe) can land in the same tick,
-    // and if both pass the dedupe above before either records, both start
-    // a run — they then fight over the page, one dies 'stale run', and
-    // only a couple of pictures get translated. The check and the record
-    // are one synchronous block, so the second event sees it and returns.
-    autoFired.set(tabId, { url, at: now });
+    // A stale run must never finish on top of the new page. The fire was
+    // already recorded above, before the gate await, so a second 'complete'
+    // in the same tick is deduped before it reaches here.
     await cancelRunsForTab(tabId);
     const r = await runPipeline(tabId, { auto: true });
     // Freemium counting now lives inside runPipeline (it counts a finished
