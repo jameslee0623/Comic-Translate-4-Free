@@ -3325,6 +3325,9 @@ async function runPipeline(tabId, opts = {}) {
   // a 50-block translate doesn't keep burning quota after the user cancelled.
   const abortController = new AbortController();
   runs.set(runId, { cancelled: false, tabId, abortController });
+  // A foreground run just started — gray out the right-click send item
+  // (it is global, so it grays out on every tab until the run ends).
+  refreshContextMenuEnabled();
   // Run footer numbers — function scope, so the catch block can log the
   // run footer on failure/cancel too. A let/const declared inside the try
   // is invisible to the catch (that was a ReferenceError: the footer
@@ -4808,6 +4811,9 @@ async function runPipeline(tabId, opts = {}) {
       ...(e && e.fallbackUrl ? { fallbackUrl: e.fallbackUrl } : {}) };
   } finally {
     runs.delete(runId);
+    // The run ended — re-enable the right-click send item if no other
+    // foreground run is active (the helper checks the runs map).
+    refreshContextMenuEnabled();
     clearRunRecord(runId); // FIX1: run ended, drop its persisted record.
     // Drop any pixel payloads this run staged but never got taken.
     for (const k of pxKeys) await pixelDrop(k);
@@ -5237,9 +5243,35 @@ async function refreshContextMenu() {
     };
     if (patterns) props.documentUrlPatterns = patterns;
     await chrome.contextMenus.create(props);
+    // A run may already be going (settings changed mid-run): set the
+    // menu's enabled state to match the runs map at once.
+    refreshContextMenuEnabled();
   } catch (e) {
     console.warn('[ct] context menu setup failed:', String((e && e.message) || e).slice(0, 120));
   }
+}
+// One tab at a time (2.3.89, James): gray out the right-click "Send to
+// Comic Translate 4 Free" item while a run is going. A Chrome context menu
+// item is GLOBAL — chrome.contextMenus.update can only enable/disable it
+// everywhere, not per tab. So while ANY foreground run is active (a real
+// tab id, not cancelled, pre-translate excluded), the item is disabled on
+// every tab; when no foreground run is active it is re-enabled. That also
+// blocks a same-tab re-send while its own run is going — the cost of the
+// global menu, accepted. Called when a foreground run starts and when one
+// ends (runPipeline set/finally), and after the menu is (re)created, so
+// the state follows the runs map. A missing menu item (not yet created, or
+// removed because no sites are allowed) fails silently.
+async function refreshContextMenuEnabled() {
+  try {
+    if (!chrome.contextMenus || !chrome.contextMenus.update) return;
+    let anyForeground = false;
+    for (const [, r] of runs) {
+      if (r.cancelled || r.tabId === null || r.tabId === undefined) continue;
+      anyForeground = true;
+      break;
+    }
+    await chrome.contextMenus.update(CTX_MENU_ID, { enabled: !anyForeground });
+  } catch { /* menu not created yet: stay silent */ }
 }
 // Manual send: the right-clicked image goes through the pipeline like a page
 // run — same gate, same stages, same page cache, in-place replace.
@@ -5263,19 +5295,13 @@ async function handleTranslateImage(tabId, srcUrl) {
       } catch { /* no page access: stay silent */ }
       return;
     }
-    // One tab at a time (2.3.87, James): a right-click send must not start
-    // a second run while another tab is translating. Show the reason on
-    // the page's pill (same pattern as the site-not-allowed branch above).
-    // Never cancels the other tab's run.
+    // One tab at a time (2.3.89, James): safety net — if a right-click send
+    // somehow still gets through while another tab is translating (menu not
+    // yet updated), cancel the other tab's job first, then start this one.
+    // The new translate wins. Pre-translate is never touched
+    // (cancelRunsForOtherTabs skips tabId null).
     if (foregroundRunState(tabId).other) {
-      try {
-        await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
-        await withTimeout(chrome.tabs.sendMessage(tabId, {
-          type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
-          error: 'Another tab is already translating — wait for it to finish.',
-        }), MSG_TIMEOUT_MS, 'run progress notice');
-      } catch { /* no page access: stay silent */ }
-      return;
+      await cancelRunsForOtherTabs(tabId);
     }
     // Any in-flight run for this tab is dropped first — the new request wins.
     await cancelRunsForTab(tabId);
@@ -5716,14 +5742,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // it idle (~30s) or at the 5-minute per-event cap mid-run. The ML
           // alarm backup (ml-bridge.js) and inpaint progress keep-alive cover
           // that; without them a killed worker meant a frozen pill, no error.
-          // One tab at a time (2.3.87, James): refuse to start a second run
-          // while another tab is translating. The popup button is grayed
-          // out, but a stale popup (opened before the other run started)
-          // can still send this — the guard here makes the rule airtight.
-          // Never cancels the other tab's run.
+          // One tab at a time (2.3.89, James): safety net — if a translate
+          // action somehow still gets through (stale popup, menu not yet
+          // updated), cancel the other tab's job first, then start the new
+          // one. The new translate wins. The popup button gray-out is the
+          // first line; this is the last resort behind it. Pre-translate
+          // is never touched (cancelRunsForOtherTabs skips tabId null).
           if (foregroundRunState(tab.id).other) {
-            sendResponse({ ok: false, error: 'Another tab is already translating — wait for it to finish or cancel it from the popup.' });
-            break;
+            await cancelRunsForOtherTabs(tab.id);
           }
           // Any in-flight run for this tab is dropped first — the new request wins.
           await cancelRunsForTab(tab.id);
