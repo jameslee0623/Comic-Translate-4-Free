@@ -1764,8 +1764,8 @@
     }
     if (times && times.totalMs != null) {
       html += `<p style="color:#eee;font-size:14px;margin:0 0 4px">total: <b>${times.totalMs}ms</b>`;
-      if (times.seqMs != null && times.seqMs > times.totalMs) {
-        html += ` <span style="color:#8f8;font-size:12px">(parallelism saved ${times.seqMs - times.totalMs}ms vs sequential ${times.seqMs}ms)</span>`;
+      if (times.parallelMs != null && times.parallelMs > 0) {
+        html += ` <span style="color:#8f8;font-size:12px">(parallelism saved ${times.parallelMs}ms vs sequential ${times.seqMs}ms)</span>`;
       }
       html += `</p>`;
       if (times.breakdown) html += `<p style="color:#888;margin:0 0 8px">${esc(times.breakdown)}</p>`;
@@ -1830,8 +1830,8 @@
         const done = (t) => { copyBtn.textContent = t; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500); };
         let text = p.log || '';
         if (lastRunTimes) {
-          const saved = lastRunTimes.seqMs != null && lastRunTimes.seqMs > lastRunTimes.totalMs
-            ? ` (parallelism saved ${lastRunTimes.seqMs - lastRunTimes.totalMs}ms vs sequential ${lastRunTimes.seqMs}ms)` : '';
+          const saved = lastRunTimes.parallelMs != null && lastRunTimes.parallelMs > 0
+            ? ` (parallelism saved ${lastRunTimes.parallelMs}ms vs sequential ${lastRunTimes.seqMs}ms)` : '';
           text = `total: ${lastRunTimes.totalMs}ms${saved}\n${lastRunTimes.breakdown}\n\n${text}`;
         }
         try { await navigator.clipboard.writeText(text); done('Copied'); }
@@ -2209,10 +2209,23 @@
           // adding a string to a number concatenates, which turned seqMs
           // into garbage and hid the "parallelism saved" line.
           const TIME_KEYS = new Set(['capture', 'detect', 'blocks', 'ocr', 'translate', 'mask', 'inpaint', 'render']);
+          // 2.4.5 fix 2: the SW's total ends when it sends the render, so
+          // it leaves render out while the breakdown includes it. Add the
+          // content-side render time so the total and the breakdown agree.
+          // (A cache hit has no SW total, so it still falls back to the sum
+          // of the stage times, which already includes render.)
           const totalMs = allTimings.total != null
-            ? allTimings.total
+            ? allTimings.total + (allTimings.render || 0)
             : Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k)).reduce((a, [, v]) => a + (v || 0), 0);
-          const seqMs = Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k) && k !== 'render').reduce((a, [, v]) => a + (v || 0), 0);
+          const seqMs = Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k)).reduce((a, [, v]) => a + (v || 0), 0);
+          // 2.4.5 fix 5: "parallelism saved" was seqMs - totalMs, which is
+          // the real overlap MINUS the uncounted gaps between stages, so it
+          // understated the parallelism. The only parallel stages are
+          // translate (worker) vs mask+inpaint (main thread), which start
+          // together — the true overlap is the shorter of the two branches.
+          const parallelMs = Math.min(
+            allTimings.translate || 0,
+            (allTimings.mask || 0) + (allTimings.inpaint || 0));
           stageTabs['render'] = {
             title: 'Render',
             ms: allTimings.render,
@@ -2222,6 +2235,7 @@
           lastRunTimes = {
             totalMs,
             seqMs,
+            parallelMs,
             breakdown: Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k)).map(([k, v]) => `${k} ${v}ms`).join(' · '),
           };
           if (debug && !debugPanelSuppressed) {

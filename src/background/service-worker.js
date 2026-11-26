@@ -3865,6 +3865,10 @@ async function runPipeline(tabId, opts = {}) {
         ({ rgba, w, h, mode, tier, attempts } = await loadPipelineImagePixels(tabId, img, settings, tabUrl, { srcUrl: manualSrc, runId }));
       }
       imgTimings.capture = Math.round(performance.now() - t0);
+      // 2.4.5 fix 1: a fallback-tab picture's pixels were read before this
+      // timer started, so the line above is ~0ms. The real read time rides
+      // on pre.captureMs (timed inside fallbackCaptureViaTab) — use it.
+      if (pre && pre.captureMs != null) imgTimings.capture = pre.captureMs;
       imgTimings.tier = tier;
       // Human-readable capture: one picture line (size, download bytes)
       // and one capture line (which tier won, how long, what the failed
@@ -4563,6 +4567,10 @@ async function runPipeline(tabId, opts = {}) {
       // The content script measures the render (canvas compose + text draw)
       // and returns it on the RENDER reply; the benchmark log needs it.
       imgTimings.render = (renderRes && Number.isFinite(renderRes.renderMs)) ? Math.round(renderRes.renderMs) : 0;
+      // 2.4.5 fix 2: total was set before the render, so the bench log's
+      // total left render out while the panel breakdown included it.
+      // Recompute the wall clock now that the render is done.
+      imgTimings.total = Math.round(performance.now() - imgT0);
       // ---- 9. page cache: remember this translated page for instant revisits.
       // Best-effort — a cache failure must never fail the run. Skipped in
       // incognito; a cancelled run never reaches this point (it throws above).
@@ -5399,6 +5407,13 @@ async function checkImageHostPermissions(images) {
   return missing;
 }
 async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
+  // 2.4.5 fix 1: time the whole background-tab read (open tab, load the
+  // picture, read its pixels, close the tab) and carry it on the returned
+  // pixels as captureMs. The pipeline's capture timer starts after this
+  // returns, so without it a fallback-tab picture showed capture ~0ms
+  // even though the read took seconds. The retry's 1s wait is included —
+  // it is part of getting the pixels.
+  const fbT0 = performance.now();
   const notice = (text, sticky) =>
     chrome.tabs.sendMessage(origTabId, { type: MSG.PILL_NOTICE, text, sticky }).catch(() => {});
   // Quiet mode (pre-translate): the job runs in the background, so no pill
@@ -5531,7 +5546,9 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
     }
   };
   try {
-    return await attempt();
+    const out = await attempt();
+    out.captureMs = Math.round(performance.now() - fbT0);
+    return out;
   } catch (e1) {
     logFailure(1, e1);
     if (isMissingHost(e1)) await recordMissingHost(imageUrl);
@@ -5544,7 +5561,9 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
     // is unproven.
     await new Promise(r => setTimeout(r, 1000));
     try {
-      return await attempt();
+      const out = await attempt();
+      out.captureMs = Math.round(performance.now() - fbT0);
+      return out;
     } catch (e2) {
       logFailure(2, e2);
       if (isMissingHost(e2)) await recordMissingHost(imageUrl);
