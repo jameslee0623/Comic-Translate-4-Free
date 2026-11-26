@@ -582,12 +582,12 @@
     "message": "Gemini needs an API key to translate."
   },
   "model_distil": {
-    "message": "OCR distil (Japanese test)"
+    "message": "OCR (thử nghiệm)"
   },
   "ocr_distil_test": {
-    "message": "Use distil OCR for Japanese (test)"
+    "message": "OCR (thử nghiệm)"
   },
   "ocr_distil_test_hint": {
-    "message": "Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR."
+    "message": "OCR nhỏ và nhanh chỉ dành cho trang tiếng Nhật. Cần tải mô hình OCR bên dưới. Tiếng Anh và tiếng Trung vẫn dùng OCR thường."
   }
 }
