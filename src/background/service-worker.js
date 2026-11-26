@@ -3948,7 +3948,6 @@ async function runPipeline(tabId, opts = {}) {
         await pixelPut(pxKey, rgba.buffer);
         const r = await callMlChecked(runId, { type: MSG.ML_DETECT, key: pxKey, width: w, height: h, threshold: settings.detectionThreshold, runId });
         detections = r.boxes;
-        imgTimings.detect = r.ms;
         detectInputMean = r.inputMean;
         if (detectInputMean != null && detectInputMean < 0.004) {
           throw new Error(`the detector received a blank image (input mean ${detectInputMean}) ` +
@@ -3956,7 +3955,14 @@ async function runPipeline(tabId, opts = {}) {
             `between capture and detection. Reload the page and try again.`);
         }
       }
-      if (!imgTimings.detect) imgTimings.detect = Math.round(performance.now() - t0);
+      // Stage time is wall-clock from stage start (t0, set when the stage
+      // received the captured pixels) to when the detections are ready.
+      // r.ms is the worker's own compute time only — it misses pixelPut,
+      // message transit, the ML queue wait, the ready wait, and model load.
+      // The stage clock starts when the stage gets its input (James's rule)
+      // and counts everything after that. Same measurement for the sliced
+      // and non-sliced paths.
+      imgTimings.detect = Math.round(performance.now() - t0);
       imgSetProgress('detect', 0.25);
       await imgEmitDebug('detect', {
         title: `Detection — ${detections.length} boxes @ ≥${settings.detectionThreshold}` +
@@ -3999,8 +4005,11 @@ async function runPipeline(tabId, opts = {}) {
       checkCancelled(runId);
       imgSetProgress('ocr', 0.38);
       {
-        // DIAG (2.0.9): prep = crop building + pixelPut (SW side, invisible
-        // in r.ms); call = the ML round trip; load rides on r.loadMs.
+        // DIAG (2.0.9): prep = crop building + pixelPut; call = the ML round
+        // trip; load rides on r.loadMs. The stage time (imgTimings.ocr) is
+        // wall-clock from ocrPrepT0, so it includes prep, transit, queue
+        // wait, and model load if it happens during the stage. r.ms is the
+        // worker's own compute time only and under-counts the stage.
         const ocrPrepT0 = performance.now();
         const crops = [];
         for (const [i, b] of blocks.entries()) {
@@ -4012,7 +4021,7 @@ async function runPipeline(tabId, opts = {}) {
           crops.push({ id: i, key: pxKey, data: c.data, width: c.w, height: c.h, x: c.x, y: c.y, bw: b.xyxy[2] - b.xyxy[0], bh: b.xyxy[3] - b.xyxy[1] });
         }
         const ocrPrepMs = Math.round(performance.now() - ocrPrepT0);
-        let ocrMs = 0, ocrEngineLabel = '', ocrCallMs = 0;
+        let ocrEngineLabel = '', ocrCallMs = 0;
         // Per-crop OCR diagnostics for the debug panel: char count and whether
         // this crop needed the Baberu chunked re-OCR (v1.1: >256 chars, rare).
         const ocrStats = new Map();
@@ -4030,7 +4039,6 @@ async function runPipeline(tabId, opts = {}) {
             crops: crops.map(({ id, key, width, height }) => ({ id, key, width, height })),
           });
           ocrCallMs = Math.round(performance.now() - ocrCallT0);
-          ocrMs = r.ms;
           ocrEngineLabel = (MODEL_GROUPS.find(g => g.id === r.engine) || {}).label || r.engine || '';
           imgTimings.ocrEngine = r.engine || '';
           for (const res of r.results) {
@@ -4051,7 +4059,13 @@ async function runPipeline(tabId, opts = {}) {
           }
           ocrSlow.sort((a, b) => b.ms - a.ms);
         }
-        imgTimings.ocr = ocrMs;
+        // Stage time is wall-clock from stage start (ocrPrepT0, set when the
+        // stage received the blocks) to when the OCR results are assigned.
+        // It includes prep (crop building + pixelPut), message transit, the
+        // ML queue wait, the ready wait, and model load if it happens during
+        // the stage (first run). ocrCallMs / ocrPrepMs stay measured as
+        // diagnostics (call and prep splits).
+        imgTimings.ocr = Math.round(performance.now() - ocrPrepT0);
         imgSetProgress('ocr', 0.55);
         const ocrThumbs = [];
         // Thumbnails are debug-panel only — skip the 40 canvas encodes in normal runs.
@@ -4069,7 +4083,7 @@ async function runPipeline(tabId, opts = {}) {
         await imgEmitDebug('ocr', {
           title: `OCR — ${crops.length} crops, ${ocrTextCount} with text${ocrEngineLabel ? ` (${ocrEngineLabel})` : ''}` +
             (clippedCount ? `, ${clippedCount} hit the 256-char model cap (re-OCR'd in chunks)` : ''),
-          crops: ocrThumbs, ms: ocrMs,
+          crops: ocrThumbs, ms: imgTimings.ocr,
         });
       }
 
