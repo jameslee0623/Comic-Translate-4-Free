@@ -529,8 +529,20 @@
   "pro_activate": {
     "message": "Activate Pro"
   },
+  "pro_activated": {
+    "message": "Pro activado"
+  },
+  "pro_activating": {
+    "message": "activando…"
+  },
+  "pro_activation_failed": {
+    "message": "la activación falló"
+  },
   "pro_deactivate": {
     "message": "Deactivate"
+  },
+  "pro_deactivated": {
+    "message": "Pro desactivado"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"

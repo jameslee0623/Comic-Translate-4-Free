@@ -321,12 +321,12 @@ $('proActivate').onclick = async () => {
   // Like the Gemini connection check: disable the button while checking,
   // show the checking state, then the result.
   if (btn) btn.disabled = true;
-  if (resultEl) { resultEl.className = 'check-result'; resultEl.textContent = 'activating…'; }
+  if (resultEl) { resultEl.className = 'check-result'; resultEl.textContent = ctMsg('pro_activating') || 'activating…'; }
   try {
     const r = await activateProLicense(key);
     if (resultEl) {
       resultEl.className = 'check-result ' + (r.ok ? 'ok' : 'err');
-      resultEl.textContent = r.ok ? '✓ Pro activated — thank you for your support!' : '✗ ' + (r.error || 'activation failed');
+      resultEl.textContent = r.ok ? '✓ ' + (ctMsg('pro_activated') || 'Pro activated') : '✗ ' + (r.error || (ctMsg('pro_activation_failed') || 'activation failed'));
     }
     if (r.ok) { $('proKey').value = ''; refreshPro(); }
   } finally { if (btn) btn.disabled = false; }
@@ -341,7 +341,7 @@ $('proDeactivate').onclick = async () => {
   // count the seat.
   if (resultEl) {
     if (r && r.warned) { resultEl.className = 'check-result'; resultEl.textContent = r.warned; }
-    else { resultEl.className = 'check-result ok'; resultEl.textContent = 'Pro deactivated'; }
+    else { resultEl.className = 'check-result ok'; resultEl.textContent = ctMsg('pro_deactivated') || 'Pro deactivated'; }
   }
   refreshPro();
 };

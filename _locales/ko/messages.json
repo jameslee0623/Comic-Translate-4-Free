@@ -529,8 +529,20 @@
   "pro_activate": {
     "message": "Activate Pro"
   },
+  "pro_activated": {
+    "message": "Pro가 활성화되었습니다"
+  },
+  "pro_activating": {
+    "message": "활성화 중…"
+  },
+  "pro_activation_failed": {
+    "message": "활성화에 실패했습니다"
+  },
   "pro_deactivate": {
     "message": "Deactivate"
+  },
+  "pro_deactivated": {
+    "message": "Pro가 비활성화되었습니다"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"

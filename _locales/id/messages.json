@@ -529,8 +529,20 @@
   "pro_activate": {
     "message": "Activate Pro"
   },
+  "pro_activated": {
+    "message": "Pro diaktifkan"
+  },
+  "pro_activating": {
+    "message": "mengaktifkan…"
+  },
+  "pro_activation_failed": {
+    "message": "aktivasi gagal"
+  },
   "pro_deactivate": {
     "message": "Deactivate"
+  },
+  "pro_deactivated": {
+    "message": "Pro dinonaktifkan"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"

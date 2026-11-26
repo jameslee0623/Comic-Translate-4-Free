@@ -529,8 +529,24 @@
   "pro_activate": {
     "message": "Activate Pro"
   },
+  "pro_activated": {
+    "message": "Pro activated",
+    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+  },
+  "pro_activating": {
+    "message": "activating…",
+    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+  },
+  "pro_activation_failed": {
+    "message": "activation failed",
+    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+  },
   "pro_deactivate": {
     "message": "Deactivate"
+  },
+  "pro_deactivated": {
+    "message": "Pro deactivated",
+    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"
