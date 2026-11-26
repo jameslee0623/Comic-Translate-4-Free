@@ -2,17 +2,18 @@
 
 Ngôn ngữ: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-Đọc manga bằng ngôn ngữ của bạn!
-Comic Translate 4 Free tự động dịch manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ, thay thế hình ảnh ngay tại chỗ.
+Đọc manga bằng ngôn ngữ của bạn — ngay trong trình duyệt.
+
+Comic Translate 4 Free tự động dịch các trang manga và truyện tranh khi bạn duyệt web. Nó đọc tiếng Nhật, tiếng Anh, tiếng Trung giản thể và phồn thể (tự động phát hiện), và dịch sang 114 ngôn ngữ. Mở một trang, và bản dịch sẽ thay thế hình ảnh gốc ngay tại chỗ — các bong bóng thoại được lấp đầy bằng ngôn ngữ của bạn.
 
 ### 📸 Trước & Sau
 
 | Trước (tiếng Nhật) | Sau (Tiếng Việt) |
 | --- | --- |
-| ![Original Japanese manga page](../docs/images/wikipe-tan-original.jpg) | ![after](../docs/images/wikipe-tan-vi.jpg) |
+| ![Trang manga tiếng Nhật gốc](../docs/images/wikipe-tan-original.jpg) | ![Đã dịch sang tiếng Việt](../docs/images/wikipe-tan-vi.jpg) |
 
 <details>
-<summary>See translations in 14 more languages</summary>
+<summary>Xem bản dịch bằng 14 ngôn ngữ khác</summary>
 
 | Hindi | Korean | Simplified Chinese |
 | --- | --- | --- |
@@ -42,11 +43,14 @@ Comic Translate 4 Free tự động dịch manga và truyện tranh khi bạn du
 
 ## ✨ Tính năng
 
-- Dịch tự động — mở một trang manga trên một trang web được phép và bản dịch sẽ xuất hiện ngay tại chỗ, không cần bấm nút.
+- Dịch tự động (Pro) — mở một trang manga trên một trang web được phép và bản dịch sẽ xuất hiện ngay tại chỗ, không cần bấm nút. Miễn phí 50 hình ảnh mỗi ngày; không giới hạn với Pro.
 - Mỗi hình ảnh trên trang — dịch tự động xử lý tất cả hình ảnh trên một trang (tối đa 50 hình mỗi lần chạy), không chỉ hình ảnh chính.
-- Dịch trước trang tiếp theo — trong khi bạn đọc trang hiện tại, hình ảnh của trang tiếp theo được dịch trong nền nên đã sẵn sàng ngay khi bạn mở nó (chỉ một hình; bật theo mặc định, tắt được trong Cài đặt).
+- Dịch trước trang tiếp theo (Pro) — trong khi bạn đọc trang hiện tại, hình ảnh của trang tiếp theo được dịch trong nền nên đã sẵn sàng ngay khi bạn mở nó (chỉ một hình; bật theo mặc định, tắt được trong Cài đặt). Miễn phí 50 hình ảnh mỗi ngày; không giới hạn với Pro.
+- Chuyển đổi dự phòng công cụ dịch — nếu công cụ dịch đã chọn gặp lỗi, hoặc trả về văn bản sai ngôn ngữ, tiện ích mở rộng sẽ tự động thử một công cụ khác. Miễn phí, luôn bật.
+- OCR (thử nghiệm) — một công cụ OCR thử nghiệm nhanh cho các trang tiếng Nhật. Bật nó trong Cài đặt, mục Debug. Nhanh hơn nhiều trên điện thoại.
+- Một tab tại một thời điểm — trong khi một tab đang dịch, nút Translate của tab còn lại bị mờ đi. Nút Cancel hiển thị "Cancel other tab".
 - Nhấp chuột phải vào bất kỳ hình ảnh nào — chọn "Gửi đến Comic Translate 4 Free" để dịch một hình ảnh cụ thể, ngay cả khi nó nhỏ hơn kích thước tối thiểu.
-- 114 ngôn ngữ đích qua Google Translate, Gemini, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
+- 114 ngôn ngữ đích qua Google Translator, Gemini, Azure Translator, hoặc máy chủ LM Studio cục bộ của riêng bạn.
 - Tự động phát hiện ngôn ngữ nguồn — tiếng Nhật, tiếng Anh, tiếng Trung giản thể/phồn thể được xác định tự động từ văn bản đã OCR.
 - Hỗ trợ truyện dài / webtoon — các trang cao được xử lý thành các đoạn chồng lên nhau để chữ vẫn sắc nét.
 - 17 ngôn ngữ giao diện — giao diện của tiện ích mở rộng tuân theo cài đặt ngôn ngữ của trình duyệt của bạn.
@@ -90,26 +94,29 @@ Mẹo:
   ![Nhấp chuột phải để gửi một ảnh](../docs/images/right-click.png)
 
 - Nếu một trang web chặn tải xuống (HTTP 403), tiện ích mở rộng sẽ tự động thử lại qua một tab nền.
-- Chọn công cụ dịch của bạn trong Cài đặt: Google (miễn phí, không cần khóa), Gemini (khóa API miễn phí — dịch manga tốt hơn, được khuyến nghị), Azure Translator (sắp ngừng hoạt động — 2 triệu ký tự/tháng miễn phí), hoặc LM Studio (máy chủ cục bộ).
-- Bật Chế độ gỡ lỗi (xem từng giai đoạn) trong Cài đặt để kiểm tra từng giai đoạn của quy trình.
+- Chọn công cụ dịch của bạn trong Cài đặt: Google Translator (không cần khóa), Gemini (cần khóa, được khuyến nghị — dịch manga tốt hơn), Azure Translator (sắp ngừng hoạt động), hoặc LM Studio (máy chủ cục bộ).
+
+---
 
 ## 🔑 Lấy khóa API Gemini
 
 Gemini cung cấp những bản dịch manga tốt nhất. Để sử dụng nó làm công cụ dịch:
 
-1. Mở [Google AI Studio](https://aistudio.google.com/apikey) và nhấp vào "Create API key" — miễn phí, không cần thẻ tín dụng
+1. Mở [Google AI Studio](https://aistudio.google.com/apikey) và nhấp vào "Create API key"
 2. Chọn hoặc tạo dự án Google Cloud nếu được yêu cầu
 3. Sao chép khóa
 4. Dán nó vào trường Khóa API Gemini trong Cài đặt của tiện ích mở rộng, sau đó nhấp vào "Kiểm tra kết nối Gemini"
-5. Chọn Gemini (miễn phí, cần khóa) làm công cụ dịch trong Cài đặt.
+5. Chọn Gemini làm công cụ dịch trong Cài đặt.
 
 ---
 
-## ❤️ Hỗ trợ dự án này
+## 💎 Pro
 
-Nếu tiện ích mở rộng này hữu ích với bạn, hãy cân nhắc hỗ trợ quá trình phát triển của nó:
+Bản dịch được tính vào 50 hình ảnh miễn phí mỗi ngày khi bất kỳ tính năng Pro nào đang bật. Một hình ảnh được tính là một, dù cao bao nhiêu. Tắt cả hai tính năng Pro thì dịch miễn phí và không giới hạn. Dịch tự động và dịch trước là các tính năng Pro — miễn phí 50 hình ảnh mỗi ngày, không giới hạn với gói đăng ký Pro.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/tháng hoặc $30/năm
+- Mua khóa bản quyền, dán nó vào trường License key trong Cài đặt của tiện ích mở rộng, rồi nhấp vào Activate Pro. Khóa dùng được trên 2 trình duyệt.
+- Khi bạn chạm mức giới hạn miễn phí 50 hình ảnh, một cửa sổ bật lên sẽ nhắc bạn một lần mỗi ngày. Sau khi bạn đánh giá tiện ích mở rộng, Get Pro sẽ thành "Copy Discount Code: 5STARS" — chạm vào đó để sao chép mã và mở trang thanh toán.
 
 ---
 
@@ -119,7 +126,7 @@ Nếu tiện ích mở rộng này hữu ích với bạn, hãy cân nhắc hỗ
 - Phiên lớn — dịch hàng chục hình ảnh trong một phiên có thể khởi động lại tiện ích mở rộng ở chế độ nền. Nếu điều đó xảy ra, quá trình chạy sẽ tự động tiếp tục từ chỗ đã dừng lại.
 - Firefox — các mô hình chạy trong trang nền (không có tài liệu offscreen), chia sẻ bộ nhớ với mọi thứ khác. Khởi động lại trình duyệt nếu bạn thấy "no available backend found".
 - Firefox chậm hơn Chrome — các tiện ích mở rộng của Firefox không thể dùng bộ nhớ dùng chung cho đa luồng (SharedArrayBuffer), vì vậy mô hình chạy trên một luồng CPU duy nhất. Đây là giới hạn của nền tảng Firefox, không phải lỗi của tiện ích mở rộng. ([Lỗi Mozilla 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate sử dụng endpoint miễn phí không chính thức và có thể bị giới hạn tốc độ.
+- Google Translator sử dụng endpoint miễn phí không chính thức và có thể bị giới hạn tốc độ.
 
 ---
 

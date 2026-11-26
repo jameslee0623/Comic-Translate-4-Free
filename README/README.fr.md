@@ -2,8 +2,9 @@
 
 Langue : [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-Lisez des mangas dans votre langue !
-Comic Translate 4 Free traduit mangas et BD automatiquement. Il lit japonais, anglais, chinois simplifié/traditionnel (détection auto), et traduit vers 114 langues, remplaçant l'image sur place.
+Lisez des mangas dans votre langue — directement dans le navigateur.
+
+Comic Translate 4 Free traduit automatiquement les pages de manga et de BD pendant que vous naviguez. Il lit le japonais, l'anglais et le chinois simplifié et traditionnel (avec détection automatique), et traduit vers 114 langues. Ouvrez une page, et la version traduite remplace l'image originale sur place — les bulles sont remplies de votre langue.
 
 ### 📸 Avant & Après
 
@@ -12,7 +13,7 @@ Comic Translate 4 Free traduit mangas et BD automatiquement. Il lit japonais, an
 | ![Page de manga japonaise d'origine](../docs/images/wikipe-tan-original.jpg) | ![Traduit en français](../docs/images/wikipe-tan-fr.jpg) |
 
 <details>
-<summary>See translations in 14 more languages</summary>
+<summary>Voir les traductions dans 14 autres langues</summary>
 
 | Hindi | Korean | Simplified Chinese |
 | --- | --- | --- |
@@ -42,11 +43,14 @@ Comic Translate 4 Free traduit mangas et BD automatiquement. Il lit japonais, an
 
 ## ✨ Fonctionnalités
 
-- Traduction automatique — ouvrez une page de manga sur un site autorisé et la version traduite apparaît sur place, sans avoir besoin de cliquer sur un bouton.
+- Traduction automatique (Pro) — ouvrez une page de manga sur un site autorisé et la version traduite apparaît sur place, sans avoir besoin de cliquer sur un bouton. Gratuit pour 50 images par jour ; illimité avec Pro.
 - Chaque image sur la page — la traduction automatique gère toutes les images d'une page (jusqu'à 50 par exécution), pas seulement l'image principale.
-- Prétraduire la page suivante — pendant que vous lisez la page actuelle, l’image de la page suivante est traduite en arrière-plan, elle est donc prête dès que vous l’ouvrez (une seule image ; activé par défaut, désactivable dans les Réglages).
+- Prétraduire la page suivante (Pro) — pendant que vous lisez la page actuelle, l'image de la page suivante est traduite en arrière-plan, elle est donc prête dès que vous l'ouvrez (une seule image ; activé par défaut, désactivable dans les Réglages). Gratuit pour 50 images par jour ; illimité avec Pro.
+- Bascule de moteur — si le moteur de traduction sélectionné échoue, ou renvoie du texte dans la mauvaise langue, l'extension essaie automatiquement un autre moteur. Gratuit, toujours activé.
+- OCR (test) — un moteur OCR de test rapide pour les pages en japonais. Activez-le dans les Réglages, sous Débogage. Beaucoup plus rapide sur téléphone.
+- Un onglet à la fois — pendant qu'un onglet traduit, le bouton Traduire de l'autre onglet est grisé. Annuler devient « Annuler l'autre onglet ».
 - Clic droit sur n'importe quelle image — choisissez « Envoyer vers Comic Translate 4 Free » pour traduire une image précise, même si elle est plus petite que la taille minimale.
-- 114 langues cibles via Google Translate, Gemini, Azure Translator ou votre propre serveur local LM Studio.
+- 114 langues cibles via Google Translator, Gemini, Azure Translator ou votre propre serveur local LM Studio.
 - Détection automatique de la langue source — le japonais, l'anglais, le chinois simplifié/traditionnel sont identifiés automatiquement à partir du texte lu par OCR.
 - Prise en charge des longues bandes / webtoons — les pages hautes sont traitées en segments qui se chevauchent pour que le texte reste net.
 - 17 langues d'interface — l'interface de l'extension suit le réglage de langue de votre navigateur.
@@ -90,8 +94,7 @@ Conseils :
   ![Clic droit pour envoyer une image](../docs/images/right-click.png)
 
 - Si un site bloque les téléchargements (HTTP 403), l'extension réessaie automatiquement via un onglet en arrière-plan.
-- Choisissez votre moteur de traduction dans Paramètres : Google (gratuit, sans clé), Gemini (clé API gratuite — meilleure traduction de mangas, recommandé), Azure Translator (en cours de retrait — 2 millions de caractères/mois gratuits) ou LM Studio (serveur local).
-- Activez le Mode débogage (inspecteur d'étapes) dans Paramètres pour inspecter chaque étape du pipeline.
+- Choisissez votre moteur de traduction dans Paramètres : Google Translator (sans clé), Gemini (clé requise, recommandé — meilleure traduction de mangas), Azure Translator (en cours de retrait) ou LM Studio (serveur local).
 
 ---
 
@@ -99,19 +102,21 @@ Conseils :
 
 Gemini offre les meilleures traductions de manga. Pour l'utiliser comme moteur de traduction :
 
-1. Ouvrez [Google AI Studio](https://aistudio.google.com/apikey) et cliquez sur « Créer une clé API » — gratuit, aucune carte de crédit requise
+1. Ouvrez [Google AI Studio](https://aistudio.google.com/apikey) et cliquez sur « Créer une clé API »
 2. Choisissez ou créez un projet Google Cloud si demandé
 3. Copiez la clé
 4. Collez-la dans le champ « Clé API Gemini » dans les Paramètres de l'extension, puis cliquez sur « Vérifier la connexion Gemini »
-5. Sélectionnez Gemini (gratuit, clé requise) comme moteur de traduction dans Paramètres
+5. Sélectionnez Gemini comme moteur de traduction dans Paramètres
 
 ---
 
-## ❤️ Soutenez ce projet
+## 💎 Pro
 
-Si cette extension vous est utile, pensez à soutenir son développement :
+Les traductions comptent dans le quota gratuit de 50 images par jour tant qu'une fonctionnalité Pro est activée. Une image compte pour une, quelle que soit sa hauteur. Désactivez les deux fonctionnalités Pro et la traduction est gratuite et illimitée. La traduction automatique et la prétraduction sont des fonctionnalités Pro — gratuites pour 50 images par jour, illimitées avec un abonnement Pro.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- 3 $/mois ou 30 $/an
+- Achetez une clé de licence, collez-la dans le champ « Clé de licence » dans les Paramètres de l'extension, et cliquez sur Activer Pro. La clé fonctionne sur 2 navigateurs.
+- Quand vous atteignez la limite gratuite de 50 images, une fenêtre contextuelle vous le rappelle une fois par jour. Après avoir noté l'extension, le bouton Obtenir Pro devient « Copier le code de réduction : 5STARS » — touchez-le pour copier le code et ouvrir la page de paiement.
 
 ---
 
@@ -121,7 +126,7 @@ Si cette extension vous est utile, pensez à soutenir son développement :
 - Grosses sessions — traduire des dizaines d'images en une session peut redémarrer l'extension en arrière-plan. Si cela arrive, l'exécution reprend automatiquement là où elle s'était arrêtée.
 - Firefox — les modèles tournent dans la page d'arrière-plan (sans documents offscreen), en partageant la mémoire avec tout le reste. Redémarrez le navigateur si vous voyez « no available backend found ».
 - Firefox est plus lent que Chrome — les extensions Firefox ne peuvent pas utiliser la mémoire partagée pour le multithreading (SharedArrayBuffer), donc le modèle tourne sur un seul thread CPU. C'est une limite de la plateforme Firefox, pas un bug de l'extension. ([Bug Mozilla 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate utilise le point de terminaison gratuit non officiel et peut être limité en débit.
+- Google Translator utilise le point de terminaison gratuit non officiel et peut être limité en débit.
 
 ---
 

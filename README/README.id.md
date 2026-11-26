@@ -2,14 +2,15 @@
 
 Bahasa: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-Baca manga dalam bahasamu!
-Comic Translate 4 Free menerjemahkan manga dan komik otomatis saat menjelajah. Membaca Jepang, Inggris, Tionghoa Sederhana/Tradisional (deteksi otomatis), dan menerjemahkan ke 114 bahasa, mengganti gambar di tempatnya.
+Baca manga dalam bahasamu — langsung di browser.
+
+Comic Translate 4 Free menerjemahkan halaman manga dan komik secara otomatis saat Anda menjelajah. Aplikasi ini membaca bahasa Jepang, Inggris, Tionghoa Sederhana dan Tradisional (dengan deteksi otomatis), dan menerjemahkan ke 114 bahasa. Buka sebuah halaman, dan versi terjemahannya menggantikan gambar asli di tempatnya — gelembung percakapan terisi dalam bahasamu.
 
 ### 📸 Sebelum & Sesudah
 
 | Sebelum (Jepang) | Sesudah (Indonesia) |
 | --- | --- |
-| ![Original Japanese manga page](../docs/images/wikipe-tan-original.jpg) | ![Translated to Indonesian](../docs/images/wikipe-tan-id.jpg) |
+| ![Halaman manga Jepang asli](../docs/images/wikipe-tan-original.jpg) | ![Diterjemahkan ke Bahasa Indonesia](../docs/images/wikipe-tan-id.jpg) |
 
 <details>
 <summary>Lihat terjemahan dalam 14 bahasa lainnya</summary>
@@ -42,11 +43,14 @@ Comic Translate 4 Free menerjemahkan manga dan komik otomatis saat menjelajah. M
 
 ## ✨ Fitur
 
-- Terjemahan otomatis — buka halaman manga di situs yang diizinkan dan versi terjemahannya akan muncul di tempatnya, tanpa perlu mengeklik tombol.
+- Terjemahan otomatis (Pro) — buka halaman manga di situs yang diizinkan dan versi terjemahannya akan muncul di tempatnya, tanpa perlu mengeklik tombol. Gratis untuk 50 gambar per hari; tanpa batas dengan Pro.
 - Setiap gambar di halaman — terjemahan otomatis menangani semua gambar di sebuah halaman (hingga 50 per proses), bukan hanya gambar utama.
-- Terjemahkan halaman berikutnya terlebih dahulu — saat Anda membaca halaman ini, gambar halaman berikutnya diterjemahkan di latar belakang, jadi sudah siap begitu Anda membukanya (hanya satu gambar; aktif secara default, bisa dimatikan di Pengaturan).
+- Terjemahkan halaman berikutnya terlebih dahulu (Pro) — saat Anda membaca halaman ini, gambar halaman berikutnya diterjemahkan di latar belakang, jadi sudah siap begitu Anda membukanya (hanya satu gambar; aktif secara default, bisa dimatikan di Pengaturan). Gratis untuk 50 gambar per hari; tanpa batas dengan Pro.
+- Failover mesin — jika mesin terjemahan yang dipilih gagal, atau menghasilkan teks dalam bahasa yang salah, ekstensi secara otomatis mencoba mesin lain. Gratis, selalu aktif.
+- OCR (pengujian) — mesin OCR uji yang cepat untuk halaman Jepang. Aktifkan di Pengaturan, di bawah Debug. Jauh lebih cepat di ponsel.
+- Satu tab dalam satu waktu — saat satu tab sedang menerjemahkan, tombol Terjemahkan di tab lain menjadi abu-abu. Batal menjadi "Batalkan tab lain".
 - Klik kanan pada gambar apa pun — pilih "Kirim ke Comic Translate 4 Free" untuk menerjemahkan gambar tertentu, bahkan yang lebih kecil dari ukuran minimum.
-- 114 bahasa target melalui Google Translate, Gemini, Azure Translator, atau server LM Studio lokal Anda sendiri.
+- 114 bahasa target melalui Google Translator, Gemini, Azure Translator, atau server LM Studio lokal Anda sendiri.
 - Deteksi otomatis bahasa sumber — bahasa Jepang, Inggris, Tionghoa Sederhana/Tradisional dikenali secara otomatis dari teks hasil OCR.
 - Dukungan strip panjang / webtoon — halaman tinggi diproses dalam segmen yang tumpang tindih sehingga teks tetap tajam.
 - 17 bahasa UI — antarmuka ekstensi mengikuti pengaturan bahasa browser Anda.
@@ -84,14 +88,13 @@ Setelah menginstal, model diunduh secara otomatis di latar belakang (~350 MB: de
 2. Muat ulang halaman manga — terjemahan dimulai secara otomatis saat halaman dimuat. Sebuah pil di kanan atas menunjukkan progres langsung (Capturing → Detecting → OCR → …).
 3. Selesai — gambar-gambar halaman diganti di tempatnya dengan versi terjemahan.
 
-Tips:
+Kiat:
 - Klik kanan pada gambar apa pun → Kirim ke Comic Translate 4 Free untuk menerjemahkan hanya gambar itu.
 
   ![Right-click to send an image](../docs/images/right-click.png)
 
 - Jika sebuah situs memblokir unduhan (HTTP 403), ekstensi akan otomatis mencoba lagi melalui tab latar belakang.
-- Pilih mesin terjemahan Anda di Pengaturan: Google (gratis, tanpa kunci), Gemini (kunci API gratis — terjemahan manga lebih baik, direkomendasikan), Azure Translator (akan dihentikan — 2 jt karakter/bulan gratis), atau LM Studio (server lokal).
-- Aktifkan Mode debug (pemeriksa tahap) di Pengaturan untuk memeriksa setiap tahap pipeline.
+- Pilih mesin terjemahan Anda di Pengaturan: Google Translator (tanpa kunci), Gemini (perlu kunci, direkomendasikan — terjemahan manga lebih baik), Azure Translator (akan dihentikan), atau LM Studio (server lokal).
 
 ---
 
@@ -99,19 +102,21 @@ Tips:
 
 Gemini memberikan terjemahan manga terbaik. Untuk menggunakannya sebagai mesin terjemahan:
 
-1. Buka [Google AI Studio](https://aistudio.google.com/apikey) dan klik "Create API key" — gratis, tidak perlu kartu kredit
+1. Buka [Google AI Studio](https://aistudio.google.com/apikey) dan klik "Create API key"
 2. Pilih atau buat proyek Google Cloud jika diminta
 3. Salin kunci
 4. Tempelkan ke kolom 'Kunci API Gemini' di Pengaturan ekstensi, lalu klik 'Periksa koneksi Gemini'
-5. Pilih Gemini (gratis, perlu kunci API) sebagai mesin terjemahan di Pengaturan
+5. Pilih Gemini sebagai mesin terjemahan di Pengaturan
 
 ---
 
-## ❤️ Dukung proyek ini
+## 💎 Pro
 
-Jika ekstensi ini berguna bagi Anda, pertimbangkan untuk mendukung pengembangannya:
+Terjemahan dihitung dalam kuota gratis 50 gambar per hari selama ada fitur Pro yang aktif. Satu gambar dihitung satu, berapa pun tingginya. Matikan kedua fitur Pro dan penerjemahan menjadi gratis dan tanpa batas. Terjemahan otomatis dan pra-terjemahan adalah fitur Pro — gratis untuk 50 gambar per hari, tanpa batas dengan langganan Pro.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/bulan atau $30/tahun
+- Beli kunci lisensi, tempelkan ke kolom 'Kunci lisensi' di Pengaturan ekstensi, lalu klik Aktifkan Pro. Kunci ini berfungsi di 2 browser.
+- Saat Anda mencapai batas gratis 50 gambar, sebuah popup mengingatkan Anda sekali sehari. Setelah Anda memberi rating pada ekstensi, Dapatkan Pro berubah menjadi "Salin Kode Diskon: 5STARS" — ketuk untuk menyalin kode dan membuka checkout.
 
 ---
 
@@ -121,7 +126,7 @@ Jika ekstensi ini berguna bagi Anda, pertimbangkan untuk mendukung pengembangann
 - Sesi besar — menerjemahkan puluhan gambar dalam satu sesi dapat memulai ulang ekstensi di latar belakang. Jika itu terjadi, proses akan dilanjutkan secara otomatis dari tempat terakhir berhenti.
 - Firefox — model berjalan di halaman latar belakang (tanpa dokumen offscreen), berbagi memori dengan yang lain. Restart browser jika Anda melihat "no available backend found".
 - Firefox lebih lambat daripada Chrome — ekstensi Firefox tidak dapat menggunakan memori bersama untuk multi-threading (SharedArrayBuffer), jadi model berjalan pada satu thread CPU. Ini adalah batasan platform Firefox, bukan bug ekstensi. ([Bug Mozilla 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate menggunakan endpoint gratis tidak resmi dan mungkin dibatasi kecepatannya.
+- Google Translator menggunakan endpoint gratis tidak resmi dan mungkin dibatasi kecepatannya.
 
 ---
 

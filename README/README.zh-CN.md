@@ -2,8 +2,9 @@
 
 语言： [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-用你的语言读漫画！
-Comic Translate 4 Free 会在你浏览时自动翻译漫画和连环画。它能识别日语、英语、简体/繁体中文（自动检测），并翻译成 114 种语言，在原地替换原始图片。
+用你的语言读漫画——就在浏览器中。
+
+Comic Translate 4 Free 会在你浏览时自动翻译漫画和连环画页面。它能识别日语、英语、简体和繁体中文（自动检测），并翻译成 114 种语言。打开一个页面，翻译后的版本就会在原地替换原始图片——对话气泡里填满你的语言。
 
 ### 📸 翻译前后对比
 
@@ -12,7 +13,7 @@ Comic Translate 4 Free 会在你浏览时自动翻译漫画和连环画。它能
 | ![原版日语漫画页面](../docs/images/wikipe-tan-original.jpg) | ![翻译成简体中文](../docs/images/wikipe-tan-zh-CN.jpg) |
 
 <details>
-<summary>See translations in 14 more languages</summary>
+<summary>查看其他 14 种语言的翻译</summary>
 
 | Hindi | Korean | Simplified Chinese |
 | --- | --- | --- |
@@ -42,11 +43,14 @@ Comic Translate 4 Free 会在你浏览时自动翻译漫画和连环画。它能
 
 ## ✨ 功能
 
-- 自动翻译 — 在已允许的网站上打开漫画页面，翻译后的版本就会在原地出现，无需点击按钮。
+- 自动翻译 (Pro) — 在已允许的网站上打开漫画页面，翻译后的版本就会在原地出现，无需点击按钮。每天免费 50 张图片；Pro 无限量。
 - 页面上的每张图片 — 自动翻译会处理页面上的所有图片（每次最多 50 张），而不仅仅是主图。
-- 预先翻译下一页 — 在您阅读当前页时，下一页的图片会在后台翻译好，打开时即可直接查看（仅限一幅图片；默认开启，可在设置中关闭）。
+- 预先翻译下一页 (Pro) — 在您阅读当前页时，下一页的图片会在后台翻译好，打开时即可直接查看（仅限一幅图片；默认开启，可在设置中关闭）。每天免费 50 张图片；Pro 无限量。
+- 引擎故障转移 — 如果所选翻译引擎失败，或返回了错误语言的文本，扩展会自动尝试另一个引擎。免费，始终开启。
+- OCR（测试版）— 一个用于日语页面的快速测试版 OCR 引擎。在设置中的 Debug 下开启。在手机上快得多。
+- 一次只翻译一个标签页 — 当一个标签页正在翻译时，另一个标签页的 Translate 会变灰。Cancel 上显示 "Cancel other tab"。
 - 右键点击任意图片 — 选择“发送到 Comic Translate 4 Free”来翻译特定图片，即使它小于最小尺寸也可以。
-- 通过 Google Translate、Gemini、Azure Translator 或你自己的本地 LM Studio 服务器，支持 114 种目标语言。
+- 通过 Google Translator、Gemini、Azure Translator 或你自己的本地 LM Studio 服务器，支持 114 种目标语言。
 - 源语言自动检测 — 根据 OCR 识别的文本自动识别日语、英语、简体/繁体中文。
 - 长条 / 网络漫画支持 — 高页面按重叠分段处理，文字保持清晰。
 - 17 种界面语言 — 扩展界面遵循浏览器的语言设置。
@@ -90,26 +94,29 @@ Firefox:
   ![右键发送图片](../docs/images/right-click.png)
 
 - 如果某个网站阻止下载（HTTP 403），扩展会通过后台标签页自动重试。
-- 在设置中选择你的翻译引擎：Google（免费，无需密钥）、Gemini（免费 API 密钥 — 漫画翻译效果更好，推荐使用）、Azure Translator（即将停用 — 每月 200 万字符免费）或 LM Studio（本地服务器）。
-- 在设置中启用调试模式（阶段检查器），可以检查流水线的每个阶段。
+- 在设置中选择你的翻译引擎：Google Translator（无需密钥）、Gemini（需要密钥，推荐使用——漫画翻译效果更好）、Azure Translator（即将停用）或 LM Studio（本地服务器）。
+
+---
 
 ## 🔑 获取 Gemini API 密钥
 
 Gemini 的漫画翻译效果最好。要将其用作翻译引擎：
 
-1. 打开 [Google AI Studio](https://aistudio.google.com/apikey)，点击 “Create API key” — 免费，无需信用卡
+1. 打开 [Google AI Studio](https://aistudio.google.com/apikey)，点击 “Create API key”
 2. 如果被要求，选择或创建 Google Cloud 项目
 3. 复制密钥
 4. 把它粘贴到扩展设置里的 Gemini API 密钥字段，然后点击“检查 Gemini 连接”
-5. 在设置中选择 Gemini（免费，需要密钥）作为翻译引擎。
+5. 在设置中选择 Gemini 作为翻译引擎。
 
 ---
 
-## ❤️ 支持这个项目
+## 💎 Pro
 
-如果这个扩展对你有用，请考虑支持它的开发：
+当任何 Pro 功能开启时，翻译会计入每天免费的 50 张图片。一张图片计为一张，无论它有多高。关闭两个 Pro 功能后，翻译即免费且无限量。自动翻译和预先翻译是 Pro 功能——每天免费 50 张图片，订阅 Pro 后无限量。
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/月或 $30/年
+- 购买许可证密钥，将其粘贴到扩展设置中的 License key 字段，然后点击 Activate Pro。该密钥可在 2 个浏览器上使用。
+- 当你达到 50 张图片的免费上限时，弹窗每天会提醒你一次。给扩展评分后，Get Pro 会变成“Copy Discount Code: 5STARS”——点按它即可复制折扣码并打开结账页面。
 
 ---
 
@@ -119,7 +126,7 @@ Gemini 的漫画翻译效果最好。要将其用作翻译引擎：
 - 大型会话 — 在一次会话中翻译数十张图片可以在后台重启扩展。如果发生这种情况，运行会自动从中断处恢复。
 - Firefox — 模型在后台页面中运行（没有离屏文档），与其他所有内容共享内存。如果看到“no available backend found”，请重新启动浏览器。
 - Firefox 比 Chrome 慢 — Firefox 扩展无法使用共享内存进行多线程处理（SharedArrayBuffer），因此模型只在一个 CPU 线程上运行。这是 Firefox 平台的限制，不是扩展的错误。([Mozilla 错误 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477))
-- Google Translate 使用非官方免费端点，可能会受到速率限制。
+- Google Translator 使用非官方免费端点，可能会受到速率限制。
 
 ---
 

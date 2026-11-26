@@ -2,8 +2,9 @@
 
 Limba: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-Citește manga în limba ta!
-Comic Translate 4 Free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi, înlocuind imaginea chiar acolo.
+Citește manga în limba ta — chiar în browser.
+
+Comic Translate 4 Free traduce automat manga și benzi desenate în timp ce navighezi. Citește japoneză, engleză, chineză simplificată/tradițională (detectare automată) și traduce în 114 limbi. Deschide o pagină, iar versiunea tradusă înlocuiește imaginea originală chiar acolo — bulele de dialog fiind completate în limba ta.
 
 ### 📸 Înainte și după
 
@@ -42,11 +43,14 @@ Comic Translate 4 Free traduce automat manga și benzi desenate în timp ce navi
 
 ## ✨ Funcții
 
-- Traducere automată — deschide o pagină de manga pe un site permis, iar versiunea tradusă apare chiar acolo, fără să fie nevoie să apeși vreun buton.
+- Traducere automată (Pro) — deschide o pagină de manga pe un site permis, iar versiunea tradusă apare chiar acolo, fără să fie nevoie să apeși vreun buton. Gratuit pentru 50 de imagini pe zi; nelimitat cu Pro.
 - Fiecare imagine de pe pagină — traducerea automată gestionează toate imaginile de pe o pagină (până la 50 pe rulare), nu doar imaginea principală.
-- Pretradu pagina următoare — în timp ce citești pagina curentă, imaginea paginii următoare este tradusă în fundal, așa că e gata în momentul în care o deschizi (o singură imagine; activat implicit, se poate opri din Setări).
+- Pretradu pagina următoare (Pro) — în timp ce citești pagina curentă, imaginea paginii următoare este tradusă în fundal, așa că e gata în momentul în care o deschizi (o singură imagine; activat implicit, se poate opri din Setări). Gratuit pentru 50 de imagini pe zi; nelimitat cu Pro.
+- Failover pentru motor — dacă motorul de traducere selectat eșuează sau returnează text în limba greșită, extensia încearcă automat altul. Gratuit, mereu activat.
+- OCR (testing) — un motor de OCR de test rapid pentru paginile în japoneză. Pornește-l din Setări, sub Depanare. Mult mai rapid pe telefoane.
+- Câte o filă o dată — în timp ce o filă traduce, butonul Traducere al celeilalte file este estompat. Butonul Anulare arată "Cancel other tab".
 - Clic dreapta pe orice imagine — alege „Trimite la Comic Translate 4 Free” pentru a traduce o anumită imagine, chiar și una mai mică decât dimensiunea minimă.
-- 114 limbi țintă prin Google Translate, Gemini, Azure Translator sau propriul tău server local LM Studio.
+- 114 limbi țintă prin Google Translator, Gemini, Azure Translator sau propriul tău server local LM Studio.
 - Detectare automată a limbii sursă — japoneza, engleza, chineza simplificată/tradițională sunt identificate automat din textul recunoscut prin OCR.
 - Suport pentru benzi lungi / webtoon — paginile înalte sunt procesate în segmente care se suprapun, astfel încât textul rămâne clar.
 - 17 limbi pentru interfață — interfața extensiei urmează setarea de limbă a browserului tău.
@@ -90,8 +94,7 @@ Sfaturi:
   ![Right-click to send an image](../docs/images/right-click.png)
 
 - Dacă un site blochează descărcările (HTTP 403), extensia încearcă din nou automat printr-o filă de fundal.
-- Alege motorul de traducere în Setări: Google (gratuit, fără cheie), Gemini (cheie API gratuită — traducere manga mai bună, recomandată), Azure Translator (în curs de retragere — 2 milioane de caractere/lună gratuit), sau LM Studio (server local).
-- Activează Mod depanare (inspector de etape) în Setări pentru a inspecta fiecare etapă a procesului.
+- Alege motorul de traducere în Setări: Google Translator (fără cheie), Gemini (cheie necesară, recomandat — traducere manga mai bună), Azure Translator (în curs de retragere) sau LM Studio (server local).
 
 ---
 
@@ -99,19 +102,21 @@ Sfaturi:
 
 Gemini oferă cele mai bune traduceri de manga. Pentru a-l folosi ca motor de traducere:
 
-1. Deschide [Google AI Studio](https://aistudio.google.com/apikey) și apasă „Create API key” — gratuit, nu este nevoie de card de credit
+1. Deschide [Google AI Studio](https://aistudio.google.com/apikey) și apasă „Create API key”
 2. Alege sau creează un proiect Google Cloud, dacă ți se cere
 3. Copiază cheia
 4. Lipește-o în câmpul Cheie API Gemini din Setările extensiei, apoi apasă „Verifică conexiunea Gemini”
-5. Alege Gemini (gratuit, necesită cheie) ca motor de traducere în Setări
+5. Alege Gemini ca motor de traducere în Setări
 
 ---
 
-## ❤️ Sprijină acest proiect
+## 💎 Pro
 
-Dacă această extensie îți este utilă, ia în considerare sprijinirea dezvoltării sale:
+Traducerile se scad din cele 50 de imagini gratuite pe zi cât timp este activată oricare funcție Pro. O imagine contează ca una singură, indiferent de înălțimea ei. Dacă oprești ambele funcții Pro, traducerea este gratuită și nelimitată. Traducerea automată și pretraducerea sunt funcții Pro — gratuite pentru 50 de imagini pe zi, nelimitate cu un abonament Pro.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/lună sau $30/an
+- Cumpără o cheie de licență, lipește-o în câmpul Cheie de licență din Setările extensiei și apasă Activate Pro. Cheia funcționează pe 2 browsere.
+- Când atingi limita gratuită de 50 de imagini, un popup îți amintește o dată pe zi. După ce evaluezi extensia, Get Pro devine "Copy Discount Code: 5STARS" — apasă-l pentru a copia codul și a deschide pagina de plată.
 
 ---
 
@@ -121,7 +126,7 @@ Dacă această extensie îți este utilă, ia în considerare sprijinirea dezvol
 - Sesiuni mari — traducerea a zeci de imagini într-o singură sesiune poate reporni extensia în fundal. Dacă se întâmplă asta, rularea reia automat de unde a rămas.
 - Firefox — modelele rulează în pagina de fundal (fără documente offscreen), împărțind memoria cu toate celelalte. Repornește browserul dacă vezi mesajul „no available backend found”.
 - Firefox este mai lent decât Chrome — extensiile Firefox nu pot folosi memoria partajată pentru multi-threading (SharedArrayBuffer), așa că modelul rulează pe un singur fir CPU. Aceasta este o limită a platformei Firefox, nu o eroare a extensiei. ([Bug Mozilla 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate folosește endpointul gratuit neoficial și poate fi limitat ca rată.
+- Google Translator folosește endpointul gratuit neoficial și poate fi limitat ca rată.
 
 ---
 

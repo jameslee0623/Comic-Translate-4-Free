@@ -2,8 +2,9 @@
 
 Sprache: [English](../README.md) · [हिन्दी](README.hi.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Español](README.es.md) · [العربية](README.ar.md) · [Français](README.fr.md) · [বাংলা](README.bn.md) · [Português](README.pt.md) · [Русский](README.ru.md) · [Tiếng Việt](README.vi.md) · [Bahasa Indonesia](README.id.md) · [اردو](README.ur.md) · [Deutsch](README.de.md) · [Română](README.ro.md)
 
-Lies Manga in deiner Sprache!
-Comic Translate 4 Free übersetzt Manga und Comics automatisch. Es liest Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch (Auto-Erkennung) und übersetzt in 114 Sprachen, ersetzt das Bild an Ort und Stelle.
+Lies Manga in deiner Sprache — direkt im Browser.
+
+Comic Translate 4 Free übersetzt Manga- und Comicseiten automatisch beim Surfen. Es liest Japanisch, Englisch, Vereinfachtes und Traditionelles Chinesisch (mit Auto-Erkennung) und übersetzt in 114 Sprachen. Öffne eine Seite, und die übersetzte Version ersetzt das Originalbild an Ort und Stelle — die Sprechblasen sind mit deiner Sprache gefüllt.
 
 ### 📸 Vorher & Nachher
 
@@ -42,11 +43,14 @@ Comic Translate 4 Free übersetzt Manga und Comics automatisch. Es liest Japanis
 
 ## ✨ Funktionen
 
-- Automatische Übersetzung — öffne eine Mangaseite auf einer erlaubten Website, und die übersetzte Version erscheint an Ort und Stelle, ganz ohne Klick.
+- Automatische Übersetzung (Pro) — öffne eine Mangaseite auf einer erlaubten Website, und die übersetzte Version erscheint an Ort und Stelle, ganz ohne Klick. Kostenlos für 50 Bilder pro Tag; unbegrenzt mit Pro.
 - Jedes Bild auf der Seite — die automatische Übersetzung verarbeitet alle Bilder einer Seite (bis zu 50 pro Durchlauf), nicht nur das Hauptbild.
-- Nächste Seite vorab übersetzen — während du die aktuelle Seite liest, wird das Bild der nächsten Seite im Hintergrund übersetzt und ist bereit, sobald du sie öffnest (nur ein Bild; standardmäßig an, in den Einstellungen abschaltbar).
+- Nächste Seite vorab übersetzen (Pro) — während du die aktuelle Seite liest, wird das Bild der nächsten Seite im Hintergrund übersetzt und ist bereit, sobald du sie öffnest (nur ein Bild; standardmäßig an, in den Einstellungen abschaltbar). Kostenlos für 50 Bilder pro Tag; unbegrenzt mit Pro.
+- Engine-Failover — wenn die gewählte Übersetzungs-Engine fehlschlägt oder Text in der falschen Sprache liefert, versucht die Erweiterung automatisch eine andere. Kostenlos, immer an.
+- OCR (testing) — eine schnelle Test-OCR-Engine für japanische Seiten. Schalte sie in den Einstellungen unter Debug ein. Auf Handys deutlich schneller.
+- Ein Tab nach dem anderen — während ein Tab übersetzt, ist „Translate" im anderen Tab ausgegraut. Der Abbrechen-Button heißt „Cancel other tab".
 - Rechtsklick auf ein beliebiges Bild — wähle „An Comic Translate 4 Free senden“, um ein bestimmtes Bild zu übersetzen, auch wenn es kleiner als die Mindestgröße ist.
-- 114 Zielsprachen über Google Translate, Gemini, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
+- 114 Zielsprachen über Google Translator, Gemini, Azure Translator oder deinen eigenen lokalen LM-Studio-Server.
 - Automatische Quellspracherkennung — Japanisch, Englisch, Vereinfachtes/Traditionelles Chinesisch werden automatisch aus dem per OCR gelesenen Text erkannt.
 - Unterstützung für lange Strips / Webtoons — hohe Seiten werden in überlappenden Abschnitten verarbeitet, damit der Text scharf bleibt.
 - 17 UI-Sprachen — die Oberfläche der Erweiterung folgt der Spracheinstellung deines Browsers.
@@ -90,8 +94,7 @@ Tipps:
   ![Rechtsklick, um ein Bild zu senden](../docs/images/right-click.png)
 
 - Wenn eine Website Downloads blockiert (HTTP 403), versucht es die Erweiterung automatisch über einen Hintergrund-Tab erneut.
-- Wähle deine Übersetzungs-Engine in den Einstellungen: Google (kostenlos, kein Schlüssel), Gemini (kostenloser API-Schlüssel — bessere Manga-Übersetzung, empfohlen), Azure Translator (wird eingestellt — 2 Mio. Zeichen/Monat kostenlos) oder LM Studio (lokaler Server).
-- Aktiviere den Debug-Modus (Stufen-Inspektor) in den Einstellungen, um jede Pipeline-Stufe zu prüfen.
+- Wähle deine Übersetzungs-Engine in den Einstellungen: Google Translator (kostenlos, kein Schlüssel), Gemini (Schlüssel erforderlich, empfohlen — bessere Manga-Übersetzung), Azure Translator (wird eingestellt) oder LM Studio (lokaler Server).
 
 ---
 
@@ -99,19 +102,21 @@ Tipps:
 
 Gemini liefert die besten Manga-Übersetzungen. Um es als Übersetzungs-Engine zu verwenden:
 
-1. Öffne [Google AI Studio](https://aistudio.google.com/apikey) und klicke auf „Create API key“ — kostenlos, keine Kreditkarte nötig
+1. Öffne [Google AI Studio](https://aistudio.google.com/apikey) und klicke auf „Create API key“
 2. Wähle ein Google-Cloud-Projekt aus oder erstelle eins, falls danach gefragt wird
 3. Kopiere den Schlüssel
 4. Füge ihn in das Feld Gemini-API-Schlüssel in den Einstellungen der Erweiterung ein und klicke dann auf „Gemini-Verbindung prüfen“
-5. Wähle Gemini (kostenlos, Schlüssel erforderlich) als Übersetzungs-Engine in den Einstellungen
+5. Wähle Gemini als Übersetzungs-Engine in den Einstellungen
 
 ---
 
-## ❤️ Unterstütze dieses Projekt
+## 💎 Pro
 
-Wenn dir diese Erweiterung nützlich ist, erwäge, ihre Entwicklung zu unterstützen:
+Übersetzungen zählen zum kostenlosen Limit von 50 Bildern pro Tag, solange eine Pro-Funktion an ist. Ein Bild zählt als eins, egal wie hoch es ist. Schalte beide Pro-Funktionen aus, und das Übersetzen ist kostenlos und unbegrenzt. Automatisches Übersetzen und Vorab-Übersetzen sind Pro-Funktionen — kostenlos für 50 Bilder pro Tag, unbegrenzt mit einem Pro-Abo.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S5X627XJQW)
+- $3/Monat oder $30/Jahr
+- Kaufe einen Lizenzschlüssel, füge ihn in das Feld „License key" in den Einstellungen der Erweiterung ein und klicke auf „Activate Pro". Der Schlüssel funktioniert in 2 Browsern.
+- Wenn du das kostenlose Limit von 50 Bildern erreichst, erinnert dich ein Popup einmal am Tag daran. Nachdem du die Erweiterung bewertet hast, wird aus Get Pro „Copy Discount Code: 5STARS" — tippe darauf, um den Code zu kopieren und den Checkout zu öffnen.
 
 ---
 
@@ -121,7 +126,7 @@ Wenn dir diese Erweiterung nützlich ist, erwäge, ihre Entwicklung zu unterstü
 - Große Sitzungen — das Übersetzen von Dutzenden Bildern in einer Sitzung kann die Erweiterung im Hintergrund neu starten. Wenn das passiert, wird der Lauf automatisch von dort fortgesetzt, wo er aufgehört hat.
 - Firefox — die Modelle laufen auf der Hintergrundseite (ohne Offscreen-Dokumente) und teilen sich den Speicher mit allem anderen. Starte den Browser neu, wenn du „no available backend found“ siehst.
 - Firefox ist langsamer als Chrome — Firefox-Erweiterungen können keinen gemeinsamen Speicher für Multithreading (SharedArrayBuffer) verwenden, daher läuft das Modell auf einem einzigen CPU-Thread. Das ist eine Grenze der Firefox-Plattform, kein Fehler der Erweiterung. ([Mozilla-Bug 1673477](https://bugzilla.mozilla.org/show_bug.cgi?id=1673477)).
-- Google Translate nutzt den inoffiziellen kostenlosen Endpunkt und kann ratenbegrenzt sein.
+- Google Translator nutzt den inoffiziellen kostenlosen Endpunkt und kann ratenbegrenzt sein.
 
 ---
 
