@@ -221,11 +221,12 @@ async function load() {
     setTimeout(() => { resetBtn.textContent = old; }, 1500);
   };
   // Reset rate popup (Debug only): clears the shown date + the Rate flag +
-  // the Redeem flag, so the full flow (popup → Rate → Redeem) can be tested
-  // from scratch. Clears ONLY those three keys, nothing else.
+  // the Redeem flag + the "Do not show again" dismiss flag, so the full
+  // flow (popup → Rate → Redeem, or popup → Do not show again) can be
+  // tested from scratch. Clears ONLY those four keys, nothing else.
   const resetRateBtn = $('resetRatePopup');
   if (resetRateBtn) resetRateBtn.onclick = async () => {
-    try { await chrome.storage.local.remove(['ctSupportPopup', 'ctSupportRated', 'ctSupportRedeemed']); } catch {}
+    try { await chrome.storage.local.remove(['ctSupportPopup', 'ctSupportRated', 'ctSupportRedeemed', 'ctSupportPopupDismissed']); } catch {}
     const old = resetRateBtn.textContent;
     resetRateBtn.textContent = 'Reset ✓';
     setTimeout(() => { resetRateBtn.textContent = old; }, 1500);

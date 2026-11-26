@@ -129,6 +129,9 @@
   "detection_rendering": {
     "message": "شناخت و رینڈرنگ"
   },
+  "do_not_show_again": {
+    "message": "دوبارہ نہ دکھائیں"
+  },
   "download": {
     "message": "ڈاؤن لوڈ"
   },
@@ -426,10 +429,10 @@
     "message": "🎁 مفت ٹرائل حاصل کریں"
   },
   "support_modal_title": {
-    "message": "Comic Translate 4 Free پسند آ رہا ہے؟"
+    "message": "مفت آٹو ترجمہ کی حد پوری ہو گئی"
   },
   "support_modal_text": {
-    "message": "اگر پسند آئے تو ریٹنگ یا فیڈبیک بہت مدد کرتا ہے۔"
+    "message": "آج آپ نے 50 مفت تصاویر استعمال کر لی ہیں۔ لامحدود آٹو ترجمہ اور پری ٹرانسلیٹ کے لیے Pro لیں۔ دستی ترجمہ اب بھی مفت ہے۔"
   },
   "target_lang": {
     "message": "ہدف زبان"

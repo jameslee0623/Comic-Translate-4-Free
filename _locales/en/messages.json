@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Detection & rendering"
   },
+  "do_not_show_again": {
+    "message": "Do not show again"
+  },
   "download": {
     "message": "Download"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 Redeem free trial"
   },
   "support_modal_title": {
-    "message": "Enjoying Comic Translate 4 Free?"
+    "message": "Free Auto-translate Limit Reached"
   },
   "support_modal_text": {
-    "message": "If you like it, a rating or feedback helps a lot."
+    "message": "You've used 50 free images today. Get Pro for unlimited auto-translate and pre-translate. Manual translate is still free."
   },
   "support_hint": {
     "message": "Translate manga and comics in your browser."

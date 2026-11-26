@@ -129,6 +129,9 @@
   "detection_rendering": {
     "message": "डिटेक्शन और रेंडरिंग"
   },
+  "do_not_show_again": {
+    "message": "फिर से न दिखाएँ"
+  },
   "download": {
     "message": "डाउनलोड"
   },
@@ -426,10 +429,10 @@
     "message": "🎁 निःशुल्क परीक्षण रिडीम करें"
   },
   "support_modal_title": {
-    "message": "Comic Translate 4 Free पसंद आ रहा है?"
+    "message": "मुफ़्त ऑटो-अनुवाद सीमा पूरी हुई"
   },
   "support_modal_text": {
-    "message": "अगर पसंद आए, तो रेटिंग या फ़ीडबैक बहुत मदद करता है।"
+    "message": "आज आपने 50 मुफ़्त छवियाँ इस्तेमाल कर ली हैं। असीमित ऑटो-अनुवाद और प्री-ट्रांसलेट के लिए Pro लें। मैन्युअल अनुवाद अभी भी मुफ़्त है।"
   },
   "target_lang": {
     "message": "लक्ष्य भाषा"

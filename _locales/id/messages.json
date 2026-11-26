@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Deteksi & rendering"
   },
+  "do_not_show_again": {
+    "message": "Jangan tampilkan lagi"
+  },
   "download": {
     "message": "Unduh"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 Tukarkan uji coba gratis"
   },
   "support_modal_title": {
-    "message": "Menikmati Comic Translate 4 Free?"
+    "message": "Batas terjemahan otomatis gratis tercapai"
   },
   "support_modal_text": {
-    "message": "Jika Anda menyukainya, rating atau masukan sangat membantu."
+    "message": "Anda telah memakai 50 gambar gratis hari ini. Dapatkan Pro untuk terjemahan otomatis dan pra-terjemahan tanpa batas. Terjemahan manual tetap gratis."
   },
   "support_hint": {
     "message": "Terjemahkan manga dan komik di browser Anda."

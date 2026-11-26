@@ -2394,12 +2394,15 @@ ensureModelWatchdog();
 restoreModelDownloadInflight();
 
 // Daily support popup: the first time the user hits the 50/day free limit
-// ON EACH DAY, offer the store rating / free trial / feedback once, in the
+// ON EACH DAY, remind them the free auto-translate limit is reached and
+// offer Get Pro / the store rating / free trial / feedback once, in the
 // middle of the page. Once per day — the shown date is stored, so a second
 // limit hit the same day does not show it again, but tomorrow it shows
-// again. The flag is set only when the content script confirms the modal
-// actually rendered (it returns ok:true), so a render failure does not lose
-// the popup for that day (2.2.12). Old installs may still carry
+// again — until the user clicks "Do not show again" in the modal, which
+// sets ctSupportPopupDismissed and the popup never shows again. The flag
+// is set only when the content script confirms the modal actually rendered
+// (it returns ok:true), so a render failure does not lose the popup for
+// that day (2.2.12). Old installs may still carry
 // { translatedTotal, shown } from the old 50-lifetime trigger, or
 // { shown: true } with no date — a flag with no date is treated as shown on
 // an unknown past day, so the popup can show again today.
@@ -2408,6 +2411,13 @@ let supportPopupSendInFlight = false; // one send at a time — two tabs hitting
 async function maybeShowSupportPopupAtLimit(tabId) {
   if (supportPopupSendInFlight) return;
   try {
+    // "Do not show again": a permanent dismiss. The content script sets
+    // ctSupportPopupDismissed when the user clicks the link in the modal;
+    // once set, the popup never shows again (overrides the daily rule).
+    // Its own key, separate from the ctSupportPopup record, so the
+    // whole-record shownDate write below can never clobber it.
+    const dis = await chrome.storage.local.get('ctSupportPopupDismissed');
+    if (dis && dis.ctSupportPopupDismissed) return;
     const saved = await chrome.storage.local.get(SUPPORT_POPUP_KEY);
     const rec = (saved && saved[SUPPORT_POPUP_KEY]) || {};
     if (rec.shownDate === dateStr()) return; // already shown today

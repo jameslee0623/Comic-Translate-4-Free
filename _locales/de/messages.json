@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Erkennung & Rendering"
   },
+  "do_not_show_again": {
+    "message": "Nicht mehr anzeigen"
+  },
   "download": {
     "message": "Herunterladen"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 Kostenlose Testversion einlösen"
   },
   "support_modal_title": {
-    "message": "Gefällt dir Comic Translate 4 Free?"
+    "message": "Kostenloses Auto-Übersetzungs-Limit erreicht"
   },
   "support_modal_text": {
-    "message": "Wenn sie dir gefällt, hilft eine Bewertung oder Rückmeldung sehr."
+    "message": "Du hast heute 50 kostenlose Bilder verbraucht. Hole dir Pro für unbegrenztes Auto-Übersetzen und Vorübersetzen. Manuelles Übersetzen ist weiterhin kostenlos."
   },
   "support_hint": {
     "message": "Übersetze Manga und Comics in deinem Browser."

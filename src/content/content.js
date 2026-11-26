@@ -1136,6 +1136,20 @@
       chrome.storage.local.set({ ctSupportRedeemed: true }, () => {});
     } catch { /* best-effort — the button is hidden in this render anyway */ }
   }
+  // "Do not show again" flag for the support popup: once the user clicks
+  // "Do not show again", the popup never shows again — the SW's daily gate
+  // checks this flag first. Stored under its own key
+  // (ctSupportPopupDismissed), separate from the ctSupportPopup record, so
+  // the SW's whole-record shownDate write can never clobber it (and this
+  // write can never clobber shownDate). Mirrors markSupportRated /
+  // markSupportRedeemed. The content script never needs to read it — the
+  // SW gates on it before sending.
+  function markSupportPopupDismissed() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+      chrome.storage.local.set({ ctSupportPopupDismissed: true }, () => {});
+    } catch { /* best-effort — the modal still closes in this render */ }
+  }
   function showSupportModal(rated, checkoutUrl, redeemed) {
     if (supportModal) return false; // already showing
     const wrap = document.createElement('div');
@@ -1153,11 +1167,11 @@
     x.style.cssText = 'position:absolute;top:10px;right:14px;color:#9a9aa0;font-size:18px;cursor:pointer;';
     x.onclick = () => closeSupportModal();
     const title = document.createElement('div');
-    title.textContent = supportMsg('support_modal_title', 'Enjoying Comic Translate 4 Free?');
+    title.textContent = supportMsg('support_modal_title', 'Free Auto-translate Limit Reached');
     title.style.cssText = 'font-size:16px;color:#fff;margin-bottom:8px;';
     const text = document.createElement('p');
-    text.textContent = supportMsg('support_modal_text', 'If you like it, please support it — it helps a lot.');
-    text.style.cssText = 'color:#8a8a90;font-size:12px;margin:0 0 16px;';
+    text.textContent = supportMsg('support_modal_text', "You've used 50 free images today. Get Pro for unlimited auto-translate and pre-translate. Manual translate is still free.");
+    text.style.cssText = 'color:#fff;font-size:12px;margin:0 0 16px;';
     const btns = document.createElement('div');
     btns.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
     const mkBtn = (labelKey, fallback, url) => {
@@ -1201,12 +1215,30 @@
         setRateLabel();
       }
     };
+    // Get Pro button: opens the Pro checkout (Dodo collection). First button —
+    // the popup's main job is reminding the user the free auto-translate limit
+    // is reached. Only rendered when a checkout URL is present; a missing URL
+    // must never produce a dead button. It does not close the modal and does
+    // not touch the rated / redeemed flags. Reuses the pro_get_short locale
+    // key ("Get Pro"), the same label the popup Pro row uses.
+    if (hasCheckout) btns.appendChild(mkBtn('pro_get_short', 'Get Pro', checkoutUrl));
     if (!redeemed) btns.appendChild(rateBtn);
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:jameslee0623@muse.ai?subject=Comic%20Translate%204%20Free%20feedback'));
+    // "Do not show again": closes the popup and stops it permanently — the
+    // SW's daily gate checks the dismiss flag first and never sends again.
+    // Bigger than a footnote (14px, same size as the body text).
+    const dismiss = document.createElement('div');
+    dismiss.textContent = supportMsg('do_not_show_again', 'Do not show again');
+    dismiss.style.cssText = 'margin-top:14px;color:#e8e8ea;font-size:14px;cursor:pointer;text-decoration:underline;';
+    dismiss.onclick = () => {
+      try { markSupportPopupDismissed(); } catch {}
+      closeSupportModal();
+    };
     card.appendChild(x);
     card.appendChild(title);
     card.appendChild(text);
     card.appendChild(btns);
+    card.appendChild(dismiss);
     wrap.appendChild(card);
     document.documentElement.appendChild(wrap);
     supportModal = wrap;

@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "检测与渲染"
   },
+  "do_not_show_again": {
+    "message": "不再显示"
+  },
   "download": {
     "message": "下载"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 兑换免费试用"
   },
   "support_modal_title": {
-    "message": "喜欢 Comic Translate 4 Free 吗？"
+    "message": "免费自动翻译次数已用完"
   },
   "support_modal_text": {
-    "message": "如果喜欢，评分或反馈会很有帮助。"
+    "message": "您今天已使用 50 张免费图片。升级 Pro 即可无限自动翻译和预翻译。手动翻译仍然免费。"
   },
   "support_hint": {
     "message": "在浏览器中翻译漫画。"

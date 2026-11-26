@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Detecção e renderização"
   },
+  "do_not_show_again": {
+    "message": "Não mostrar novamente"
+  },
   "download": {
     "message": "Baixar"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 Resgatar teste grátis"
   },
   "support_modal_title": {
-    "message": "Gostando do Comic Translate 4 Free?"
+    "message": "Limite de tradução automática gratuita atingido"
   },
   "support_modal_text": {
-    "message": "Se você gostou, uma avaliação ou feedback ajuda muito."
+    "message": "Você usou 50 imagens gratuitas hoje. Assine o Pro para tradução automática e pré-tradução ilimitadas. A tradução manual continua gratuita."
   },
   "support_hint": {
     "message": "Traduza mangás e quadrinhos no seu navegador."

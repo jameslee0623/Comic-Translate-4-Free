@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "検出と描画"
   },
+  "do_not_show_again": {
+    "message": "今後表示しない"
+  },
   "download": {
     "message": "ダウンロード"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 無料トライアルを使う"
   },
   "support_modal_title": {
-    "message": "Comic Translate 4 Free を楽しんでいますか？"
+    "message": "無料の自動翻訳の上限に達しました"
   },
   "support_modal_text": {
-    "message": "気に入ったら、評価やフィードバックがとても役立ちます。"
+    "message": "今日は無料画像を50枚使いました。自動翻訳と事前翻訳を無制限にするにはProをご利用ください。手動翻訳は引き続き無料です。"
   },
   "support_hint": {
     "message": "ブラウザでマンガやコミックを翻訳。"

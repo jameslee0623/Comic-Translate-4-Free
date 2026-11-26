@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Phát hiện & hiển thị"
   },
+  "do_not_show_again": {
+    "message": "Không hiển thị nữa"
+  },
   "download": {
     "message": "Tải xuống"
   },
@@ -387,10 +390,10 @@
     "message": "🎁 Nhận dùng thử miễn phí"
   },
   "support_modal_title": {
-    "message": "Bạn có thích Comic Translate 4 Free không?"
+    "message": "Đã đạt giới hạn dịch tự động miễn phí"
   },
   "support_modal_text": {
-    "message": "Nếu bạn thích, một đánh giá hoặc phản hồi sẽ giúp ích rất nhiều."
+    "message": "Hôm nay bạn đã dùng 50 ảnh miễn phí. Nâng cấp lên Pro để dịch tự động và dịch trước không giới hạn. Dịch thủ công vẫn miễn phí."
   },
   "support_hint": {
     "message": "Dịch manga và truyện tranh trong trình duyệt của bạn."
