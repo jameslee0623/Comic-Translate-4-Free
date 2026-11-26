@@ -5122,12 +5122,8 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
       const cur = autoFired.get(tabId);
       if (cur && cur.url === url) autoFired.delete(tabId);
       diagPush('Auto-translate skipped — free limit reached (' + gate.used + '/' + gate.limit + ' images today).');
-      try {
-        await withTimeout(chrome.tabs.sendMessage(tabId, {
-          type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
-          error: 'Free limit reached: ' + gate.used + '/' + gate.limit + ' auto-translate images today. Get Pro in Settings for unlimited auto-translate.',
-        }), MSG_TIMEOUT_MS, 'free limit notice');
-      } catch {}
+      // No error is shown on the page (James, 2026-11-26): the daily
+      // support popup below is the only limit notice.
       // First time the free limit is hit today, show the daily support popup
       // (Rate it in store → Discount Code: 5STARS). Fire-and-forget: it must
       // never block or slow this return, and it no-ops once the popup has
