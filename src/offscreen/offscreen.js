@@ -176,6 +176,12 @@ function benchOneCount(threads) {
     let settled = false;
     const done = (v) => { if (settled) return; settled = true; benchCancelResolve = null; clearTimeout(timer); try { worker.terminate(); } catch {} resolve(v); };
     try { worker = new Worker(chrome.runtime.getURL('src/background/ml-bench-worker.js')); } catch { resolve(null); return; }
+    // Wait — the bench worker's 'bench-result' message. The worker has no timeout
+    // of its own, so without this a hung worker would wedge benchRunning forever.
+    // 120s is a bound, not a target: it loads three models (~122MB) and creates
+    // three sessions, so it needs more than the old step-only worker's 60s — but
+    // 120s is just 2x that old bound, with no measurement cited. A timeout here
+    // is non-fatal (that count is skipped), so an over-long bound only costs time.
     timer = setTimeout(() => done(null), 120000);
     benchCancelResolve = () => done(null);
     worker.onmessage = (e) => {
@@ -212,6 +218,11 @@ function benchKeepAliveStart() {
     benchKeepAlivePort = port;
     try { port.onDisconnect.addListener(() => { if (benchKeepAlivePort === port) benchKeepAlivePort = null; }); } catch {}
     try {
+      // Wait — heartbeat every 20s on the bench keepalive Port, keeping the SW/doc
+      // alive while the bench measures (an open Port with traffic is the documented
+      // activity signal; a silent self-connect is not). TODO: the 20s interval cites
+      // no source in the code — no idle-freeze threshold is stated here to show 20s
+      // is safely under it. Verify against the SW idle limit before trusting it.
       benchKeepAliveTimer = setInterval(() => {
         try { if (benchKeepAlivePort) benchKeepAlivePort.postMessage({ beat: Date.now() }); } catch {}
       }, 20000);
@@ -262,6 +273,10 @@ const BENCH_STALE_MS = 3 * 60 * 1000;
 let benchSelfStartTimer = null;
 function scheduleBenchSelfStart() {
   try { if (benchSelfStartTimer) clearTimeout(benchSelfStartTimer); } catch {}
+  // Wait — 10s with no (non-keepalive, non-pre-translate) message before the doc
+  // starts the bench itself. No "doc idle" event exists, so a re-armed timer is the
+  // only idle signal. TODO: the 10s value is an unsourced heuristic — verify; too
+  // short and the bench competes with runs, too long and it rarely fires.
   benchSelfStartTimer = setTimeout(() => {
     try { maybeBenchSelfStart(); } catch {}
   }, 10000);
@@ -690,6 +705,11 @@ const CHROME_GPU_IDLE_MS = 10 * 60 * 1000;
 
 function armChromeGpuIdleTimer() {
   try { if (chromeGpuIdleTimer) clearTimeout(chromeGpuIdleTimer); } catch {}
+  // Wait — 10 idle minutes before the shared GPU worker (206MB LaMa session) is
+  // terminated to reclaim GPU memory. No idle event exists for a worker, so a
+  // timer re-armed on every completion is the only mechanism. TODO: the 10-minute
+  // value cites no source in the code — verify. Firing late only costs a reload;
+  // firing early (mid-run) is prevented by the re-arm + pending-size check below.
   chromeGpuIdleTimer = setTimeout(() => {
     // Only when idle: a pending job re-arms on completion, so this
     // never fires mid-run. The next run recreates the worker and pays
@@ -747,6 +767,11 @@ async function getChromeGpuWorker() {
   chromeGpuWorker = worker;
   const readyT0 = performance.now();
   chromeGpuWorkerReady = new Promise((resolve, reject) => {
+    // Wait — the GPU worker's 'ml-ready' message. 15s against a ~6.3s first-run
+    // LaMa load (see the shared-worker comment above): ~2.4x margin, so a slow
+    // cold load is not killed as a hang — but 15s itself cites no measurement,
+    // only that load figure. On fire the worker is dropped, the next run retries,
+    // and the SW falls back to WASM, so a false positive costs one load, not a run.
     const to = setTimeout(() => {
       // Creation timed out: drop the worker so the next run retries.
       if (chromeGpuWorker === worker) { chromeGpuWorker = null; chromeGpuWorkerReady = null; try { worker.terminate(); } catch {} }

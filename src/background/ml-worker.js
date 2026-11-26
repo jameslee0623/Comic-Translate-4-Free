@@ -48,6 +48,11 @@ Promise.all([
   // instead of killing each other. ML_CANCEL bypasses the queue: it must
   // run at once to stop the in-flight work, not wait behind it.
   const ML_COMPUTE = new Set(['ml/ensure', 'ml/detect', 'ml/ocr', 'ml/inpaint', 'ml/translate']);
+  // Wait (audit) — the only wait in this file: a promise chain, not a timer.
+  // Each compute job awaits the previous one's completion. No event or timeout
+  // can replace it: ORT's WASM backend runs one inference at a time (see the
+  // comment above), so serialization is the fix itself, and a job's own
+  // completion is the signal — there is nothing to poll or time out here.
   let mlQueue = Promise.resolve();
   const runMl = async (msg) => {
     try {

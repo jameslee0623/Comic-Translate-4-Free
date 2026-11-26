@@ -362,12 +362,23 @@ const CONTENT_SCRIPT_FILES = (typeof window !== 'undefined' && window.document)
 // call, so they all race against the same 5s. Data calls (list-images,
 // RENDER, get-image-pixels) carry a bigger payload and get 30s, the same
 // as the fetch-image-bytes download race.
+// Neither value comes from a measured latency in the code — both are
+// judgment calls from the observed hang. If 5s ever false-fires on a slow
+// page, the number to revisit is here, not at each call site. Per-call-site
+// comments below are only added where a call waits for something specific
+// (a tab load, a render); plain message calls rely on this comment.
 const MSG_TIMEOUT_MS = 5000;
 const DATA_TIMEOUT_MS = 30000;
 
 // Race a promise against a timeout so a hung browser API can never stall
 // a run silently. The timeout rejection flows into the caller's existing
 // error handling, so a hang becomes a loud failure, not a stuck run.
+// Callers pass MSG_TIMEOUT_MS (5s) for control messages (ping, inject,
+// show-support) and DATA_TIMEOUT_MS (30s) for calls that move image bytes
+// (list-images, RENDER, get-image-pixels) — see the constants above for
+// why those two values. A timeout here is the only guard because
+// tabs.sendMessage / executeScript have no cancellation and can hang
+// without ever settling; there is no event to wait on instead.
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -621,6 +632,10 @@ async function fetchImagePixels(url, referrer) {
   // connection but never responds used to hang the run at "capture"
   // forever — and user Cancel could not interrupt it, because the hung
   // `await fetch` never resolves and `checkCancelled` is never reached.
+  // 30s matches DATA_TIMEOUT_MS — the same data budget as the
+  // page-canvas / page-download races below, so one image costs at most
+  // 30s per attempt on any tier. No event exists: fetch has no progress
+  // or stall signal, so an AbortController timer is the only way to bound it.
   const CAPTURE_FETCH_TIMEOUT_MS = 30000;
   let lastErr = new Error('image download failed');
   for (const init of tries) {
@@ -762,6 +777,11 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     try {
       // 2.2.12: race the content-script round trip against a 30s timeout
       // — a hung content script used to hang the run at "capture" forever.
+      // 30s is the DATA_TIMEOUT_MS value, inlined here instead of using
+      // withTimeout (same behaviour, older code). The wait is for the
+      // content script to read the page canvas and reply with pixels;
+      // sendMessage is the only channel and it can hang without settling,
+      // so a race is the only guard — there is no canvas-ready event.
       const p = await Promise.race([
         chrome.tabs.sendMessage(tabId,
           info.uid ? { type: 'ct/get-image-pixels-by-uid', uid: info.uid } : { type: 'ct/get-image-pixels', srcUrl: info.src }),
@@ -799,6 +819,11 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   if (opts.runId) persistDiagStage(opts.runId, 'capture-page-fetch');
   try {
     // 2.2.12: race the content-script round trip against a 30s timeout.
+    // 30s is the DATA_TIMEOUT_MS value, inlined here instead of using
+    // withTimeout (same behaviour, older code). The wait is for the page
+    // to download the image bytes and reply with a data URL; the page
+    // fetch is the only way to get the page's real referrer/cookies, and
+    // sendMessage can hang without settling, so a race is the only guard.
     const f = await Promise.race([
       chrome.tabs.sendMessage(tabId, { type: 'ct/fetch-image-bytes', srcUrl: info.src }),
       new Promise((_, rej) => setTimeout(() => rej(new Error('page download timed out after 30s')), 30000)),
@@ -1085,6 +1110,9 @@ async function emitDebug(runId, tabId, settings, stage, payload) {
     // Race against a timeout: on some browsers tabs.sendMessage can hang
     // (neither resolve nor reject), which would stall the pipeline — the
     // mask branch must resolve so inpaint can start.
+    // 5s is the MSG_TIMEOUT_MS value, inlined here instead of using
+    // withTimeout (same hang, same guard, older code). No event exists —
+    // the reply is the only signal the panel got the stage.
     await Promise.race([
       chrome.tabs.sendMessage(tabId, {
         type: MSG.DEBUG_STAGE, runId, stage, payload, debug: true,
@@ -1104,6 +1132,9 @@ async function emitDebug(runId, tabId, settings, stage, payload) {
 // not get a panel pop on every good run.
 async function sendDiagLog(tabId, runId) {
   try {
+    // Same 5s race as emitDebug (the MSG_TIMEOUT_MS value, inlined): a
+    // hung sendMessage must not stall the failure/recovery path that calls
+    // this. No event exists — the reply is the only signal.
     await Promise.race([
       chrome.tabs.sendMessage(tabId, {
         type: MSG.DEBUG_STAGE, runId, stage: 'diaglog',
@@ -1415,6 +1446,11 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
   const translateController = new AbortController();
   if (runController.signal?.aborted) { try { translateController.abort(); } catch {} }
   else runController.signal?.addEventListener('abort', () => { try { translateController.abort(); } catch {} }, { once: true });
+  // 30s aborts the CURRENT translate attempt so translateBlocks can fail
+  // over to the next backend — it matches the deadlineMs=30000 argument
+  // passed to translateBlocks below (translators.js), so the abort and the
+  // callee's own deadline agree. No event exists: a stalled backend gives
+  // no signal, so an AbortController timer is the only way to bound it.
   const tier1TimeoutId = setTimeout(() => { try { translateController.abort(); } catch {} }, 30000);
   const failoverNotice = (p) => {
     if (p && p.failoverFrom && p.failoverTo) {
@@ -1494,6 +1530,11 @@ async function renderFromPageCache(tabId, runId, entry, settings, timings, srcUr
 // source of truth — never the callMl result, whose 90s timeout fires
 // on slow downloads that are still progressing.
 const modelDownloadInflight = new Map(); // fileId -> { startedAt }
+// TODO: 15 min overall cap / 3 min stall have no measured basis in the
+// code — no download-time data for slow connections is recorded anywhere.
+// If a legitimately slow download ever hits the 15-min cap, the number to
+// revisit is here; the 3-min stall assumes a healthy download writes a
+// chunk at least that often, which is also unmeasured.
 const MODEL_DOWNLOAD_WAIT_MS = 15 * 60 * 1000; // overall cap for one run's wait
 const MODEL_DOWNLOAD_STALL_MS = 3 * 60 * 1000; // no progress for this long = dead download, restart it
 
@@ -1621,6 +1662,12 @@ async function waitForModels(runId) {
     if (Date.now() - t0 > MODEL_DOWNLOAD_WAIT_MS) {
       throw new Error('model download timed out after 15 minutes — check the connection, or open Settings → Models and tap "Download all models".');
     }
+    // 1s poll: the only way to observe download progress. Progress lives
+    // in IndexedDB chunk counts (getModelDownloadState reads them) and the
+    // offscreen doc pushes no progress event, so there is nothing to listen
+    // to — polling is the only option. 1s keeps the pill percent fresh
+    // without hammering IndexedDB; the stall/cap checks above, not the
+    // poll interval, decide when to restart or give up.
     await new Promise(r => setTimeout(r, 1000));
   }
 }
@@ -2209,6 +2256,11 @@ async function runPretranslate(job, sourceTabId, settings) {
   // so 'same-origin' would send none cross-origin).
   let html;
   {
+    // TODO: why 15s here, when image downloads elsewhere get 30s? No
+    // origin for 15s in the code — verify against real next-page fetch
+    // times on slow connections before trusting it. The wait itself is
+    // justified: fetch has no stall signal, so an AbortController timer
+    // is the only bound; only the duration is unproven.
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 15000);
     try {
@@ -2359,6 +2411,12 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     const entry = runs.get(runId);
     const abortController = (entry && entry.abortController) || new AbortController();
     const runTranslate = async () => {
+      // 30s aborts the CURRENT attempt so translateBlocks can fail over;
+      // the 60s backstop kills a run wedged past stall (30s) + rescue
+      // (20s) — the same pattern as runOneImage and pretranslateTier1Only,
+      // so a hung translate cannot leave the pre-translate job unsettled
+      // forever. 30s also matches the deadlineMs=30000 passed to
+      // translateBlocks below.
       const TRANSLATE_TIMEOUT_MS = 30000;
       const TRANSLATE_BACKSTOP_MS = 60000;
       let timeoutId = null, backstopId = null;
@@ -2692,6 +2750,10 @@ async function runPipeline(tabId, opts = {}) {
       contentScriptReady = true;
     } catch { /* no content script yet — inject it below */ }
     if (!contentScriptReady) {
+      // Injection has no completion event beyond its own promise, and on
+      // Orion that promise can hang forever (neither resolve nor reject)
+      // — the 5s MSG_TIMEOUT_MS race is the only guard. The ping above
+      // already proved the script is absent, so waiting here is correct.
       try {
         await withTimeout(chrome.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
       } catch (e) {
@@ -2714,6 +2776,11 @@ async function runPipeline(tabId, opts = {}) {
     // jumps back). Best-effort with a timeout — a failure or timeout
     // must never block the run; translate whatever loaded.
     if (opts.auto && !manualSrc) {
+      // TODO: the 20s cap has no measured origin in the code — scroll time
+      // grows with page length, so a very long chapter may always time out
+      // here. Best-effort only (a timeout never blocks the run), so the
+      // cost is a slow start, not a failure. No event exists — the content
+      // script's reply is the only completion signal.
       try {
         const r = await Promise.race([
           chrome.tabs.sendMessage(tabId, { type: 'ct/force-load-images' }),
@@ -3797,6 +3864,10 @@ async function runPipeline(tabId, opts = {}) {
             benchTracePush('threads bench trigger attempt ' + attempts + ': ensureMlHost failed: ' + lastError);
           }
           try {
+            // 3s: the doc's handler replies at once, so any wait past 3s
+            // means the doc is dead or gone — the timeout is a liveness
+            // check, not a latency budget. No event confirms delivery;
+            // the sendMessage reply is the only signal.
             const reply = await Promise.race([
               chrome.runtime.sendMessage({ type: MSG.ML_BENCH_THREADS }),
               new Promise((_, rej) => setTimeout(() => rej(new Error('bench trigger timeout')), 3000)),
@@ -3833,6 +3904,14 @@ async function runPipeline(tabId, opts = {}) {
       } catch {}
       let count = 0;
       const maxPings = 8; // 8 x 15s = 2 minutes
+      // QUESTIONABLE: the pings stop after 2 minutes even if the bench is
+      // still running — a bench slower than 2 min loses its keepalive and
+      // the doc may be discarded mid-bench. Better: keep pinging until
+      // benchStatus is 'done' (the tick already checks that each round),
+      // with a longer cap (e.g. 10 min) as the only stop. Left as is —
+      // audit only. The 15s interval itself has no stated origin in the
+      // code — presumably below the offscreen doc's idle-discard threshold;
+      // TODO verify.
       benchTracePush('threads bench keepalive: pings starting (15s x 8)');
       const tick = async () => {
         try {
@@ -4291,6 +4370,10 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
         // 2.2.12: the timeout goes through finishErr, not a bare reject —
         // the old bare reject never removed the onUpdated listener and
         // never set done, leaking one listener per timed-out attempt.
+        // 30s: no stated origin in the code — it matches the 30s data
+        // budget used for image reads elsewhere (DATA_TIMEOUT_MS), so one
+        // stuck image tab costs at most 30s. TODO: verify against slow
+        // image loads before trusting it.
         const timeout = setTimeout(() => finishErr(new Error('timed out waiting for the image tab to load')), 30000);
         const checkLoaded = async () => {
           if (done) return;
@@ -4353,6 +4436,10 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
     // Retry once in a fresh tab: a tab that was not ready (or a transient
     // server refusal) can succeed on a second open. Wait a moment first
     // so a transient CDN hiccup can clear before the retry.
+    // 1s is an unmeasured guess — no data in the code on how long a
+    // transient CDN refusal lasts. The wait itself is justified (a retry
+    // in the same instant would hit the same refusal); only the duration
+    // is unproven.
     await new Promise(r => setTimeout(r, 1000));
     try {
       return await attempt();

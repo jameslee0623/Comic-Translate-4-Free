@@ -24,6 +24,10 @@ export async function mlHostAlive() {
   // unbounded sendMessage would hang ensure/restart with it. A blocked doc
   // reads as dead, so the caller closes + recreates it instead of waiting.
   try {
+    // Wait — ML_PING reply from the offscreen doc. No event signals "doc alive
+    // but blocked on WASM", and sendMessage has no timeout, so racing it against
+    // a timer is the only way to tell dead from slow. TODO: the 3000ms value has
+    // no source in the code (no measurement or platform limit cited) — verify.
     const r = await Promise.race([
       chrome.runtime.sendMessage({ type: MSG.ML_PING }),
       new Promise((_, rej) => setTimeout(() => rej(new Error('ping timeout')), 3000)),
@@ -59,6 +63,12 @@ export async function ensureMlHost() {
         if (!/already|only one/i.test(String((e && e.message) || e))) throw e;
       }
       // Poll for readiness: creation resolves before the document's scripts run.
+      // Wait — mlHostAlive() (a ping round-trip) every 200ms, up to 10 tries (2s
+      // total). No ready event exists: the doc never posts a "loaded" message the
+      // SW could await, so polling the ping is the only readiness signal.
+      // TODO: neither 200ms nor 10 tries is sourced in the code — verify. Better
+      // approach: have offscreen.js post an ML_READY message on load and await
+      // that once instead of polling (also removes the 2s cap on slow loads).
       for (let i = 0; i < 10; i++) {
         if (await mlHostAlive()) return;
         await new Promise(r => setTimeout(r, 200));
@@ -103,6 +113,14 @@ function mlHostError(type, raw) {
 // offscreen document would otherwise wedge the run forever — the await
 // never resolves, the run entry leaks, pixel payloads accumulate, and
 // Cancel can't help because runPipeline's finally never runs.
+// Wait — per-stage caps on callMlInner's reply (enforced by the setTimeout in
+// callMl below). A hung WASM session never resolves, so without a timer the run
+// wedges forever; WASM cannot be aborted mid-run, so the timeout can only
+// abandon the wait and restart the host (cancelMlRun). TODO: only ML_DOWNLOAD
+// (15min, matches the run's download wait cap) is sourced in the code —
+// DETECT 30s, OCR/INPAINT 120s, DIAG 10s and the 90s default cite no
+// measurement or limit. NOTE: src/offscreen/ml/inpaint.js still says "the 90s
+// timeout" but inpaint is 120s here — that cross-reference is stale.
 const ML_TIMEOUT_MS = {
   [MSG.ML_DETECT]: 30 * 1000,
   [MSG.ML_OCR]: 120 * 1000,
@@ -218,6 +236,13 @@ function ensureMlWorker() {
   mlWorker = w;
   mlWorkerReady = new Promise((resolve, reject) => {
     let settled = false;
+    // Wait — the worker's 'ml-ready' postMessage (posted after importScripts(ort)
+    // + dynamic import of the handlers). No other signal exists for a worker
+    // whose import hangs: it posts neither ready nor error. TODO: the 5000ms
+    // value cites no measurement in the code — verify. NOTE: on timeout the
+    // fallback is in-process compute, which can block the main thread — the
+    // exact failure the worker exists to avoid — so a slow (not dead) worker
+    // start trades a hang for main-thread jank.
     const to = setTimeout(() => {
       if (settled) return;
       settled = true;
@@ -416,6 +441,10 @@ export async function callMl(msg, opts = {}) {
     } catch { /* best-effort: the setTimeout still covers the awake case */ }
   }
   let timer = null;
+  // Wait — callMlInner's reply (worker postMessage / doc sendMessage). A plain
+  // setTimeout, not an AbortSignal: the WASM run itself cannot be cancelled
+  // mid-inference, so the timer only abandons the wait; cancelMlRun then
+  // restarts the host so the orphaned op cannot complete late into a dead run.
   const timeoutP = new Promise((_, reject) => {
     timer = setTimeout(() => {
       // Stop the runaway op first: without this it keeps running past the
@@ -616,6 +645,11 @@ export const GPU_WATCHDOG_INACTIVITY_MS = 30 * 1000;
 // loadWindowMs is an opts override so the Node harness can use short
 // windows; production always uses 30 s.
 export const GPU_LOAD_WINDOW_MS = 30 * 1000;
+// Wait — the GPU worker's 'ml-ready' message (createGpuSlot, below). Same shape
+// as the ML worker ready wait: the only guard against a worker that never posts
+// ready. TODO: the 5s value cites no measurement in the code — verify. (The
+// 30s watchdog/load windows above ARE sourced: cold load ~6s, 5x margin;
+// slowest single GPU patch ~1s — see the 1.4.0 m3 comment.)
 const GPU_READY_TIMEOUT_MS = 5 * 1000;
 
 function gpuHangError(watchdogMs) {
@@ -644,6 +678,9 @@ function createGpuSlot(createWorker, readyTimeoutMs) {
   // after the promise is assigned, below.)
   slot.readyPromise = new Promise((resolve, reject) => {
     slot._rejectReady = reject;
+    // Wait — this GPU worker's 'ml-ready' message. A worker that never posts
+    // ready (hung import) posts no error either, so the timer is the only guard;
+    // on fire the worker is terminated so a late ready cannot revive it.
     const to = setTimeout(() => {
       slot.dead = true;
       try { worker.terminate(); } catch {}
@@ -705,6 +742,9 @@ function terminateGpuSlot(slot, err) {
   try { slot.worker.terminate(); } catch {}
 }
 
+// NOTE (wait audit): the opts line below still says watchdogInactivityMs=60000,
+// but the real default is GPU_WATCHDOG_INACTIVITY_MS (30s) — the 60s figure is
+// stale from before 1.4.0 m3 cut the window to 30s.
 // Firefox GPU inpaint. opts: {runId, patches, onProgress(frac 0..1),
 // diag(line), isCancelled(), createWorker,
 // watchdogInactivityMs=60000, readyTimeoutMs=5000}. Returns
@@ -841,6 +881,9 @@ function chromeGpuSkippedError(message) {
   return Object.assign(new Error(message), { gpuSkipped: true });
 }
 
+// NOTE (wait audit): the opts line below still says watchdogInactivityMs=60000,
+// but the real default is GPU_WATCHDOG_INACTIVITY_MS (30s) — same stale 60s
+// figure as the Firefox GPU doc above.
 // Chrome GPU inpaint. opts: {runId, patches, onProgress(frac 0..1),
 // diag(line), isCancelled(), ensureHost, sendGpuMessage, cancelGpuMessage,
 // watchdogInactivityMs=60000}. Returns {results, ms, totalTiles} in the

@@ -2,6 +2,9 @@
 // Empty source texts map to empty translations. Throws with a human message.
 import { LANGS, TARGET_LANGS, updateSettingsField } from '../shared/settings.js';
 
+// Plain sleep primitive: waits for wall-clock time to pass. No event,
+// callback or promise can replace it — elapsed time is the thing being
+// waited for. All real waits in this file go through sleep/sleepAbortable.
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 // Abort-aware sleep: rejects immediately on cancel instead of waiting out
 // the full backoff delay.
@@ -13,6 +16,11 @@ let _translateLog = null;
 export function setTranslateLogger(fn) { _translateLog = typeof fn === 'function' ? fn : null; }
 function tlog(line) { try { if (_translateLog) _translateLog(line); } catch {} }
 
+// Abort-aware sleep: waits out a backoff delay, but resolves/rejects at
+// once when `signal` aborts instead of sleeping the full delay. This is
+// the best shape for a timed wait that must stay cancellable: a bare
+// setTimeout cannot be cut short by a cancel, and there is no event that
+// fires when "enough time has passed for the server to recover".
 function sleepAbortable(ms, signal) {
   if (!signal) return sleep(ms);
   if (signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true });
@@ -27,8 +35,11 @@ function sleepAbortable(ms, signal) {
 }
 
 // Fetch with timeout and retry for LM Studio (the flakiest backend).
-// 10-min timeout per attempt; 2 retries with 2s/6s backoff on network
-// errors and 5xx only (4xx are not retried).
+// NOTE: the old "10-min timeout per attempt; 2 retries with 2s/6s backoff"
+// line was stale and is corrected here — the code caps each attempt at 60s
+// (see the Math.min(60000, remaining) timer) and the whole call at
+// deadlineMs (default 30s), with up to 3 retries on backoffs [1000, 2000,
+// 4000]ms, on network errors and 5xx only (4xx are not retried).
 
 // LM Studio host permission check. Manifest covers localhost/127.0.0.1
 // only — NOT [::1] (the manifests grant no IPv6 loopback). A [::1] URL
@@ -78,8 +89,20 @@ export async function ensureLmStudioHostAccess(url) {
 // 30s — matching the Firefox worker deadline and Chrome's translate
 // abort, so a hung server can't hold the worker past its kill). Callers
 // thread their own deadline: the SW passes 30s on both browser paths.
+// The 30s value is an app-chosen budget, not a server/API limit: it is
+// sized so stall (30s) + rescue failover (20s) still fits under the
+// caller's 60s backstop (TRANSLATE_BACKSTOP_MS in service-worker.js).
 async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
   const deadline = Date.now() + deadlineMs;
+  // Retry backoff between LM Studio attempts: waits for a flaky local
+  // server / transient network error to clear. No event exists for "the
+  // server recovered", so a timed wait is the only option. This is the
+  // one backoff in this file that is budget-safe: the wait is capped at
+  // the remaining deadline (Math.min below), so retries can never eat
+  // time reserved for failover — copy this pattern, don't copy the
+  // Google/Azure/Gemini delays. TODO: the 1000/2000/4000 values have no
+  // measured basis or API contract in the code — conventional exponential
+  // backoff; verify whether a shorter first delay would fail over sooner.
   const backoffs = [1000, 2000, 4000];
   let lastErr = null;
   const timedOut = () => new Error('LM Studio: translate timed out');
@@ -87,6 +110,8 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
     let remaining = deadline - Date.now();
     if (remaining <= 0) throw timedOut();
     if (attempt > 0) {
+      // Backoff wait, capped at the remaining deadline (see the backoffs
+      // comment above): retries never consume failover's time.
       await sleepAbortable(Math.min(backoffs[attempt - 1], remaining), signal);
       remaining = deadline - Date.now();
       if (remaining <= 0) throw timedOut();
@@ -99,6 +124,14 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
       if (signal.aborted) throw Object.assign(new Error('cancelled'), { cancelled: true });
       signal.addEventListener('abort', onAbort, { once: true });
     }
+    // Per-attempt abort timer: waits for one LM Studio fetch to answer,
+    // then aborts it so a hung local server cannot stall the whole page.
+    // fetch() has no built-in timeout, so a timer + AbortController is
+    // the only way to bound a single attempt. 60s is the per-attempt
+    // ceiling; the remaining deadline caps it further, so inside a 30s
+    // budget this timer effectively fires at `remaining`, not 60s.
+    // TODO: why 60s? No measured value or server contract found in the
+    // code — verify whether it should be the deadline itself.
     const timer = setTimeout(() => ctrl.abort(), Math.min(60000, remaining));
     try {
       const resp = await fetch(url, { ...opts, signal: ctrl.signal });
@@ -151,6 +184,14 @@ async function googleFree(texts, src, dst, signal) {
       const i = next++;
       if (i >= texts.length) return;
       out[i] = await googleOne(texts[i], src, dst, signal);
+      // Per-lane pacing: waits 120ms between one lane's Google requests
+      // so the unofficial gtx endpoint is not hammered into 429s. No
+      // server signal tells us when it is safe to send the next request,
+      // so a fixed gap is the only throttle — but the 120ms value is
+      // inherited ("as before"), not measured, and the code never reads
+      // the 429 Retry-After header, which IS the server's real signal.
+      // TODO: verify 120ms against actual 429 rates; honour Retry-After
+      // on 429 instead of (or in addition to) blind pacing.
       await sleep(120); // per-lane pacing, as before
     }
   }
@@ -166,6 +207,18 @@ async function googleOne(t, src, dst, signal) {
   // The gtx endpoint is unofficial and rate-limits aggressively (HTTP 500 /
   // 429 in bursts). One failure must not kill the whole page: retry with
   // exponential backoff + jitter before giving up on this text.
+  // PROBLEM — NOT the best solution inside a 30s translate budget:
+  // these waits are paid in full (up to 1500+4000+10000 = 15.5s, plus up
+  // to 0.8s jitter per wait = ~17.9s) with NO cap against the remaining
+  // budget, unlike lmStudioFetch which does Math.min(backoff, remaining).
+  // googleOne takes no deadline, so a rate-limited Google can burn most
+  // of the 30s on waiting and leave failover no time — the exact failure
+  // the AZURE_RESERVE_MS / primaryCap logic below tries to prevent.
+  // Better: cap each wait at the remaining budget and stop retrying when
+  // the remaining time cannot fit another attempt (copy lmStudioFetch),
+  // and honour the 429 Retry-After header when the server sends one
+  // instead of guessing 1.5s/4s/10s. TODO: the 1500/4000/10000 values
+  // have no measured basis or API contract in the code — verify.
   const delays = [1500, 4000, 10000];
   let resp = null, lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -181,6 +234,9 @@ async function googleOne(t, src, dst, signal) {
     if (resp && resp.ok) break;
     const retryable = !resp || resp.status === 429 || resp.status >= 500;
     if (!retryable || attempt === delays.length) break;
+    // Jitter (0–800ms, random) spreads simultaneous retries so lanes
+    // don't re-hit the endpoint in lockstep. 800ms is an arbitrary
+    // spread, not a measured value — verify.
     const wait = delays[attempt] + Math.random() * 800;
     typeof tlog === 'function' && tlog(`translate retry google attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
     await sleepAbortable(wait, signal);
@@ -268,6 +324,16 @@ async function azure(texts, settings, signal) {
       (from ? `&from=${encodeURIComponent(from)}` : '');
     // Like the Google path: one throttled batch (429/5xx) must not kill the
     // whole page. Retry with exponential backoff + jitter.
+    // PROBLEM — same as googleOne (see above): up to ~17.9s of waits with
+    // NO cap against the remaining 30s budget, and the 429 Retry-After
+    // header is never read. Worse here than for Google: Azure is a paid
+    // official API with documented retry guidance, so a 10s blind wait is
+    // harder to justify — and Azure is usually the LAST backend (the
+    // failover reserve), so burning its own budget on backoff leaves
+    // nothing after it. Better: cap waits at the remaining budget (copy
+    // lmStudioFetch) and honour Retry-After on 429. TODO: the
+    // 1500/4000/10000 values are copied verbatim from Google with no
+    // Azure-specific basis — verify against Azure's actual throttling.
     const delays = [1500, 4000, 10000];
     let resp = null, lastErr = null;
     for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -409,6 +475,13 @@ async function gemini(texts, settings, signal) {
   // Like the Google/Azure paths: one throttled call (429/5xx) must not kill
   // the whole page. Retry with exponential backoff + jitter. 4xx are client
   // errors (bad key, unknown model) and are not retried.
+  // PROBLEM — same as googleOne (see above): up to ~17.9s of waits with
+  // NO cap against the remaining 30s budget, and the 429 Retry-After
+  // header is never read. Gemini's free tier does send Retry-After on
+  // 429s, so the server's own signal is available and ignored. Better:
+  // cap waits at the remaining budget (copy lmStudioFetch) and honour
+  // Retry-After on 429. TODO: the 1500/4000/10000 values are copied
+  // verbatim from Google with no Gemini-specific basis — verify.
   const delays = [1500, 4000, 10000];
   let resp = null, lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -473,6 +546,11 @@ export async function checkGemini(settings) {
   try {
     // Minimal real call: one tiny generation. A 200 proves key+network.
     // 2.2.12: 10s timeout — same hang as checkLmStudio (see above).
+    // Waits at most 10s for the probe reply, then aborts: fetch() has no
+    // built-in timeout, so a timer + AbortController is the only bound.
+    // 10s is an app-chosen UX bound (a one-word probe should answer in
+    // ~1s; 10s leaves ample headroom), not a server SLA — justified as
+    // a probe cap, but the value itself is unmeasured; verify.
     const ctrl = new AbortController();
     const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, 10000);
     let resp;
@@ -844,6 +922,11 @@ export async function checkLmStudio(settings) {
     // 2.2.12: 10s timeout — the old plain fetch hung forever if the server
     // accepted the connection but never responded, leaving the Settings
     // button stuck on "checking…".
+    // Waits at most 10s for the /models reply, then aborts: fetch() has
+    // no built-in timeout, so a timer + AbortController is the only bound.
+    // 10s is an app-chosen UX bound (a local-server probe should answer
+    // in well under a second), not a server SLA — justified as a probe
+    // cap, but the value itself is unmeasured; verify.
     const ctrl = new AbortController();
     const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, 10000);
     try { resp = await fetch(ep.models, { signal: ctrl.signal }); }
@@ -880,6 +963,11 @@ export async function checkAzure(settings) {
   try {
     // Minimal real call: translate one word. A 200 proves key+region+network.
     // 2.2.12: 10s timeout — same hang as checkLmStudio (see above).
+    // Waits at most 10s for the probe reply, then aborts: fetch() has no
+    // built-in timeout, so a timer + AbortController is the only bound.
+    // 10s is an app-chosen UX bound (a one-word probe should answer in
+    // ~1s), not a server SLA — justified as a probe cap, but the value
+    // itself is unmeasured; verify.
     const url = `https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => { try { ctrl.abort(); } catch {} }, 10000);
@@ -928,6 +1016,9 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   // Without this, a slow LM Studio — or a Google retry cycle, which has
   // no per-attempt cap — could burn the whole budget and Azure would
   // never get its turn. Applies to the primary call and to failover.
+  // NOTE: 8s is derived arithmetic from the ~2s fetch + 1.5s first-delay
+  // estimates above, not a measured p95 — if Azure's real attempt time
+  // is longer, the reserve under-covers; verify against real timings.
   const AZURE_RESERVE_MS = 8000;
   const runBackend = async (b, attemptDeadlineMs, sig = signal) => {
     if (b === 'azure') return await azure(texts, settings, sig);
@@ -956,6 +1047,12 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
     if (backend === 'lmstudio') {
       // LM Studio takes the cap as its attempt deadline (passed below).
     } else {
+      // Primary abort timer: waits primaryCapMs (deadline minus the 8s
+      // Azure reserve), then aborts the primary so failover still gets
+      // its turn. Only Google/Gemini need it — LM Studio takes the cap
+      // as its own deadline instead. A timer is the only bound here:
+      // Google/Gemini take no deadline parameter, so without this the
+      // primary's uncapped retry cycle could eat the whole 30s.
       const ac = new AbortController();
       primaryTimer = setTimeout(() => ac.abort(), primaryCapMs);
       if (signal?.aborted) ac.abort();
@@ -963,6 +1060,9 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
       primarySig = ac.signal;
     }
   }
+  // Primary LM Studio cap: same 15s ceiling as the failover LM cap
+  // below (FAILOVER_LM_DEADLINE_MS) — a slow local model must not eat
+  // the whole primary budget. See that constant for the provenance TODO.
   const primaryLmCap = backend === 'lmstudio' ? Math.min(primaryCapMs, 15000) : undefined;
   try {
     results = await runBackend(backend, primaryLmCap, primarySig);
@@ -995,12 +1095,23 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
       // under the caller's 60s backstop. A user cancel during rescue
       // still stops it via the loop-top check below.
       const rescueMode = signal?.aborted && !isUserCancelled?.();
+      // Failover budget: 20s in rescue mode (fresh signal after the 30s
+      // stall abort), else the full deadline. 20s is 60s backstop − 30s
+      // stall, from TRANSLATE_BACKSTOP_MS in service-worker.js — derived
+      // arithmetic, not a measured value.
       const failoverBudgetMs = rescueMode ? 20000 : deadlineMs;
       const budgetStart = rescueMode ? performance.now() : translateStart;
       let attemptSignal = signal;
       let failoverTimer = null;
       let failoverAttempted = false;
       if (rescueMode) {
+        // Failover rescue timer: waits failoverBudgetMs (20s), then aborts
+        // the fresh failover signal. Needed because the caller's signal
+        // is already dead (it fired the 30s stall abort), so without a
+        // fresh controller + timer, failover would have no bound at all.
+        // 20s comes from the caller's 60s backstop minus the 30s stall
+        // (TRANSLATE_BACKSTOP_MS in service-worker.js), leaving ~10s
+        // slack — derived arithmetic, not a measured value.
         const fc = new AbortController();
         attemptSignal = fc.signal;
         failoverTimer = setTimeout(() => { try { fc.abort(); } catch {} }, failoverBudgetMs);
@@ -1011,6 +1122,9 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
       // overall abort then poisoned their attempts too. Cap each LM Studio
       // failover attempt at 15s and stop when the budget is gone, so Azure
       // always gets its turn inside the 30s translate budget.
+      // TODO: why 15s? No measured value or model contract found in the
+      // code — half the 30s budget is a round split, not a derivation;
+      // verify whether 15s fits a real slow-model generation.
       const FAILOVER_LM_DEADLINE_MS = 15000;
       for (const fb of candidates) {
         const remaining = failoverBudgetMs - (performance.now() - budgetStart);
@@ -1031,12 +1145,20 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
           // isUserCancelled, so the loop still moves on to Azure.
           let attemptSig = attemptSignal;
           let attemptTimer = null;
+          // LM Studio failover cap: the smaller of the remaining budget
+          // and the 15s per-attempt ceiling (see FAILOVER_LM_DEADLINE_MS).
           let lmCap = fb === 'lmstudio' ? Math.min(remaining, FAILOVER_LM_DEADLINE_MS) : undefined;
           if (fb !== 'azure' && azureStillToCome) {
             const attemptMs = remaining - AZURE_RESERVE_MS;
             if (attemptMs <= 0) continue; // Nothing left before Azure's reserve.
             if (fb === 'lmstudio') lmCap = Math.min(lmCap, attemptMs);
             else {
+              // Per-attempt abort timer: waits attemptMs (remaining budget
+              // minus the 8s Azure reserve), then aborts this failover
+              // attempt so Azure keeps its turn. Same reasoning as the
+              // primary timer: Google/Gemini take no deadline parameter,
+              // so a timer is the only per-attempt bound. The value is
+              // derived from the remaining budget, not a magic number.
               const ac = new AbortController();
               attemptTimer = setTimeout(() => ac.abort(), attemptMs);
               if (attemptSignal.aborted) ac.abort();

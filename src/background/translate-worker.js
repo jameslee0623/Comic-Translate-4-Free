@@ -13,6 +13,13 @@ self.onmessage = async (e) => {
   // The deadlineMs arg only caps LM Studio; this signal caps Google/Azure
   // too. The message below derives from DEADLINE_MS so it can't drift
   // from the value again.
+  // 30s is an app-chosen stall budget, not a server/API limit: it matches
+  // the Chrome path's abortController and the 30s deadlineMs passed by
+  // the service worker, and it is sized so stall (30s) + rescue failover
+  // (20s, inside translateBlocks) still fits under the caller's 60s
+  // backstop (TRANSLATE_BACKSTOP_MS in service-worker.js). fetch() has
+  // no built-in timeout, so a timer + AbortController is the only way
+  // to bound a hung backend here — no event fires when a backend stalls.
   const DEADLINE_MS = 30000;
   const ctrl = new AbortController();
   const deadlineId = setTimeout(() => ctrl.abort(), DEADLINE_MS);

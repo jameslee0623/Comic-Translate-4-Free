@@ -428,10 +428,21 @@
     const BUDGET_MS = 15000; // whole force-load must fit in this
     const DIRECT_WAIT_MS = 5000; // longest to wait for direct triggers
     const DIRECT_STALL_MS = 1000; // no picture finished in this long: rest need scroll
+    // TODO: why 60ms here? No event exists: after scrollTo the site's own
+    // lazy-load observer fires asynchronously, and our own
+    // IntersectionObserver firing would not prove the site's did — so a
+    // fixed wait is the only option, but 60ms is an unverified guess, not
+    // a measured value. Verify against slow lazy-load sites, or drive it
+    // off observed events (own observer entry + a frame) instead.
     const STEP_WAIT_MS = 60; // let the lazy-load observer fire after each scroll step
     const MAX_STEPS = 200; // taller than this is effectively infinite scroll
     const startY = window.scrollY || 0, startX = window.scrollX || 0;
     const vh = Math.max(1, window.innerHeight || 800);
+    // Polling helper: the loops below wait on a SET of pictures settling
+    // (all loaded, or stalled) — no single event fires for that, and the
+    // stall check needs a timer anyway, so a sleep-based poll is the only
+    // option. Per-picture load/error listeners could replace the "all
+    // loaded" exit, but not the stall exit.
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const pageHeight = () => document.documentElement.scrollHeight || document.body.scrollHeight || 0;
     const countPending = () => {
@@ -480,6 +491,11 @@
         if (pending < lastPending) { lastPending = pending; stallSince = Date.now(); }
         else if (Date.now() - stallSince >= DIRECT_STALL_MS) break;
         if (Date.now() - t0 >= DIRECT_WAIT_MS) break;
+        // Poll cadence for the direct-trigger wait: re-checks img.complete
+        // for the whole set. 200ms is a chosen cadence, not a measured
+        // value — fast enough that the wait ends promptly once the last
+        // picture lands, slow enough not to spin. No event replaces it:
+        // see the sleep helper above.
         await sleep(200);
       }
     }
@@ -524,6 +540,10 @@
     for (;;) {
       if (!countPending()) break;
       if (Date.now() - t0 >= BUDGET_MS) break;
+      // Poll cadence for the post-scroll wait: same reasoning as the
+      // direct-trigger poll above (no set-level event; 200ms is a chosen
+      // cadence, not measured). The user is already back at the original
+      // scroll position, so this wait is invisible.
       await sleep(200);
     }
     let loaded = 0, total = 0;
@@ -821,6 +841,10 @@
       p.style.display = 'block';
       p.style.borderColor = '#444';
       clearTimeout(pillTimer);
+      // Auto-hide after 4s: a display duration, not a wait for anything —
+      // no event can replace "show the status long enough to read, then
+      // get out of the way". 4s is a UX choice for a short status line,
+      // not a measured value. Sticky pills (errors needing action) skip it.
       if (!lastPillSticky) pillTimer = setTimeout(() => { p.style.display = 'none'; }, 4000);
     } catch { /* never break the page */ }
   }
@@ -884,6 +908,8 @@
     p.style.display = 'block';
     p.style.borderColor = '#444';
     clearTimeout(pillTimer);
+    // Auto-hide after 4s: a UX display duration, not a synchronisation
+    // wait — see showPillFromLast above. Sticky pills skip it.
     if (!sticky) pillTimer = setTimeout(() => { p.style.display = 'none'; }, 4000);
   }
   function pillAllowLabel(host) {
@@ -1499,6 +1525,10 @@
     const copyBtn = debugBody.querySelector('#ct-copy-log');
     if (copyBtn) {
       copyBtn.onclick = async () => {
+        // Revert the button label 1.5s after showing "Copied" / "Copy
+        // failed": a UX feedback duration, not a wait for anything — no
+        // event can replace "let the user see the result, then restore
+        // the label". 1.5s is a UX choice, not a measured value.
         const done = (t) => { copyBtn.textContent = t; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500); };
         let text = p.log || '';
         if (lastRunTimes) {
