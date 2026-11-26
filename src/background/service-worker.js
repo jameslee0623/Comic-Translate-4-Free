@@ -5310,7 +5310,7 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
         else tabHost = tabUrl.slice(0, 120); // e.g. about:neterror — no host, keep the whole URL
       } catch { tabHost = tabUrl; }
     } else tabHost = '(unknown)';
-    diagPush(`Background tab read failed (attempt ${attemptNo}): ${String((e && e.message) || e).slice(0, 120)}`);
+    diagPush(`Background tab read failed (attempt ${attemptNo}): image ${imgHost}${imgPath}, tab ${tabHost}${tabPath} — ${String((e && e.message) || e).slice(0, 120)}`);
   };
   const isMissingHost = (e) => /Missing host permission for the tab/i.test(String((e && e.message) || e));
   // Label for an error-page tab URL: host+path when there is one (a
@@ -5401,7 +5401,7 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
       // different host is diagnosable from the log even when the read
       // itself succeeds (a redirect to an error page fails below, and
       // logFailure names both URLs there too).
-      if (tabUrl && tabUrl !== imageUrl) diagPush('Background tab opened a different page than requested.');
+      if (tabUrl && tabUrl !== imageUrl) diagPush(`Background tab opened a different page than requested (final tab URL ${tabUrl.slice(0, 120)} vs requested ${imageUrl.slice(0, 120)}).`);
       await withTimeout(chrome.scripting.executeScript({ target: { tabId: newTabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
       const p = await withTimeout(chrome.tabs.sendMessage(newTabId, { type: 'ct/get-image-pixels', srcUrl: imageUrl }), DATA_TIMEOUT_MS, 'get-image-pixels');
       if (!p || !p.ok || typeof p.dataUrl !== 'string') {
