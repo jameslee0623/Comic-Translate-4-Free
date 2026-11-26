@@ -40,11 +40,11 @@ function sleepAbortable(ms, signal) {
 // wait. Returns milliseconds, or null when the header is absent or
 // unparseable (then the caller falls back to its fixed delay).
 // RETRY_AFTER_MAX_MS: the longest Retry-After worth waiting out. It is the
-// old max blind delay (10000ms), not a new magic number. A server that
-// says "come back in 60s" is down for longer than our translate budget,
-// so the caller breaks out of the retry loop at once and fails over to
-// Google instead of burning the budget waiting.
-const RETRY_AFTER_MAX_MS = 10000;
+// max blind delay (4000ms), not a new magic number. A server that says
+// "come back in 60s" is down for longer than our translate budget, so the
+// caller breaks out of the retry loop at once and fails over to Google
+// instead of burning the budget waiting.
+const RETRY_AFTER_MAX_MS = 4000;
 function retryAfterMs(resp) {
   if (!resp || !resp.headers || typeof resp.headers.get !== 'function') return null;
   const v = resp.headers.get('Retry-After');
@@ -231,19 +231,13 @@ async function googleOne(t, src, dst, signal) {
   // The gtx endpoint is unofficial and rate-limits aggressively (HTTP 500 /
   // 429 in bursts). One failure must not kill the whole page: retry with
   // exponential backoff + jitter before giving up on this text.
-  // PROBLEM — NOT the best solution inside a 30s translate budget:
-  // these waits are paid in full (up to 1500+4000+10000 = 15.5s, plus up
-  // to 0.8s jitter per wait = ~17.9s) with NO cap against the remaining
-  // budget, unlike lmStudioFetch which does Math.min(backoff, remaining).
-  // googleOne takes no deadline, so a rate-limited Google can burn most
-  // of the 30s on waiting and leave failover no time — the exact failure
-  // the AZURE_RESERVE_MS / primaryCap logic below tries to prevent.
-  // Better: cap each wait at the remaining budget and stop retrying when
-  // the remaining time cannot fit another attempt (copy lmStudioFetch),
-  // and honour the 429 Retry-After header when the server sends one
-  // instead of guessing 1.5s/4s/10s. TODO: the 1500/4000/10000 values
-  // have no measured basis or API contract in the code — verify.
-  const delays = [1500, 4000, 10000];
+  // 3 tries only (James 2026-11-26 — the old 10s third delay is gone):
+  // waits are 1500+4000 = 5.5s max, plus up to 0.8s jitter per wait
+  // (~7.1s). Still NO cap against the remaining budget, unlike
+  // lmStudioFetch which does Math.min(backoff, remaining). Retry-After
+  // is honoured on 429 (see retryAfterMs). TODO: the 1500/4000 values
+  // have no measured basis — verify against real timings.
+  const delays = [1500, 4000];
   let resp = null, lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
@@ -364,17 +358,12 @@ async function azure(texts, settings, signal) {
       (from ? `&from=${encodeURIComponent(from)}` : '');
     // Like the Google path: one throttled batch (429/5xx) must not kill the
     // whole page. Retry with exponential backoff + jitter.
-    // PROBLEM — same as googleOne (see above): up to ~17.9s of waits with
-    // NO cap against the remaining 30s budget, and the 429 Retry-After
-    // header is never read. Worse here than for Google: Azure is a paid
-    // official API with documented retry guidance, so a 10s blind wait is
-    // harder to justify — and Azure is usually the LAST backend (the
-    // failover reserve), so burning its own budget on backoff leaves
-    // nothing after it. Better: cap waits at the remaining budget (copy
-    // lmStudioFetch) and honour Retry-After on 429. TODO: the
-    // 1500/4000/10000 values are copied verbatim from Google with no
-    // Azure-specific basis — verify against Azure's actual throttling.
-    const delays = [1500, 4000, 10000];
+    // 3 tries only (James 2026-11-26 — the old 10s third delay is gone):
+    // waits are 1500+4000 = 5.5s max, plus jitter (~7.1s). Still NO cap
+    // against the remaining 30s budget, and Retry-After is honoured on
+    // 429 (see retryAfterMs). TODO: the 1500/4000 values are copied
+    // verbatim from Google with no Azure-specific basis — verify.
+    const delays = [1500, 4000];
     let resp = null, lastErr = null;
     for (let attempt = 0; attempt <= delays.length; attempt++) {
       try {
@@ -528,14 +517,12 @@ async function gemini(texts, settings, signal) {
   // Like the Google/Azure paths: one throttled call (429/5xx) must not kill
   // the whole page. Retry with exponential backoff + jitter. 4xx are client
   // errors (bad key, unknown model) and are not retried.
-  // PROBLEM — same as googleOne (see above): up to ~17.9s of waits with
-  // NO cap against the remaining 30s budget, and the 429 Retry-After
-  // header is never read. Gemini's free tier does send Retry-After on
-  // 429s, so the server's own signal is available and ignored. Better:
-  // cap waits at the remaining budget (copy lmStudioFetch) and honour
-  // Retry-After on 429. TODO: the 1500/4000/10000 values are copied
+  // 3 tries only (James 2026-11-26 — the old 10s third delay is gone):
+  // waits are 1500+4000 = 5.5s max, plus jitter (~7.1s). Still NO cap
+  // against the remaining 30s budget, and Retry-After is honoured on
+  // 429 (see retryAfterMs). TODO: the 1500/4000 values are copied
   // verbatim from Google with no Gemini-specific basis — verify.
-  const delays = [1500, 4000, 10000];
+  const delays = [1500, 4000];
   let resp = null, lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
