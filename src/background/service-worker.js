@@ -2,7 +2,7 @@
 // translation APIs, capture, debug emission. ML inference itself lives in
 // the offscreen document; pure-JS stages (blocks, mask) run here.
 import { MSG, STORE_URLS, FEEDBACK_MAILTO, SUPPORT_POPUP_THRESHOLD } from '../shared/contracts.js';
-import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, pruneModelIds, computeModelFingerprint } from '../shared/model-specs.js';
+import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings, updateSettingsField } from '../shared/settings.js';
 import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense } from '../shared/pro.js';
 import { recordBenchRun } from '../shared/bench.js';
@@ -1872,10 +1872,125 @@ const modelDownloadInflight = new Map(); // fileId -> { startedAt }
 // TODO: 15 min overall cap / 3 min stall have no measured basis in the
 // code — no download-time data for slow connections is recorded anywhere.
 // If a legitimately slow download ever hits the 15-min cap, the number to
-// revisit is here; the 3-min stall assumes a healthy download writes a
-// chunk at least that often, which is also unmeasured.
+// revisit is here. The 3-min stall used to assume a healthy download
+// writes a chunk at least that often (also unmeasured); it now applies to
+// live byte progress (ct/model-progress broadcasts), not chunk flushes.
 const MODEL_DOWNLOAD_WAIT_MS = 15 * 60 * 1000; // overall cap for one run's wait
 const MODEL_DOWNLOAD_STALL_MS = 3 * 60 * 1000; // no progress for this long = dead download, restart it
+
+// Phase-2 (internet audit 3c): live byte progress + restart/give-up state.
+// The offscreen doc broadcasts ct/model-progress {loaded, total} on every
+// read, {error} on failure and {done:true} on completion (offscreen.js
+// ML_DOWNLOAD), and the SW listens for it below (MODEL_PROGRESS branch in
+// the runtime.onMessage listener). Chunk counts in IndexedDB only move
+// every 8 MB, so they cannot tell a slow download from a dead one — the
+// live byte counts can. modelDownloadErrors records the last hard failure
+// per file, so a permanent 404 is never retried in a loop and a 429/5xx
+// backs off instead of restarting at once.
+const modelByteProgress = new Map(); // fileId -> { loaded, at } (live bytes)
+const modelDownloadErrors = new Map(); // fileId -> { error, at } (last hard failure)
+const modelDownloadGaveUp = new Map(); // fileId -> { reason, at } (watchdog gave up this lifetime)
+const modelWatchdogRestarts = new Map(); // fileId -> consecutive restarts without progress
+const MODEL_MAX_RESTARTS = 3; // restarts per file per run, then give up
+const MODEL_TRANSIENT_BACKOFF_MS = MODEL_DOWNLOAD_STALL_MS; // 3-min floor after a 429/5xx
+
+// Permanent download failures (model-specs.js throws these verbatim):
+// the file is gone from Hugging Face, so no retry in this run will help.
+function isPermanentModelDownloadError(text) {
+  return typeof text === 'string' && text.includes('model file not found on Hugging Face');
+}
+// Transient server-side failures: 429 (rate-limited) or 5xx. The
+// in-function wait already ran inside downloadFileToIdb; the SW must not
+// restart into the same limit at once.
+function isTransientModelDownloadError(text) {
+  if (typeof text !== 'string') return false;
+  if (text.includes('rate-limited, retry later')) return true;
+  return /download failed \(HTTP 5\d\d\)/.test(text);
+}
+function recordModelDownloadError(fileId, err) {
+  const text = String((err && err.message) || err || '').slice(0, 300);
+  if (!fileId || !text) return;
+  const prev = modelDownloadErrors.get(fileId);
+  // Log a failure once per distinct text — a retry that fails the same way
+  // updates the timestamp (which drives the back-off) without spamming.
+  if (!prev || prev.error !== text) diagPush('model download failed for ' + fileId + ': ' + text);
+  modelDownloadErrors.set(fileId, { error: text, at: Date.now() });
+}
+// Shared restart/give-up decision for waitForModels (counts: its own
+// per-run map) and the watchdog (counts: modelWatchdogRestarts, gaveUp:
+// modelDownloadGaveUp). Returns 'restart' when the caller should trigger
+// a fresh download, 'backoff' when a 429/5xx failure is too recent to
+// retry yet (not counted as a restart), 'gaveup' when the file must not
+// be restarted again in this run.
+function modelRestartDecision(fileId, counts, gaveUp) {
+  if (gaveUp.has(fileId)) return 'gaveup';
+  const err = modelDownloadErrors.get(fileId);
+  if (err && err.error) {
+    if (isPermanentModelDownloadError(err.error)) {
+      gaveUp.set(fileId, { reason: err.error, permanent: true, at: Date.now() });
+      return 'gaveup';
+    }
+    if (isTransientModelDownloadError(err.error) && Date.now() - err.at < MODEL_TRANSIENT_BACKOFF_MS) return 'backoff';
+  }
+  const n = (counts.get(fileId) || 0) + 1;
+  if (n > MODEL_MAX_RESTARTS) {
+    gaveUp.set(fileId, { reason: 'model download failed after 3 restarts — check the connection', at: Date.now() });
+    return 'gaveup';
+  }
+  counts.set(fileId, n);
+  return 'restart';
+}
+// What waitForModels throws when a file may not be restarted again: the
+// permanent error text when that is the cause, else the 3-restart text.
+function modelWaitGiveUpMessage(fileId, gaveUp) {
+  const rec = gaveUp.get(fileId) || {};
+  if (rec.permanent && rec.reason) return rec.reason;
+  return 'model download failed after 3 restarts — check the connection (' + fileId + ')';
+}
+// Live bytes for a file: the broadcast byte count when it is ahead of the
+// IndexedDB chunk count, else the chunk count. A stale broadcast (download
+// died before its next progress event) cannot hide a real stall for more
+// than one window — it stops advancing, and the stall timer fires.
+function modelLiveLoaded(fileId, chunkLoaded) {
+  const live = modelByteProgress.get(fileId);
+  if (live && typeof live.loaded === 'number') return Math.max(chunkLoaded, live.loaded);
+  return chunkLoaded;
+}
+
+// Phase-2 (audit 3c): the in-flight mark is in-memory only, so a
+// service-worker restart loses it and a second download can start for
+// the same file. Persist it in chrome.storage.local — NOT the ct-db
+// models store: getModelDownloadState counts chunk keys by prefix, and a
+// new record type in that store would risk confusing that count. The
+// in-function resume makes a duplicate start non-corrupting (same chunk
+// keys, same bytes), so a stale mark only costs bandwidth — and every
+// stale mark self-heals: the stall branches restart a file whose mark is
+// older than 3 min. Restore keeps the original startedAt, so the 3-min
+// window is measured from the real start, not the restart.
+const MODEL_DL_INFLIGHT_KEY = 'ctModelDlInflight'; // chrome.storage.local: { fileId: startedAt }
+async function persistModelDownloadInflight() {
+  try {
+    const rec = {};
+    for (const [id, v] of modelDownloadInflight) rec[id] = (v && v.startedAt) || Date.now();
+    if (Object.keys(rec).length) await chrome.storage.local.set({ [MODEL_DL_INFLIGHT_KEY]: rec });
+    else await chrome.storage.local.remove(MODEL_DL_INFLIGHT_KEY);
+  } catch { /* storage write failed — the in-memory mark still guards this lifetime */ }
+}
+async function restoreModelDownloadInflight() {
+  try {
+    const saved = await chrome.storage.local.get(MODEL_DL_INFLIGHT_KEY);
+    const rec = (saved && saved[MODEL_DL_INFLIGHT_KEY]) || {};
+    // Only restore marks for files still missing — a completed file's
+    // stale mark must not linger.
+    let state = null;
+    try { state = await getModelDownloadState(); } catch { /* restore without the filter */ }
+    const missing = new Set(((state && state.missing) || []).map(f => f.id));
+    for (const [id, startedAt] of Object.entries(rec)) {
+      if (state && !missing.has(id)) continue;
+      if (!modelDownloadInflight.has(id)) modelDownloadInflight.set(id, { startedAt: Number(startedAt) || Date.now() });
+    }
+  } catch { /* a failed restore just means the first tick may duplicate a download; resume makes that safe */ }
+}
 
 // Fire-and-forget one file's download. Returns the host call's promise,
 // or null if it is already going (same SW lifetime) — a duplicate start
@@ -1891,11 +2006,12 @@ function triggerModelDownload(fileId) {
   ensureModelWatchdog();
   if (modelDownloadInflight.has(fileId)) return null;
   modelDownloadInflight.set(fileId, { startedAt: Date.now() });
+  persistModelDownloadInflight();
   const p = ensureMlHost().then(
     () => callMl({ type: MSG.ML_DOWNLOAD, fileId }),
-    (e) => { modelDownloadInflight.delete(fileId); throw e; },
+    (e) => { modelDownloadInflight.delete(fileId); persistModelDownloadInflight(); throw e; },
   );
-  p.then(() => { modelDownloadInflight.delete(fileId); }, (e) => {
+  p.then(() => { modelDownloadInflight.delete(fileId); persistModelDownloadInflight(); }, (e) => {
     // 2.3.4: a hard failure (the worker replied with an error) means the
     // download is really dead — clear the mark at once so the next run
     // start or watchdog tick restarts it immediately. The old code only
@@ -1908,10 +2024,10 @@ function triggerModelDownload(fileId) {
     // restarting those. A duplicate start is harmless: both fetch the
     // same bytes and write the same chunk keys, and the state check
     // re-downloads a manifest whose chunks are missing.
-    if (!e || !e.mlTimeout) { modelDownloadInflight.delete(fileId); return; }
+    if (!e || !e.mlTimeout) { modelDownloadInflight.delete(fileId); recordModelDownloadError(fileId, e); persistModelDownloadInflight(); return; }
     getModelDownloadState().then(state => {
       const f = state.files.find(x => x.id === fileId);
-      if (f && !f.done && !f.started) modelDownloadInflight.delete(fileId);
+      if (f && !f.done && !f.started) { modelDownloadInflight.delete(fileId); persistModelDownloadInflight(); }
     }).catch(() => {});
   });
   return p;
@@ -1943,6 +2059,8 @@ async function waitForModels(runId) {
   // stalled file when another file was still progressing. A file is
   // stalled only when its OWN loaded bytes have not changed for 3 min.
   const perFileProgress = new Map(); // fileId -> { loaded, at }
+  const restartCounts = new Map(); // fileId -> restarts this wait (fresh per run)
+  const gaveUp = new Map(); // fileId -> { reason, at } (permanent / capped this wait)
   for (;;) {
     if (runs.get(runId)?.cancelled) throw new Error('cancelled');
     let state;
@@ -1951,7 +2069,18 @@ async function waitForModels(runId) {
     }
     if (!state.missing.length) {
       for (const f of state.files) modelDownloadInflight.delete(f.id);
+      persistModelDownloadInflight();
       return;
+    }
+    // A file that finished clears its per-run state, so a later stall of
+    // another file never inherits a stale error or count.
+    for (const f of state.files) {
+      if (f.done) {
+        restartCounts.delete(f.id);
+        gaveUp.delete(f.id);
+        modelDownloadErrors.delete(f.id);
+        modelByteProgress.delete(f.id);
+      }
     }
     // Start anything not downloading yet (covers a failed ensureMlHost
     // at the top, and a download that died before writing a chunk).
@@ -1964,8 +2093,21 @@ async function waitForModels(runId) {
     for (const f of state.missing) {
       if (f.started) continue;
       const inflight = modelDownloadInflight.get(f.id);
-      if (!inflight) { triggerModelDownload(f.id); continue; }
+      if (!inflight) {
+        // A file with a recorded hard failure is a re-trigger, not a first
+        // attempt: a 404 used to re-trigger every second until the 15-min
+        // cap. Gate it — permanent gives up at once, 429/5xx backs off.
+        if (modelDownloadErrors.has(f.id)) {
+          const decision = modelRestartDecision(f.id, restartCounts, gaveUp);
+          if (decision === 'gaveup') throw new Error(modelWaitGiveUpMessage(f.id, gaveUp));
+          if (decision === 'backoff') continue;
+        }
+        triggerModelDownload(f.id); continue;
+      }
       if (Date.now() - (inflight.startedAt || 0) > MODEL_DOWNLOAD_STALL_MS) {
+        const decision = modelRestartDecision(f.id, restartCounts, gaveUp);
+        if (decision === 'gaveup') throw new Error(modelWaitGiveUpMessage(f.id, gaveUp));
+        if (decision === 'backoff') continue;
         diagPush('model download never started, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         triggerModelDownload(f.id);
@@ -1977,22 +2119,32 @@ async function waitForModels(runId) {
     const stalled = [];
     for (const f of state.missing) {
       if (!f.started) continue;
+      // Live bytes, not chunk counts: a healthy download slower than
+      // ~45 KB/s writes no 8 MB chunk inside the 3-min window, but its
+      // byte count still grows — that is progress, not a stall.
+      const loaded = modelLiveLoaded(f.id, f.loaded);
       const prev = perFileProgress.get(f.id);
-      if (!prev || prev.loaded !== f.loaded) {
-        perFileProgress.set(f.id, { loaded: f.loaded, at: now });
+      if (!prev || prev.loaded !== loaded) {
+        perFileProgress.set(f.id, { loaded, at: now });
       } else if (now - prev.at > MODEL_DOWNLOAD_STALL_MS) {
         stalled.push(f);
       }
     }
     if (stalled.length) {
       // Stalled: a partial file whose bytes stopped growing belongs to a
-      // dead download (host died, network dropped). Clear it and start
-      // over so the wait can make progress instead of hanging. Only the
-      // files that are actually stalled are restarted — a slow file that
-      // is still progressing is left alone.
-      diagPush('model download stalled, restarting: ' + stalled.map(f => f.id).join(', '));
+      // dead download (host died, network dropped). Restart it so the wait
+      // can make progress instead of hanging — but do NOT prune the kept
+      // chunks: the next attempt resumes from them (downloadFileToIdb
+      // resumes from kept chunks). Pruning here used to throw away good
+      // bytes and restart from 0, and it undercut the in-function 429
+      // wait, which can run 3 min while this branch fired at the same
+      // 3 min. Only the files that are actually stalled are restarted —
+      // a slow file that is still progressing is left alone.
       for (const f of stalled) {
-        try { await pruneModelIds([f.id]); } catch {}
+        const decision = modelRestartDecision(f.id, restartCounts, gaveUp);
+        if (decision === 'gaveup') throw new Error(modelWaitGiveUpMessage(f.id, gaveUp));
+        if (decision === 'backoff') continue; // keep perFileProgress: restart promptly once the back-off expires
+        diagPush('model download stalled, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         perFileProgress.delete(f.id);
         triggerModelDownload(f.id);
@@ -2001,12 +2153,13 @@ async function waitForModels(runId) {
     if (Date.now() - t0 > MODEL_DOWNLOAD_WAIT_MS) {
       throw new Error('model download timed out after 15 minutes — check the connection, or open Settings → Models and tap "Download all models".');
     }
-    // 1s poll: the only way to observe download progress. Progress lives
-    // in IndexedDB chunk counts (getModelDownloadState reads them) and the
-    // offscreen doc pushes no progress event, so there is nothing to listen
-    // to — polling is the only option. 1s keeps the pill percent fresh
-    // without hammering IndexedDB; the stall/cap checks above, not the
-    // poll interval, decide when to restart or give up.
+    // 1s poll: the only way to observe download completion. Live byte
+    // progress arrives via ct/model-progress broadcasts (see the
+    // MODEL_PROGRESS branch), so a slow download that has not flushed an
+    // 8 MB chunk in 3 min is no longer mistaken for stalled; the chunk
+    // counts are only the fallback when no broadcast arrived. 1s keeps
+    // the pill percent fresh without hammering IndexedDB; the stall/cap
+    // checks above, not the poll interval, decide when to restart or give up.
     await new Promise(r => setTimeout(r, 1000));
   }
 }
@@ -2020,10 +2173,13 @@ async function waitForModels(runId) {
 // download stalled at 43% for ~3 minutes with no retry until a run
 // started. A 1-minute alarm re-checks: a missing file that never
 // started (or whose trigger died) is started, and a started file whose
-// bytes stopped growing for 3 minutes is pruned and restarted. While a
-// run is active the watchdog stays out of the way — waitForModels owns
-// restarts then. When nothing is missing the alarm clears itself, so it
-// costs nothing on a healthy install.
+// bytes stopped growing for 3 minutes is restarted (chunks kept, so it
+// resumes). While a run is active the watchdog stays out of the way —
+// waitForModels owns restarts then. When nothing is missing the alarm
+// clears itself, so it costs nothing on a healthy install. A file that
+// fails permanently (404) or hits 3 restarts without progress is given up
+// on (modelDownloadGaveUp) until a run starts again or the file completes
+// — it is not retried every minute forever.
 const MODEL_WATCHDOG_ALARM = 'ct-model-watchdog';
 const modelWatchdogProgress = new Map(); // fileId -> { loaded, at }
 function ensureModelWatchdog() {
@@ -2052,11 +2208,35 @@ async function modelWatchdogTick() {
     clearModelWatchdog();
     return;
   }
+  // Files that completed since the last tick reset their counters — a
+  // later re-download (after a delete) starts from zero restarts.
+  for (const f of state.files) {
+    if (f.done) {
+      modelWatchdogRestarts.delete(f.id);
+      modelDownloadGaveUp.delete(f.id);
+      modelDownloadErrors.delete(f.id);
+      modelByteProgress.delete(f.id);
+    }
+  }
   for (const f of state.missing) {
     if (!f.started) {
       const inflight = modelDownloadInflight.get(f.id);
-      if (!inflight) { triggerModelDownload(f.id); continue; }
+      if (!inflight) {
+        // A file with a recorded hard failure is a re-trigger, not a
+        // first attempt — gate it the same way as the stall branch.
+        if (modelDownloadErrors.has(f.id)) {
+          if (modelDownloadGaveUp.has(f.id)) continue;
+          const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
+          if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+          if (decision === 'backoff') continue;
+        }
+        triggerModelDownload(f.id); continue;
+      }
       if (Date.now() - (inflight.startedAt || 0) > MODEL_DOWNLOAD_STALL_MS) {
+        if (modelDownloadGaveUp.has(f.id)) continue;
+        const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
+        if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+        if (decision === 'backoff') continue;
         diagPush('model download never started, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         triggerModelDownload(f.id);
@@ -2067,17 +2247,33 @@ async function modelWatchdogTick() {
     // background restart) — restart it at once, no 3-minute wait. The
     // stall window below only applies to files that ARE in flight.
     if (!modelDownloadInflight.has(f.id)) {
+      if (modelDownloadGaveUp.has(f.id)) continue;
+      if (modelDownloadErrors.has(f.id)) {
+        const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
+        if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+        if (decision === 'backoff') continue;
+      }
       diagPush('model download not in flight, restarting: ' + f.id);
       modelWatchdogProgress.delete(f.id);
       triggerModelDownload(f.id);
       continue;
     }
     const prev = modelWatchdogProgress.get(f.id);
-    if (!prev || prev.loaded !== f.loaded) {
-      modelWatchdogProgress.set(f.id, { loaded: f.loaded, at: Date.now() });
+    // Live bytes, not chunk counts — same slow-download fix as waitForModels.
+    const loaded = modelLiveLoaded(f.id, f.loaded);
+    if (!prev || prev.loaded !== loaded) {
+      // Real progress resets the consecutive-restart count: the watchdog
+      // ticks for hours, so 3 stalls spread over a day with progress
+      // between them must not strand the file. Only consecutive restarts
+      // with no progress in between count toward the cap.
+      if (prev && loaded > prev.loaded) modelWatchdogRestarts.delete(f.id);
+      modelWatchdogProgress.set(f.id, { loaded, at: Date.now() });
     } else if (Date.now() - prev.at > MODEL_DOWNLOAD_STALL_MS) {
+      if (modelDownloadGaveUp.has(f.id)) continue;
+      const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
+      if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+      if (decision === 'backoff') continue; // keep modelWatchdogProgress: restart promptly once the back-off expires
       diagPush('model download stalled, restarting: ' + f.id);
-      try { await pruneModelIds([f.id]); } catch {}
       modelDownloadInflight.delete(f.id);
       modelWatchdogProgress.delete(f.id);
       triggerModelDownload(f.id);
@@ -2092,6 +2288,10 @@ async function modelWatchdogTick() {
 // ran and the partial files sat forever. Creating it here costs one tick
 // on a healthy install: the tick clears the alarm when nothing is missing.
 ensureModelWatchdog();
+// Same reason for the persisted in-flight marks: a background restart must
+// re-read them before the first tick/run, or a still-running download gets
+// a duplicate start.
+restoreModelDownloadInflight();
 
 // One-time support popup: after 50 translated pictures in total, offer the
 // store rating / support / feedback once, in the middle of the page.
@@ -4912,6 +5112,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // GPU1-Chrome: the same progress re-arms the SW-side GPU watchdog
     // in ml-bridge.js (progress resets the 60s inactivity window).
     try { notifyChromeGpuProgress(msg.runId, msg.frac); } catch {}
+    return false;
+  }
+  // Model-download progress from the ML host (one-way, no reply).
+  // The offscreen doc broadcasts ct/model-progress {loaded, total} on
+  // every read, plus {error} on failure and {done:true} on completion
+  // (offscreen.js ML_DOWNLOAD). The SW never consumed these before — the
+  // stall checks only saw 8 MB IndexedDB chunk flushes, so a healthy
+  // download slower than ~45 KB/s looked stalled. The live byte counts
+  // feed modelByteProgress (stall detection) and the error text feeds
+  // modelDownloadErrors (restart/give-up policy). Options/popup have
+  // their own listeners; this branch does not interfere with them.
+  if (msg && msg.type === MSG.MODEL_PROGRESS && msg.fileId) {
+    try {
+      if (typeof msg.loaded === 'number') modelByteProgress.set(msg.fileId, { loaded: msg.loaded, at: Date.now() });
+      if (typeof msg.error === 'string' && msg.error) recordModelDownloadError(msg.fileId, msg.error);
+      if (msg.done) { modelByteProgress.delete(msg.fileId); modelDownloadErrors.delete(msg.fileId); }
+    } catch { /* progress must never break the pipeline */ }
     return false;
   }
   if (msg && msg.type === MSG.ML_BENCH_RESULT) {

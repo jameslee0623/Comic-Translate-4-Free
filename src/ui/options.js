@@ -572,7 +572,21 @@ $('grantLmStudioHost').onclick = async () => {
 //  failure {fileId, error}). Without this listener a failed download left the
 // button stuck on "Downloading…" forever with no error shown.
 const dlInFlight = new Set(); // fileIds currently downloading
-const dlErrors = {};          // fileId -> last download error text
+const dlErrors = {};          // fileId -> last download error text (raw — the diagnostic log keeps the raw text)
+// Plain-language model errors for display. The download code (model-specs.js)
+// throws technical texts ("download failed (404)…", "rate-limited, retry
+// later…"); Settings shows the mapped line instead. Match on distinctive
+// substrings so future wording tweaks do not silently break the mapping.
+// dlErrors keeps the raw text; only the displayed line is mapped.
+function plainModelError(raw) {
+  const text = String(raw || '');
+  if (text.includes('model file not found on Hugging Face')) return 'This model file moved on Hugging Face — the extension may need an update';
+  if (text.includes('rate-limited, retry later')) return 'Hugging Face is rate-limiting downloads — try again in a few minutes';
+  if (text.includes('download link expired')) return 'Download link expired — retrying';
+  if (text.includes('failed integrity check')) return 'Downloaded file failed its integrity check — retrying';
+  if (text.includes('server says this file is')) return 'Hugging Face has a different size for this model — it may have been updated';
+  return text;
+}
 const fileToGroup = {};       // fileId -> model group id (rebuilt on refresh)
 const escapeHtml = s => String(s).replace(/[&<>"']/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -587,7 +601,7 @@ chrome.runtime.onMessage.addListener(msg => {
   if (msg.error) {
     dlErrors[msg.fileId] = msg.error;
     dlInFlight.delete(msg.fileId);
-    if (el) el.innerHTML = `<span style="color:#f85149">${escapeHtml(ctMsg('download_failed', [msg.error])) || escapeHtml('✗ download failed: ' + msg.error)}</span>`;
+    if (el) el.innerHTML = `<span style="color:#f85149">${escapeHtml(ctMsg('download_failed', [plainModelError(msg.error)])) || escapeHtml('✗ download failed: ' + plainModelError(msg.error))}</span>`;
     dlDoneCheck();
   } else if (msg.done) {
     delete dlErrors[msg.fileId];
@@ -748,7 +762,7 @@ async function refreshModels() {
         ? `<span style="color:#7ee787">${escapeHtml(sizeStr ? (ctMsg('downloaded', [sizeStr]) || `✓ downloaded (${sizeStr})`) : (ctMsg('downloaded_short') || '✓ downloaded'))}</span>`
         : `<span style="color:#f0b429">${ctMsg('not_downloaded') || 'not downloaded'}</span>`;
     const dlErr = g.files.map(f => dlErrors[f.id]).filter(Boolean)[0];
-    if (dlErr) status += `<br><span style="color:#f85149">✗ ${escapeHtml(dlErr)}</span>`;
+    if (dlErr) status += `<br><span style="color:#f85149">✗ ${escapeHtml(plainModelError(dlErr))}</span>`;
     const label = (g.labelKey && ctMsg(g.labelKey)) || g.label;
     // No "required" badge: all three model groups are required.
     div.innerHTML = `<div><b>${escapeHtml(label)}</b><div id="model-status-${g.id}" style="color:#9a9aa0;font-size:12px">${status}</div></div>`;

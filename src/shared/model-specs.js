@@ -269,12 +269,120 @@ export async function readChunked(db, fileId, manifest) {
   return buf.buffer;
 }
 
+// ---- download retry / resume helpers (audit 3c, 2026-11-26) ----
+// Hugging Face behaviour proven live in the audit: the resolver answers
+// 302 to a signed CloudFront URL; the CDN serves 200
+// application/octet-stream with Accept-Ranges: bytes and honours Range
+// with 206 + Content-Range; RateLimit-Policy says 3000 req / 5 min on
+// the resolver; error bodies are plain text; the file SHA-256 is exposed
+// as X-Linked-ETag. No Retry-After was observed on any response, so the
+// 3-minute minimum wait below is UNVERIFIED — it is a deliberate floor,
+// not a measured server value; do not tune it from testing alone.
+
+const DOWNLOAD_MAX_ATTEMPTS = 3; // attempts per file per call, then give up
+// Minimum wait before retrying a 429/5xx when the server sends neither
+// Retry-After nor a RateLimit reset. UNVERIFIED (see above): HF never
+// sent Retry-After in the audit, so this floor is a guess that a rate
+// limit needs minutes, not seconds, to clear — not a server fact.
+const DOWNLOAD_MIN_RATE_WAIT_MS = 3 * 60 * 1000;
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Wait before retrying a 429/5xx, in ms, from the response headers:
+// Retry-After first (seconds, or an HTTP-date), else the RateLimit
+// reset (the `t=` / `reset=` seconds until the window resets), else the
+// 3-minute floor. Exported so the retry timing is unit-testable.
+export function parseRetryWaitMs(headers) {
+  const retryAfter = headers && headers.get && headers.get('retry-after');
+  if (retryAfter != null) {
+    const s = String(retryAfter).trim();
+    if (/^\d+$/.test(s)) return Number(s) * 1000;
+    const when = Date.parse(s);
+    if (!Number.isNaN(when)) return Math.max(0, when - Date.now());
+  }
+  const rateLimit = headers && headers.get && headers.get('ratelimit');
+  if (rateLimit != null) {
+    const m = String(rateLimit).match(/(?:^|[,\s])t=(\d+)/) ||
+      String(rateLimit).match(/(?:^|[,\s])reset=(\d+)/);
+    if (m) return Number(m[1]) * 1000;
+  }
+  return DOWNLOAD_MIN_RATE_WAIT_MS;
+}
+
+// Log the HF rate-limit headers when present. There is no diagnostic-log
+// path reachable from this shared module (diagPush is owned by the SW;
+// the offscreen doc reaches it only via bench messages), so the values
+// go to the context console and, on a 429, into the thrown error —
+// that is what lands in Settings via the offscreen error broadcast.
+function logRateLimit(fileId, headers) {
+  try {
+    const rl = headers && headers.get && headers.get('ratelimit');
+    const policy = headers && headers.get && headers.get('ratelimit-policy');
+    if (rl != null || policy != null) {
+      console.warn(`[ct-dl] ${fileId} rate-limit: RateLimit=${rl == null ? '(absent)' : rl} RateLimit-Policy=${policy == null ? '(absent)' : policy}`);
+    }
+  } catch { /* logging must never break a download */ }
+}
+
+// How many contiguous chunk records (0..n-1) exist for a file, and how
+// many bytes they hold. Chunk records are written in order and each IDB
+// put is atomic, so the records form a trustworthy byte prefix — except
+// the LAST one, whose completeness cannot be verified without a hash
+// (see the resume rule in downloadFileToIdb). lastBytes is that last
+// chunk's size, so the caller can discard it.
+async function contiguousChunks(db, fileId) {
+  let count = 0, bytes = 0, lastBytes = 0;
+  for (;;) {
+    if (count > 4096) break; // safety bound, not a real limit (~26 max)
+    const rec = await idbGet(db, chunkKey(fileId, count)).catch(() => null);
+    if (!rec || !rec.data) break;
+    lastBytes = rec.data.byteLength;
+    bytes += lastBytes;
+    count++;
+  }
+  return { count, bytes, lastBytes };
+}
+
+// Verify reassembled bytes against the X-Linked-ETag SHA-256 from the
+// download response. Returns true (match), false (mismatch), or null
+// (no usable hash — header absent/malformed, or crypto.subtle missing —
+// so the caller proceeds with the size check only). The reassembly holds
+// the whole file in memory once (up to 206 MB); model loading already
+// does exactly that in readChunked, so this adds no new allocation shape.
+async function verifyFileHash(db, fileId, chunkCount, totalBytes, etag) {
+  const clean = String(etag == null ? '' : etag).replace(/["\s]/g, '').toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(clean)) {
+    try { console.warn(`[ct-dl] ${fileId}: X-Linked-ETag absent or not a SHA-256 (${String(etag).slice(0, 40)}), skipping integrity check (size check only)`); } catch {}
+    return null;
+  }
+  if (typeof crypto === 'undefined' || !crypto.subtle || !crypto.subtle.digest) {
+    try { console.warn(`[ct-dl] ${fileId}: crypto.subtle unavailable, skipping integrity check (size check only)`); } catch {}
+    return null;
+  }
+  const buf = await readChunked(db, fileId, { bytes: totalBytes, chunks: chunkCount });
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  const hex = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return hex === clean;
+}
+
 // Download one file with progress. Runs in the offscreen document (a service
 // worker can be killed mid-download); progress is broadcast to the UI.
 // Bytes stream straight into 8 MB IDB chunks — the file is never held whole
 // in memory and no single IDB value is large. The byte size is verified
 // against the spec — a truncated or wrong file is rejected instead of being
 // cached silently.
+//
+// Audit 3c (2026-11-26): resume + per-status retries. A failed download
+// KEEPS its chunks and the next attempt resumes with
+// `Range: bytes=<loaded>-`, expecting 206 + Content-Range; a 200 answer
+// to a Range request means the server ignored Range, so the partial is
+// discarded and the file restarts from 0. Up to 3 attempts per file per
+// call. Permanent errors (401/403/404, Content-Length/Content-Type
+// mismatch) throw at once; 429/5xx wait out Retry-After / the RateLimit
+// reset (3-minute floor when neither is sent) before retrying. A present
+// X-Linked-ETag is verified against the reassembled bytes before the
+// manifest is written. The SW-level unbounded retries are NOT touched
+// here — they are a follow-up (see the audit fix report).
 export async function downloadFileToIdb(fileId, url, onProgress) {
   const spec = ALL_FILES.find(f => f.id === fileId);
   const db = await openDb();
@@ -298,11 +406,11 @@ export async function downloadFileToIdb(fileId, url, onProgress) {
       intact = false; // manifest with no chunk count and no data: unverifiable
     }
     if (intact) return existing.bytes;
-    // Orphaned/stale manifest: fall through and re-download (the stale
-    // records are cleared below).
-  }
-  // Clear any stale or partial records before writing.
-  if (existing) {
+    // Orphaned manifest for the SAME file version: fall through and
+    // resume from the chunks that are present (kept, not deleted).
+  } else if (existing) {
+    // Stale or wrong-version records: the file changed, so the old
+    // chunks belong to another version — clear before writing.
     if (existing.chunks) await deleteChunks(db, fileId, existing.chunks);
     await deleteChunksByPrefix(db, fileId);
     await idbDel(db, fileId);
@@ -314,78 +422,311 @@ export async function downloadFileToIdb(fileId, url, onProgress) {
   // after 60s with no bytes received; a slow-but-progressing download
   // keeps resetting the timer, so it is never cut off for being slow.
   const DOWNLOAD_INACTIVITY_MS = 60000;
-  const ctrl = new AbortController();
-  let inactivityTimer = null;
-  const armInactivity = () => {
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      try { ctrl.abort(); } catch { /* already settled */ }
-    }, DOWNLOAD_INACTIVITY_MS);
-  };
-  let resp;
-  try {
-    armInactivity();
-    resp = await fetch(url, { signal: ctrl.signal });
-  } catch (e) {
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    if (e && e.name === 'AbortError') throw new Error(`download timed out (no data for ${DOWNLOAD_INACTIVITY_MS / 1000}s) for ${fileId}`);
-    throw e;
-  }
-  if (!resp.ok) {
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    throw new Error(`download failed (${resp.status}) for ${fileId}`);
-  }
-  if (!resp.body) {
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    throw new Error(`download failed (empty response body) for ${fileId}`);
-  }
-  const total = parseInt(resp.headers.get('content-length') || '0', 10);
-  const reader = resp.body.getReader();
-  let idx = 0, loaded = 0;
-  let pending = [], pendingLen = 0;
-  const flushChunk = async () => {
-    if (!pendingLen) return;
-    const buf = new Uint8Array(pendingLen);
-    let off = 0;
-    for (const c of pending) { buf.set(c, off); off += c.length; }
-    pending = []; pendingLen = 0;
-    await idbPut(db, { id: chunkKey(fileId, idx++), data: buf.buffer });
-  };
-  for (;;) {
-    let readResult;
-    try {
-      readResult = await reader.read();
-    } catch (e) {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
-      if (e && e.name === 'AbortError') throw new Error(`download timed out (no data for ${DOWNLOAD_INACTIVITY_MS / 1000}s) for ${fileId}`);
-      throw e;
+  const progressTotal = (spec && spec.bytes) || 0;
+  let lastError = null;
+  let streamFailures = 0; // consecutive attempts ending in a stream error
+  let restartFromZero = false; // set after a 2nd consecutive stream error
+  // Bytes of stored chunks already proven complete. Only the LAST chunk
+  // is ever unverified (see below), so once it is discarded the rest of
+  // the prefix is trusted — and a later attempt in this call that wrote
+  // nothing new must NOT discard another chunk, or repeated failures
+  // would drain the whole prefix one chunk per attempt. Any path that
+  // deletes chunks resets this to 0 (a new generation is unproven).
+  let trustedBytes = 0;
+
+  for (let attempt = 1; attempt <= DOWNLOAD_MAX_ATTEMPTS; attempt++) {
+    // Resume point: the contiguous chunks already stored. A restart
+    // requested by the expired-link path deletes them first.
+    if (restartFromZero) {
+      await deleteChunksByPrefix(db, fileId);
+      await idbDel(db, fileId);
+      trustedBytes = 0;
+      restartFromZero = false;
     }
-    const { done, value } = readResult;
-    if (done) break;
-    armInactivity(); // bytes arrived — the connection is alive, reset the timer
-    pending.push(value);
-    pendingLen += value.length;
-    loaded += value.length;
-    onProgress && onProgress(loaded, total);
-    if (pendingLen >= IDB_CHUNK) await flushChunk();
-    // Some proxies/middleboxes deliver every byte but never terminate the
-    // stream — without this, the download hangs at 100% forever. Once we
-    // hold the advertised content-length, stop waiting for {done: true}.
-    if (total > 0 && loaded >= total) break;
-    // yield so progress messages flush
-    await new Promise(r => setTimeout(r, 0));
+    const kept = await contiguousChunks(db, fileId);
+    let resumeFrom = kept.bytes;
+    let idx = kept.count;
+    if (spec && spec.bytes && resumeFrom > spec.bytes) {
+      // Stored chunks hold MORE than the file should be: wrong file.
+      await deleteChunksByPrefix(db, fileId);
+      await idbDel(db, fileId);
+      trustedBytes = 0;
+      resumeFrom = 0; idx = 0;
+    } else if (resumeFrom > 0) {
+      // Discard the LAST chunk — but only when the stored prefix grew
+      // since the last discard. It is the only chunk whose completeness
+      // cannot be proven: the download may have died while it was
+      // being written, and a short chunk is indistinguishable from a
+      // complete one without a hash. Every earlier chunk is a complete
+      // prefix slice (IDB puts are atomic, and a chunk is only followed
+      // by another chunk when more data arrived after it was flushed),
+      // so resuming after it is safe. Cost: at most one chunk is
+      // re-downloaded per generation of the prefix. If the stored
+      // prefix SHRANK since the last discard (another path deleted
+      // chunks), the old trust is void and the last chunk is discarded
+      // again.
+      if (kept.bytes < trustedBytes) trustedBytes = 0;
+      if (kept.bytes > trustedBytes) {
+        await idbDel(db, chunkKey(fileId, idx - 1));
+        resumeFrom -= kept.lastBytes;
+        idx -= 1;
+        trustedBytes = resumeFrom;
+      }
+    }
+    if (resumeFrom > 0) onProgress && onProgress(resumeFrom, progressTotal);
+    // Per-attempt controller: a previous attempt may have aborted its own.
+    const ctrl = new AbortController();
+    let inactivityTimer = null;
+    const armInactivity = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        try { ctrl.abort(); } catch { /* already settled */ }
+      }, DOWNLOAD_INACTIVITY_MS);
+    };
+    const stopInactivity = () => {
+      if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+    };
+
+    // One attempt may fetch twice: with Range first, and — only if the
+    // server answers 200 to the Range request (Range ignored) or a 206
+    // whose Content-Range does not match the request — again from byte 0
+    // after discarding the partial. That is not a retry, it is the same
+    // attempt falling back to a full download.
+    let resp = null;
+    let etag = null;
+    let loaded = resumeFrom;
+    let attemptTotal = 0; // Content-Length of this attempt's response
+    for (let fetchNo = 0; fetchNo < 2; fetchNo++) {
+      const wantRange = resumeFrom > 0 && fetchNo === 0;
+      try {
+        armInactivity();
+        resp = await fetch(url, wantRange
+          ? { signal: ctrl.signal, headers: { Range: `bytes=${resumeFrom}-` } }
+          : { signal: ctrl.signal });
+      } catch (e) {
+        stopInactivity();
+        if (e && e.name === 'AbortError') {
+          lastError = new Error(`download timed out (no data for ${DOWNLOAD_INACTIVITY_MS / 1000}s) for ${fileId}`);
+        } else if (e && e.name === 'TypeError') {
+          // Network error (DNS, offline, reset, TLS) or CORS rejection:
+          // fetch gives no status, so the class is the diagnosis. Fetch
+          // options are NOT changed here — CORS behaviour must be
+          // verified in the real extension context first.
+          lastError = new Error(`download failed (network/CORS error — ${String((e && e.message) || e).slice(0, 120)}) for ${fileId}`);
+        } else {
+          lastError = e;
+        }
+        resp = null;
+        break;
+      }
+      if (!resp.ok) break; // status branching below (timer stopped there)
+      if (wantRange && resp.status === 200) {
+        // Server ignored Range: discard the partial and restart from 0
+        // inside this same attempt.
+        stopInactivity();
+        try { if (resp.body) await resp.body.cancel(); } catch { /* already closed */ }
+        await deleteChunksByPrefix(db, fileId);
+        await idbDel(db, fileId);
+        trustedBytes = 0;
+        resumeFrom = 0; idx = 0; loaded = 0;
+        resp = null;
+        continue;
+      }
+      if (wantRange && resp.status === 206) {
+        const cr = resp.headers.get('content-range');
+        if (cr == null) {
+          try { console.warn(`[ct-dl] ${fileId}: 206 without Content-Range, proceeding (size check still applies)`); } catch {}
+        } else {
+          const m = /bytes\s+(\d+)-\d+\/(\d+|\*)/.exec(String(cr).trim());
+          const badRange = !m || Number(m[1]) !== resumeFrom ||
+            (m[2] !== '*' && spec && spec.bytes && Number(m[2]) !== spec.bytes);
+          if (badRange) {
+            // Server's range does not match the request: discard and
+            // restart from 0 inside this same attempt.
+            stopInactivity();
+            try { if (resp.body) await resp.body.cancel(); } catch { /* already closed */ }
+            await deleteChunksByPrefix(db, fileId);
+            await idbDel(db, fileId);
+            trustedBytes = 0;
+            resumeFrom = 0; idx = 0; loaded = 0;
+            resp = null;
+            continue;
+          }
+        }
+      }
+      break; // usable response (200 full, or a matching 206 resume)
+    }
+    if (!resp) {
+      // Fetch threw (lastError set above). Retry with resume while
+      // attempts remain.
+      if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+      continue;
+    }
+    logRateLimit(fileId, resp.headers);
+    if (!resp.ok) {
+      stopInactivity();
+      const status = resp.status;
+      if (status === 404 || status === 401 || status === 403) {
+        // Permanent: the file is gone / forbidden under this URL. No
+        // retry loop — a later extension update may fix the URL.
+        throw new Error(`model file not found on Hugging Face (HTTP ${status}) — the extension may need an update`);
+      }
+      if (status === 429 || status >= 500) {
+        streamFailures = 0; // not a stream failure; a fresh attempt starts clean
+        const waitMs = parseRetryWaitMs(resp.headers);
+        if (attempt >= DOWNLOAD_MAX_ATTEMPTS) {
+          if (status === 429) {
+            throw new Error(`rate-limited, retry later (HTTP 429 for ${fileId} after ${DOWNLOAD_MAX_ATTEMPTS} attempts; RateLimit=${String(resp.headers.get('ratelimit') || 'absent')})`);
+          }
+          throw new Error(`download failed (HTTP ${status}) for ${fileId} after ${DOWNLOAD_MAX_ATTEMPTS} attempts`);
+        }
+        // Wait out the server's asked-for delay (or the 3-minute floor)
+        // BEFORE the next attempt — restarting immediately would retry
+        // straight into the same limit.
+        await sleep(waitMs);
+        continue;
+      }
+      // Any other 4xx: permanent, same as before, with the status kept.
+      throw new Error(`download failed (HTTP ${status}) for ${fileId}`);
+    }
+    if (!resp.body) {
+      stopInactivity();
+      lastError = new Error(`download failed (empty response body) for ${fileId}`);
+      if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+      continue;
+    }
+    const contentLengthRaw = resp.headers.get('content-length');
+    const contentLength = contentLengthRaw != null ? parseInt(String(contentLengthRaw), 10) : NaN;
+    const hasLength = !Number.isNaN(contentLength);
+    if (hasLength && spec && spec.bytes) {
+      // A 206 answers with the REMAINING length, a 200 with the full
+      // file; either way resumeFrom + length must be the spec size.
+      if (resumeFrom + contentLength !== spec.bytes) {
+        stopInactivity();
+        throw new Error(`server says this file is ${resumeFrom + contentLength} bytes, expected ${spec.bytes} — the model may have been updated`);
+      }
+    } else if (!hasLength) {
+      try { console.warn(`[ct-dl] ${fileId}: no content-length on download response, proceeding`); } catch {}
+    }
+    const contentType = resp.headers.get('content-type');
+    if (contentType != null) {
+      const mediaType = String(contentType).split(';')[0].trim().toLowerCase();
+      if (mediaType !== 'application/octet-stream') {
+        stopInactivity();
+        throw new Error(`unexpected response from Hugging Face (got ${mediaType})`);
+      }
+    } else {
+      try { console.warn(`[ct-dl] ${fileId}: no content-type on download response, proceeding`); } catch {}
+    }
+    etag = resp.headers.get('x-linked-etag');
+    attemptTotal = hasLength ? contentLength : 0;
+
+    const reader = resp.body.getReader();
+    let pending = [], pendingLen = 0;
+    const flushChunk = async () => {
+      if (!pendingLen) return;
+      const buf = new Uint8Array(pendingLen);
+      let off = 0;
+      for (const c of pending) { buf.set(c, off); off += c.length; }
+      pending = []; pendingLen = 0;
+      await idbPut(db, { id: chunkKey(fileId, idx++), data: buf.buffer });
+    };
+    let streamError = null;
+    for (;;) {
+      let readResult;
+      try {
+        readResult = await reader.read();
+      } catch (e) {
+        stopInactivity();
+        if (e && e.name === 'AbortError') {
+          streamError = new Error(`download timed out (no data for ${DOWNLOAD_INACTIVITY_MS / 1000}s) for ${fileId}`);
+        } else {
+          streamError = e;
+        }
+        break;
+      }
+      const { done, value } = readResult;
+      if (done) break;
+      armInactivity(); // bytes arrived — the connection is alive, reset the timer
+      pending.push(value);
+      pendingLen += value.length;
+      loaded += value.length;
+      onProgress && onProgress(loaded, progressTotal || attemptTotal);
+      if (pendingLen >= IDB_CHUNK) await flushChunk();
+      // Some proxies/middleboxes deliver every byte but never terminate the
+      // stream — without this, the download hangs at 100% forever. Once we
+      // hold the advertised content-length, stop waiting for {done: true}.
+      // With a resume, attemptTotal is the REMAINING length, so the break
+      // is at resumeFrom + attemptTotal.
+      if (attemptTotal > 0 && loaded >= resumeFrom + attemptTotal) break;
+      // yield so progress messages flush
+      await new Promise(r => setTimeout(r, 0));
+    }
+    stopInactivity();
+    try { await reader.cancel(); } catch { /* stream already closed */ }
+    if (streamError) {
+      // A stream error after bytes arrived is usually the signed CDN URL
+      // expiring mid-download (a 403 surfaces as a stream error, with no
+      // status). Re-fetching the resolver URL gives a fresh signed URL.
+      streamFailures += 1;
+      if (streamFailures >= 2) {
+        restartFromZero = true;
+        lastError = new Error(`download link expired, retrying ${fileId} from the start`);
+        try { console.warn('[ct-dl] ' + lastError.message); } catch {}
+      } else {
+        lastError = streamError;
+      }
+      if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+      continue;
+    }
+    streamFailures = 0;
+    await flushChunk();
+    if (spec && spec.bytes && loaded !== spec.bytes) {
+      if (loaded > spec.bytes) {
+        // More bytes than the file should be: wrong file, not resumable.
+        await deleteChunks(db, fileId, idx);
+        throw new Error(
+          `downloaded ${fileId} is ${loaded} bytes but should be ${spec.bytes} — ` +
+          `the download was truncated or is the wrong file. Please try again.`);
+      }
+      // Truncated: the stream ended early. Keep the chunks and resume.
+      lastError = new Error(
+        `downloaded ${fileId} is ${loaded} bytes but should be ${spec.bytes} — ` +
+        `the download was truncated or is the wrong file. Please try again.`);
+      if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+      continue;
+    }
+    // Integrity: verify the reassembled bytes against the SHA-256 the
+    // server exposed as X-Linked-ETag, BEFORE the manifest is written.
+    if (etag != null && spec && spec.bytes) {
+      let hashOk;
+      try {
+        hashOk = await verifyFileHash(db, fileId, idx, loaded, etag);
+      } catch (e) {
+        // Reassembly failed (a chunk went missing): the stored bytes
+        // are not trustworthy — drop them and try again.
+        await deleteChunksByPrefix(db, fileId);
+        await idbDel(db, fileId);
+        trustedBytes = 0;
+        lastError = e;
+        if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+        continue;
+      }
+      if (hashOk === false) {
+        await deleteChunksByPrefix(db, fileId);
+        await idbDel(db, fileId);
+        trustedBytes = 0;
+        lastError = new Error(`downloaded file failed integrity check, retrying ${fileId}`);
+        if (attempt >= DOWNLOAD_MAX_ATTEMPTS) throw lastError;
+        continue;
+      }
+      // hashOk null = no usable hash (absent/malformed/unavailable):
+      // size check only, already passed. Logged inside verifyFileHash.
+    }
+    await idbPut(db, { id: fileId, bytes: loaded, chunks: idx, downloadedAt: Date.now() });
+    return loaded;
   }
-  if (inactivityTimer) clearTimeout(inactivityTimer);
-  try { await reader.cancel(); } catch { /* stream already closed */ }
-  await flushChunk();
-  if (spec && spec.bytes && loaded !== spec.bytes) {
-    await deleteChunks(db, fileId, idx); // don't leave a bad partial file
-    throw new Error(
-      `downloaded ${fileId} is ${loaded} bytes but should be ${spec.bytes} — ` +
-      `the download was truncated or is the wrong file. Please try again.`);
-  }
-  await idbPut(db, { id: fileId, bytes: loaded, chunks: idx, downloadedAt: Date.now() });
-  return loaded;
+  throw lastError || new Error(`download failed for ${fileId}`);
 }
 
 export { MSG };
