@@ -370,6 +370,22 @@ const CONTENT_SCRIPT_FILES = (typeof window !== 'undefined' && window.document)
 const MSG_TIMEOUT_MS = 5000;
 const DATA_TIMEOUT_MS = 30000;
 
+// Capture timeouts are 10x the tier's measured normal time (James, 2026-11-26):
+// if a tier does not respond within 10x its normal time it is assumed down
+// and the pipeline moves to the next tier. Normals measured on AsuraScans
+// ch.14 (long strip, 18 images, 9 at 900x16000, total 11.9 MB): long-strip
+// download median 1,073ms; page-canvas ~50ms (local read, no download);
+// fallback tab ~2s (estimated — tab overhead unmeasured). Worst case per
+// image: 0.5 + 11 + 22 + 41 ≈ 75s (down from ~180s; the 120s overall cap
+// in loadPipelineImagePixels is now non-binding, kept as a safety net).
+const CAPTURE_TIMEOUT_MULTIPLIER = 10;
+const CAPTURE_CANVAS_NORMAL_MS = 50;
+const CAPTURE_FETCH_NORMAL_MS = 1100;
+const CAPTURE_TAB_NORMAL_MS = 2000;
+const CAPTURE_CANVAS_TIMEOUT_MS = CAPTURE_CANVAS_NORMAL_MS * CAPTURE_TIMEOUT_MULTIPLIER; // 500
+const CAPTURE_FETCH_TIMEOUT_MS = CAPTURE_FETCH_NORMAL_MS * CAPTURE_TIMEOUT_MULTIPLIER; // 11000
+const CAPTURE_TAB_TIMEOUT_MS = CAPTURE_TAB_NORMAL_MS * CAPTURE_TIMEOUT_MULTIPLIER; // 20000
+
 // Race a promise against a timeout so a hung browser API can never stall
 // a run silently. The timeout rejection flows into the caller's existing
 // error handling, so a hang becomes a loud failure, not a stuck run.
@@ -697,15 +713,13 @@ async function fetchImagePixels(url, referrer) {
   };
   const tries = [{ ...base, referrerPolicy: 'no-referrer' }];
   if (referrer) tries.push({ ...base, referrer, referrerPolicy: 'strict-origin-when-cross-origin' });
-  // 2.2.12: each attempt has a 30s timeout. A server that accepts the
+  // 2.2.12: each attempt has an 11s timeout (10x the measured normal
+  // download, see CAPTURE_FETCH_TIMEOUT_MS). A server that accepts the
   // connection but never responds used to hang the run at "capture"
   // forever — and user Cancel could not interrupt it, because the hung
   // `await fetch` never resolves and `checkCancelled` is never reached.
-  // 30s matches DATA_TIMEOUT_MS — the same data budget as the
-  // page-canvas / page-download races below, so one image costs at most
-  // 30s per attempt on any tier. No event exists: fetch has no progress
-  // or stall signal, so an AbortController timer is the only way to bound it.
-  const CAPTURE_FETCH_TIMEOUT_MS = 30000;
+  // No event exists: fetch has no progress or stall signal, so an
+  // AbortController timer is the only way to bound it.
   // 429 in-run wait cap (5 s): a Retry-After at or under this is waited
   // out once, then the same attempt is retried once. A longer Retry-After
   // fails fast instead of stalling the run — the host is marked
@@ -794,7 +808,7 @@ async function fetchImagePixels(url, referrer) {
           break;
         }
         const expectedLen = Number(res.headers.get('content-length') || 0) || null;
-        // The body read shares the same 30s timeout: a server that sends
+        // The body read shares the same 11s timeout: a server that sends
         // headers then stalls mid-body used to hang the run at
         // "capture-worker-fetch" forever — the old code cleared the timer
         // as soon as headers arrived, so res.blob() had no timeout at all.
@@ -816,7 +830,7 @@ async function fetchImagePixels(url, referrer) {
           // Timeout of try 1 must NOT forfeit try 2 (a stalled
           // no-Referer request must not lose the with-Referer attempt):
           // break to the next referrer variant instead of throwing.
-          lastErr = Object.assign(new Error('image download timed out after 30s'), { timedOut: true });
+          lastErr = Object.assign(new Error('image download timed out after ' + (CAPTURE_FETCH_TIMEOUT_MS / 1000) + 's'), { timedOut: true });
           break;
         }
         // A fetch TypeError is a network/CORS failure (no HTTP status).
@@ -997,7 +1011,7 @@ function markPageFetchDead(host, errText) {
     diagPush(`page-fetch: host ${host} marked dead for 30 min (CORS/TypeError failure)`);
     return;
   }
-  if (status === 429 || (status >= 500 && status < 600) || /timed out after 30s/.test(text)) {
+  if (status === 429 || (status >= 500 && status < 600) || /timed out after 11s/.test(text)) {
     pageFetchDeadShort.set(host, Date.now());
     diagPush(`page-fetch: host ${host} skipped for 5 min (transient ${status || 'timeout'})`);
     return;
@@ -1061,17 +1075,17 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     const a0 = performance.now();
     if (opts.runId) persistDiagStage(opts.runId, 'capture-page-canvas');
     try {
-      // 2.2.12: race the content-script round trip against a 30s timeout
-      // — a hung content script used to hang the run at "capture" forever.
-      // 30s is the DATA_TIMEOUT_MS value, inlined here instead of using
-      // withTimeout (same behaviour, older code). The wait is for the
-      // content script to read the page canvas and reply with pixels;
-      // sendMessage is the only channel and it can hang without settling,
-      // so a race is the only guard — there is no canvas-ready event.
+      // 2.2.12: race the content-script round trip against a 500ms timeout
+      // (10x the ~50ms normal local read, see CAPTURE_CANVAS_TIMEOUT_MS) —
+      // a hung content script used to hang the run at "capture" forever.
+      // The wait is for the content script to read the page canvas and
+      // reply with pixels; sendMessage is the only channel and it can hang
+      // without settling, so a race is the only guard — there is no
+      // canvas-ready event.
       const p = await Promise.race([
         chrome.tabs.sendMessage(tabId,
           info.uid ? { type: 'ct/get-image-pixels-by-uid', uid: info.uid } : { type: 'ct/get-image-pixels', srcUrl: info.src }),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('page canvas timed out after 30s')), 30000)),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('page canvas timed out after ' + CAPTURE_CANVAS_TIMEOUT_MS + 'ms')), CAPTURE_CANVAS_TIMEOUT_MS)),
       ]);
       if (p && p.ok && typeof p.dataUrl === 'string') {
         const { rgba, w, h } = await dataUrlToRGBA(p.dataUrl);
@@ -1109,15 +1123,15 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   } else {
   if (opts.runId) persistDiagStage(opts.runId, 'capture-page-fetch');
   try {
-    // 2.2.12: race the content-script round trip against a 30s timeout.
-    // 30s is the DATA_TIMEOUT_MS value, inlined here instead of using
-    // withTimeout (same behaviour, older code). The wait is for the page
-    // to download the image bytes and reply with a data URL; the page
-    // fetch is the only way to get the page's real referrer/cookies, and
-    // sendMessage can hang without settling, so a race is the only guard.
+    // 2.2.12: race the content-script round trip against an 11s timeout
+    // (10x the ~1.1s normal download, see CAPTURE_FETCH_TIMEOUT_MS). The
+    // wait is for the page to download the image bytes and reply with a
+    // data URL; the page fetch is the only way to get the page's real
+    // referrer/cookies, and sendMessage can hang without settling, so a
+    // race is the only guard.
     const f = await Promise.race([
       chrome.tabs.sendMessage(tabId, { type: 'ct/fetch-image-bytes', srcUrl: info.src }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('page download timed out after 30s')), 30000)),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('page download timed out after ' + (CAPTURE_FETCH_TIMEOUT_MS / 1000) + 's')), CAPTURE_FETCH_TIMEOUT_MS)),
     ]);
     if (f && f.ok && typeof f.dataUrl === 'string' && f.dataUrl.startsWith('data:')) {
       const { rgba, w, h } = await dataUrlToRGBA(f.dataUrl);
@@ -1182,7 +1196,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   const corsFailure = /network\/CORS failure|Failed to fetch/i.test(failText);
   const offlineFailure = /could not reach the image host/i.test(failText);
   const serverError = /HTTP 5\d\d/.test(failText);
-  const timedOut = /timed out after 30s/.test(failText);
+  const timedOut = /timed out after (500ms|11s)/.test(failText);
   // A revisit of an already-translated page downloads the ORIGINAL url the
   // content script stashed. Some hosts hand out expiring image links
   // (keystamp=...), so on revisit that saved link is dead — the fix is a
@@ -1234,7 +1248,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
   // 5xx after its retry, falls through to the tab the same way (a tab load
   // uses a different network path). Never for 404 (dead link) or 429
   // (the tab would hit the same rate limit).
-  const workerTimedOut = /download: image download timed out after 30s/.test(failText);
+  const workerTimedOut = /download: image download timed out after 11s/.test(failText);
   const workerServerError = /download: image download failed: HTTP 5\d\d/.test(failText);
   if ((serverRefused || workerTimedOut || workerServerError) && info.src) err.fallbackUrl = info.src;
   throw err;
@@ -2797,7 +2811,7 @@ async function runPretranslate(job, sourceTabId, settings) {
   // so 'same-origin' would send none cross-origin).
   let html;
   {
-    // TODO: why 15s here, when image downloads elsewhere get 30s? No
+    // TODO: why 15s here, when image downloads elsewhere get 11s? No
     // origin for 15s in the code — verify against real next-page fetch
     // times on slow connections before trusting it. The wait itself is
     // justified: fetch has no stall signal, so an AbortController timer
@@ -5217,11 +5231,11 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
         // 2.2.12: the timeout goes through finishErr, not a bare reject —
         // the old bare reject never removed the onUpdated listener and
         // never set done, leaking one listener per timed-out attempt.
-        // 30s: no stated origin in the code — it matches the 30s data
-        // budget used for image reads elsewhere (DATA_TIMEOUT_MS), so one
-        // stuck image tab costs at most 30s. TODO: verify against slow
-        // image loads before trusting it.
-        const timeout = setTimeout(() => finishErr(new Error('timed out waiting for the image tab to load')), 30000);
+        // 20s is 10x the ~2s normal tab load (see CAPTURE_TAB_TIMEOUT_MS;
+        // the ~2s normal is estimated — tab overhead unmeasured — so this
+        // is the least certain of the capture timeouts). One stuck image
+        // tab costs at most 20s.
+        const timeout = setTimeout(() => finishErr(new Error('timed out waiting for the image tab to load')), CAPTURE_TAB_TIMEOUT_MS);
         const checkLoaded = async () => {
           if (done) return;
           let t = null;
