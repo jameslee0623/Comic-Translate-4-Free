@@ -636,10 +636,10 @@ function abortRunResources(id, r) {
   try { cancelChromeGpuInpaint(id); } catch {}
 }
 
-async function cancelRunsForTab(tabId) {
+async function cancelRunsWhere(pred) {
   const ids = [];
   for (const [id, r] of runs) {
-    if (r.tabId === tabId) {
+    if (pred(r)) {
       abortRunResources(id, r);
       ids.push(id);
     }
@@ -648,6 +648,36 @@ async function cancelRunsForTab(tabId) {
     try { await callMl({ type: MSG.ML_CANCEL, runId: id }); } catch { /* host may be down */ }
   }
   return ids.length;
+}
+
+async function cancelRunsForTab(tabId) {
+  return cancelRunsWhere(r => r.tabId === tabId);
+}
+
+// One tab at a time (2.3.85, James): cancel the foreground runs on every
+// tab except this one. The pre-translate job is never touched — its runs
+// entry carries tabId null on purpose, and this predicate skips null.
+async function cancelRunsForOtherTabs(tabId) {
+  return cancelRunsWhere(r => r.tabId !== null && r.tabId !== undefined && r.tabId !== tabId);
+}
+
+// One tab at a time (2.3.85, James): is a foreground run in flight on this
+// tab / on another tab? A run counts as foreground when it has a real tab
+// id — the pre-translate job's runs entry carries tabId null, so it never
+// counts here (it is a background job, not a pipeline the user is
+// watching). Cancelled runs stay in the map until their finally deletes
+// them, so they are excluded. Finished runs are already deleted by their
+// finally. When tabId is unknown (null), any foreground run counts as this
+// tab's — the old behaviour, fail open.
+function foregroundRunState(tabId) {
+  let own = false, other = false;
+  for (const [, r] of runs) {
+    if (r.cancelled || r.tabId === null || r.tabId === undefined) continue;
+    if (tabId == null) own = true;
+    else if (r.tabId === tabId) own = true;
+    else other = true;
+  }
+  return { own, other };
 }
 
 // ---------------------------------------------------------------- ML host (see ml-bridge.js)
@@ -1758,10 +1788,13 @@ function setProgress(runId, stage, progress, extra = {}) {
     const t = runs.get(runId)?.tabId;
     if (t != null) persistRunRecord(runId, t, stage);
   }
-  const payload = { type: MSG.RUN_PROGRESS, runId, stage, progress, ...extra };
+  // 2.3.85 (one tab at a time): the run's tab rides along so the popup can
+  // tell "my tab's run" from "another tab's run" without a round-trip.
+  const tabId = runs.get(runId)?.tabId;
+  const payload = { type: MSG.RUN_PROGRESS, runId, stage, progress, ...extra,
+    ...(tabId != null ? { tabId } : {}) };
   chrome.runtime.sendMessage(payload).catch(() => {});
   // Targeted copy for the tab's status pill (broadcasts reach every tab).
-  const tabId = runs.get(runId)?.tabId;
   if (tabId != null) {
     chrome.tabs.sendMessage(tabId, { ...payload, direct: true }).then(
       () => { diagProgressLastOk = Date.now(); },
@@ -1794,8 +1827,11 @@ function broadcastError(runId, error, grant) {
   const payload = { type: MSG.RUN_PROGRESS, runId, stage: 'error', error };
   if (grant && grant.host) { payload.grantHost = grant.host; payload.grantLabel = grant.label || grant.host; }
   if (grant && Array.isArray(grant.hosts) && grant.hosts.length) payload.grantHosts = grant.hosts;
+  // 2.3.85 (one tab at a time): the run's tab rides along, same as setProgress.
+  const errTabId = runs.get(runId)?.tabId;
+  if (errTabId != null) payload.tabId = errTabId;
   chrome.runtime.sendMessage(payload).catch(() => {});
-  const tabId = runs.get(runId)?.tabId;
+  const tabId = errTabId;
   if (tabId != null) {
     chrome.tabs.sendMessage(tabId, { ...payload, direct: true }).catch(() => {});
   }
@@ -5102,6 +5138,19 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
         }
       }
     }
+    // One tab at a time (2.3.85, James): a foreground run on another tab
+    // owns the single shared ML worker — starting a second run here would
+    // starve both, and the other tab would get no response (not even
+    // Cancel). Skip this auto start; do NOT cancel the other tab's run.
+    // The next trigger retries once it clears. Pre-translate never trips
+    // this guard — its runs entry has tabId null, so it is not a
+    // foreground run on another tab. Placed before autoFired.set so a
+    // skip does not consume the 2-min dedupe window (same as a gate
+    // failure below).
+    if (foregroundRunState(tabId).other) {
+      diagPush('Auto-translate skipped — a run is already going on another tab: ' + url.slice(0, 120) + srcTag);
+      return;
+    }
     // Record the fire SYNCHRONOUSLY here, BEFORE the gate await below.
     // The dedupe check and this record are one synchronous block (no await
     // between them), so a second 'complete' event (page + a slow iframe)
@@ -5690,20 +5739,34 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // job, whose tabId is null). When no tabId is given (old
           // popup), fall back to cancelling all — the popup always sends
           // one now.
+          // 2.3.85 (one tab at a time, James): the popup on a tab with no
+          // run of its own sends otherTabs:true to cancel the run on the
+          // OTHER tab instead — that is the "Cancel other tab" button.
+          // The pre-translate job (tabId null) is never touched by the
+          // other-tabs path.
           const targetTab = (msg && typeof msg.tabId === 'number') ? msg.tabId : null;
-          for (const [id, r] of runs) {
-            if (targetTab === null || r.tabId === targetTab) abortRunResources(id, r);
-          }
-          for (const [id, r] of runs) {
-            if (targetTab === null || r.tabId === targetTab) {
-              try { await callMl({ type: MSG.ML_CANCEL, runId: id }); } catch { /* host may be down */ }
-            }
+          if (msg && msg.otherTabs && targetTab !== null) {
+            await cancelRunsForOtherTabs(targetTab);
+          } else if (targetTab === null) {
+            await cancelRunsWhere(() => true);
+          } else {
+            await cancelRunsForTab(targetTab);
           }
           sendResponse({ ok: true });
           break;
         }
         case MSG.GET_STATUS: {
-          sendResponse({ ok: true, status: currentRun || { stage: 'idle', progress: 0 } });
+          // 2.3.85 (one tab at a time, James): the popup also needs to
+          // know whether a foreground run is in flight on THIS tab or on
+          // ANOTHER tab, so it can gray out Translate and label Cancel
+          // "Cancel other tab" when the run is elsewhere. Pre-translate
+          // (tabId null) never counts — it is a background job. When no
+          // tabId is given, any foreground run counts as this tab's (the
+          // old behaviour).
+          const stTab = (msg && typeof msg.tabId === 'number') ? msg.tabId : null;
+          const st = foregroundRunState(stTab);
+          sendResponse({ ok: true, status: currentRun || { stage: 'idle', progress: 0 },
+            ownTabRunning: st.own, otherTabRunning: st.other });
           break;
         }
         case MSG.GET_MODELS: {

@@ -34,12 +34,45 @@ function setProgress(p) {
 // Translate is also disabled while the required models are still
 // downloading (2.3.14): auto-download fetches them in the background, so
 // the button just waits — no jump to the Models section.
-let running = false;
+// One tab at a time (2.3.85, James): the buttons depend on WHERE the run
+// is, not just whether one exists. ownRunning = a foreground run on this
+// tab; otherRunning = a foreground run on another tab (pre-translate never
+// counts — it is a background job). Translate is disabled while either
+// runs; Cancel is enabled while either runs, and reads "Cancel other tab"
+// when the only run is elsewhere.
+let ownRunning = false;
+let otherRunning = false;
 let modelsReady = true; // fail-open: only gray out when we positively know models are missing
-function setRunning(r) {
-  running = !!r;
-  $('translateBtn').disabled = running || !modelsReady;
-  $('cancelBtn').disabled = !running;
+// Pure button state, so the harness can test it without a DOM:
+// returns {translateDisabled, cancelDisabled, cancelLabelKey}.
+function computeButtonState(own, other, modelsOk) {
+  return {
+    translateDisabled: !!(own || other || !modelsOk),
+    cancelDisabled: !(own || other),
+    cancelLabelKey: (!own && other) ? 'cancel_other_tab' : 'cancel',
+  };
+}
+function applyButtons() {
+  const s = computeButtonState(ownRunning, otherRunning, modelsReady);
+  $('translateBtn').disabled = s.translateDisabled;
+  $('cancelBtn').disabled = s.cancelDisabled;
+  $('cancelBtn').textContent = ctMsg(s.cancelLabelKey) ||
+    (s.cancelLabelKey === 'cancel_other_tab' ? 'Cancel other tab' : 'Cancel');
+}
+// One-tab state, from the background (authoritative): which tab, if any,
+// has a foreground run.
+function setRunState(own, other) {
+  ownRunning = !!own;
+  otherRunning = !!other;
+  applyButtons();
+}
+
+// The popup belongs to the tab it opened on: cache its id once, so the run
+// state can tell "my tab's run" from "another tab's run" (2.3.85).
+let popupTabId = null;
+async function refreshPopupTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [null]);
+  popupTabId = tab ? tab.id : null;
 }
 
 // Model gate (2.3.14): ask the background which model groups are
@@ -51,7 +84,7 @@ async function refreshModelsReady() {
   const ready = r.models.every(g => g.downloaded && !g.sizeMismatch);
   if (ready === modelsReady) return;
   modelsReady = ready;
-  setRunning(running);
+  applyButtons();
   if (!ready) setStatus(ctMsg('models_downloading_auto') || 'Models are downloading automatically');
 }
 
@@ -101,7 +134,7 @@ function bgMessage(msg, timeoutMs = 2500) {
   ]);
 }
 async function refreshStatus() {
-  const st = await bgMessage({ type: 'ct/get-status' });
+  const st = await bgMessage({ type: 'ct/get-status', ...(popupTabId != null ? { tabId: popupTabId } : {}) });
   if (st && st.ok) {
     const s = st.status;
     lastStatus = s;
@@ -114,7 +147,10 @@ async function refreshStatus() {
     // message response just before this refresh runs. Only ever set.
     if (s.error) $('error').textContent = s.error;
     const isRunning = s.stage && !['done', 'idle', 'error', 'cancelled'].includes(s.stage);
-    setRunning(isRunning);
+    // Authoritative one-tab state from the background; fall back to the
+    // stage-derived flag when the background predates it.
+    const own = (st.ownTabRunning !== undefined) ? st.ownTabRunning : isRunning;
+    setRunState(own, !!st.otherTabRunning);
   }
 }
 
@@ -424,8 +460,15 @@ $('cancelBtn').onclick = async () => {
   // 2.2.12: send the active tab's id so the worker cancels only that tab's
   // run — the old message had no tab, so the worker cancelled every tab's
   // run (and the background pre-translate job too).
+  // 2.3.85 (one tab at a time, James): when the only run is on ANOTHER tab
+  // (Cancel reads "Cancel other tab"), send otherTabs:true so the worker
+  // cancels that run instead of this tab's (which has none).
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }).catch(() => [null]);
-  chrome.runtime.sendMessage({ type: 'ct/cancel-run', tabId: tab ? tab.id : undefined });
+  const other = !ownRunning && otherRunning;
+  chrome.runtime.sendMessage({ type: 'ct/cancel-run', tabId: tab ? tab.id : undefined, ...(other ? { otherTabs: true } : {}) });
+  // Re-read the state at once: the 3s tick would leave Translate grayed
+  // out until then, even though the other run is already cancelled.
+  refreshStatus().catch(() => {});
 };
 
 $('translateBtn').onclick = async () => {
@@ -548,7 +591,17 @@ chrome.runtime.onMessage.addListener(msg => {
       }).catch(() => {});
     }
     else if (msg.stage === 'done') $('error').textContent = '';
-    setRunning(msg.stage && !['done', 'idle', 'error', 'cancelled'].includes(msg.stage));
+    // Tab-aware fast path (2.3.85): the progress message carries the run's
+    // tab, so the buttons update at once instead of waiting for the 3s
+    // tick. The tick (refreshStatus) is the authority and reconciles.
+    const progRunning = msg.stage && !['done', 'idle', 'error', 'cancelled'].includes(msg.stage);
+    if (msg.tabId != null && popupTabId != null) {
+      if (msg.tabId === popupTabId) setRunState(progRunning, otherRunning);
+      else setRunState(ownRunning, progRunning);
+    } else {
+      // No tab info (old background): a running stage counts as this tab's.
+      setRunState(progRunning, otherRunning);
+    }
   }
 });
 
@@ -557,6 +610,7 @@ fillLangs();
 // Models auto-download (2.2.2): no first-run redirect to Settings any
 // more — the install trigger fetches them, and a run that starts before
 // they finish waits for them instead.
-Promise.all([refresh(), refreshModelsReady()]).catch(() => {});
+// Cache this tab's id first: refreshStatus needs it to split own/other runs.
+refreshPopupTab().then(() => Promise.all([refresh(), refreshModelsReady()])).catch(() => {});
 refreshCacheStats();
 setInterval(refreshStatus, 3000);

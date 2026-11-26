@@ -85,6 +85,9 @@
   "cancel": {
     "message": "منسوخ کریں"
   },
+  "cancel_other_tab": {
+    "message": "دوسرا ٹیب منسوخ کریں"
+  },
   "check_azure": {
     "message": "Azure کنکشن چیک کریں"
   },

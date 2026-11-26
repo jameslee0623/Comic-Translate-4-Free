@@ -85,6 +85,9 @@
   "cancel": {
     "message": "إلغاء"
   },
+  "cancel_other_tab": {
+    "message": "إلغاء التبويب الآخر"
+  },
   "check_azure": {
     "message": "اختبار اتصال Azure"
   },

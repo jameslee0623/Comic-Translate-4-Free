@@ -85,6 +85,9 @@
   "cancel": {
     "message": "Отмена"
   },
+  "cancel_other_tab": {
+    "message": "Отменить другую вкладку"
+  },
   "check_azure": {
     "message": "Проверить соединение с Azure"
   },

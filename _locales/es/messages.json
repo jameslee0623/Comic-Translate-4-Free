@@ -85,6 +85,9 @@
   "cancel": {
     "message": "Cancelar"
   },
+  "cancel_other_tab": {
+    "message": "Cancelar la otra pestaña"
+  },
   "check_azure": {
     "message": "Comprobar la conexión de Azure"
   },
