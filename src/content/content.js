@@ -88,22 +88,11 @@
   // the icon goes away. A long-press fires `contextmenu`; a mouse
   // right-click fires it too, so tell them apart by the last touch: only
   // a touch within the last 1.5s counts as a long-press (desktop
-  // right-click keeps using the working menu item, no icon). The pill
-  // replaces the browser menu: preventDefault() stops it from opening
-  // under the pill. The icon disappears on tap, on a tap elsewhere, on
-  // scroll, or after 8s.
-  // Long-press callout (2.4.8): on Vivaldi Android, preventDefault() on
-  // contextmenu alone does not stop the native menu — it still opens and
-  // covers the pill. -webkit-touch-callout: none tells the browser not
-  // to show the callout at all. Scoped to pictures on allowed sites
-  // (this script only runs there), so the pill is what a long-press
-  // shows. Best-effort: if the style cannot be added, preventDefault
-  // below is still the fallback.
-  try {
-    const lpStyle = document.createElement('style');
-    lpStyle.textContent = 'img{-webkit-touch-callout:none !important}';
-    (document.head || document.documentElement).appendChild(lpStyle);
-  } catch {}
+  // right-click keeps using the working menu item, no icon). The browser
+  // menu is NOT suppressed (2.4.9): it stays fully working. The pill
+  // sits at the top of the screen, above where the menu opens, so the
+  // menu never covers it. It stays put when the user taps to dismiss the
+  // menu — it disappears only on tap, on scroll, or after 8s.
   let lpIcon = null, lpIconTimer = null, lpLastTouch = null;
   function hideLpIcon() {
     try {
@@ -133,11 +122,9 @@
       if (!lpLastTouch || Date.now() - lpLastTouch.at > 1500) return;
       const src = img.currentSrc || img.src || '';
       if (!src) return;
-      // Long-press on a picture: suppress the browser's own menu — the
-      // pill replaces it. Only reached for a real long-press (a mouse
-      // right-click has no recent touchstart, so it returned above and
-      // the menu still shows with the extension item).
-      try { e.preventDefault(); } catch {}
+      // The browser menu is NOT suppressed: it opens as normal next to
+      // the pill. A mouse right-click has no recent touchstart, so it
+      // returned above and the menu still shows with the extension item.
       const btn = document.createElement('button');
       btn.id = 'ct-lp-icon';
       let title = 'Translate this image';
@@ -160,11 +147,11 @@
         sp.style.cssText = 'white-space:nowrap;pointer-events:none;';
         btn.appendChild(sp);
       } catch {}
-      // Above the finger so it stays visible, centred on the touch point
-      // and clamped inside the viewport.
+      // At the top of the screen, centred: the browser menu opens near
+      // the finger, so the top stays clear of it.
       const bw = 210;
-      const x = Math.max(8, Math.min(window.innerWidth - bw - 8, (e.clientX || 0) - bw / 2));
-      const y = Math.max(8, Math.min(window.innerHeight - 52, (e.clientY || 0) - 76));
+      const x = Math.max(8, Math.min(window.innerWidth - bw - 8, (window.innerWidth - bw) / 2));
+      const y = 8;
       // 44px tall (phone touch target) and 20% transparent.
       btn.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;z-index:2147483647;' +
         'display:flex;align-items:center;gap:8px;box-sizing:border-box;height:44px;' +
@@ -178,15 +165,11 @@
       });
       document.documentElement.appendChild(btn);
       lpIcon = btn;
-      // Gone on a tap elsewhere, on scroll, or after 8s.
+      // Gone on tap, on scroll, or after 8s. NOT on a tap elsewhere:
+      // the tap that dismisses the browser menu must leave the pill
+      // there, so the user can still tap it after the menu is gone.
       lpIconTimer = setTimeout(hideLpIcon, 8000);
       try {
-        window.addEventListener('touchstart', function onTouch(ev) {
-          try { if (ev.target !== btn && !btn.contains(ev.target)) hideLpIcon(); } catch {}
-        }, { capture: true, passive: true, once: true });
-        window.addEventListener('mousedown', function onMouse(ev) {
-          try { if (ev.target !== btn && !btn.contains(ev.target)) hideLpIcon(); } catch {}
-        }, { capture: true, once: true });
         window.addEventListener('scroll', hideLpIcon, { capture: true, passive: true, once: true });
       } catch {}
     } catch {}
