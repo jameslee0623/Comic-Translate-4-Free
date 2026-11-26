@@ -1115,7 +1115,28 @@
       chrome.storage.local.set({ ctSupportRated: true }, () => {});
     } catch { /* best-effort — the button still transforms in this render */ }
   }
-  function showSupportModal(rated, checkoutUrl) {
+  // "Redeemed" flag for the support popup: once the user clicks "Redeem free
+  // trial", the button is hidden — in this render and in any later render of
+  // the modal. The popup still shows daily at the limit, but without the
+  // Redeem button once it has been clicked. Stored in chrome.storage.local
+  // (the content script's own key; the SW never needs it).
+  function supportRedeemed() {
+    return new Promise((resolve) => {
+      try {
+        if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return resolve(false);
+        chrome.storage.local.get('ctSupportRedeemed', (res) => {
+          try { resolve(!!(res && res.ctSupportRedeemed)); } catch { resolve(false); }
+        });
+      } catch { resolve(false); }
+    });
+  }
+  function markSupportRedeemed() {
+    try {
+      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
+      chrome.storage.local.set({ ctSupportRedeemed: true }, () => {});
+    } catch { /* best-effort — the button is hidden in this render anyway */ }
+  }
+  function showSupportModal(rated, checkoutUrl, redeemed) {
     if (supportModal) return false; // already showing
     const wrap = document.createElement('div');
     wrap.id = 'ct-support-modal';
@@ -1154,7 +1175,10 @@
     // "Redeem free trial" (which opens the Pro checkout). If the user
     // already rated (stored flag), it renders as Redeem from the start.
     // Without a checkout URL it stays a plain Rate button — a missing URL
-    // must never produce a dead Redeem button.
+    // must never produce a dead Redeem button. Once the user clicks Redeem,
+    // the button is hidden (stored flag) and never renders again — the
+    // popup still shows daily at the limit, just without the Redeem button.
+    // If already redeemed, no Rate/Redeem button renders at all.
     let rateIsRedeem = !!rated;
     const hasCheckout = typeof checkoutUrl === 'string' && !!checkoutUrl;
     const rateBtn = document.createElement('button');
@@ -1166,6 +1190,8 @@
     rateBtn.onclick = () => {
       if (rateIsRedeem) {
         try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: checkoutUrl }); } catch { /* link open failed — modal stays */ }
+        try { markSupportRedeemed(); } catch {}
+        try { rateBtn.remove(); } catch { /* already gone */ }
         return;
       }
       try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: supportStoreUrl() }); } catch { /* link open failed — modal stays */ }
@@ -1175,7 +1201,7 @@
         setRateLabel();
       }
     };
-    btns.appendChild(rateBtn);
+    if (!redeemed) btns.appendChild(rateBtn);
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:jameslee0623@muse.ai?subject=Comic%20Translate%204%20Free%20feedback'));
     card.appendChild(x);
     card.appendChild(title);
@@ -1821,18 +1847,19 @@
       return false;
     }
     if (msg.type === 'ct/show-support') {
-      // One-time support popup (SW sends it the first time the free daily
-      // limit is hit). 2.2.12: report whether the modal actually rendered
+      // Daily support popup (SW sends it the first time the free daily
+      // limit is hit each day). 2.2.12: report whether the modal actually rendered
       // — the old code sent ok:true even when showSupportModal threw, so
       // the SW marked it shown on delivery and a render failure lost the
-      // one-time popup. The render is async (it reads the stored "rated"
-      // flag first), so return true to keep the channel open.
+      // popup for that day. The render is async (it reads the stored "rated"
+      // and "redeemed" flags first), so return true to keep the channel open.
       (async () => {
         let shown = false;
         try {
           const rated = await supportRated();
+          const redeemed = await supportRedeemed();
           const checkoutUrl = typeof msg.checkoutUrl === 'string' ? msg.checkoutUrl : '';
-          shown = showSupportModal(rated, checkoutUrl) === true;
+          shown = showSupportModal(rated, checkoutUrl, redeemed) === true;
         } catch { shown = false; }
         try { sendResponse({ ok: shown }); } catch {}
       })();

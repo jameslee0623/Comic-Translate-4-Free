@@ -46,7 +46,7 @@ export const MSG = {
   RENDER: 'ct/render',                   // {runId, mode, imageDataUrl, width, height, blocks, timings, debug, srcUrl?}
   DEBUG_STAGE: 'ct/debug-stage',          // {runId, stage, payload, debug}
   PILL_NOTICE: 'ct/pill-notice',         // {text, sticky} (custom pill message, e.g. fallback status)
-  SHOW_SUPPORT: 'ct/show-support',       // {checkoutUrl} -> {ok} (one-time support popup the first time the free daily limit is hit)
+  SHOW_SUPPORT: 'ct/show-support',       // {checkoutUrl} -> {ok} (daily support popup the first time the free daily limit is hit each day)
   NEXT_PAGE_URL: 'ct/next-page-url',     // {learnedTexts?} -> {url|null, learnedText?} (pre-translation: what is the next page?)
   LINK_CLICKED: 'ct/link-clicked',       // {text, href} (content -> SW: a link was clicked; feeds learned next-page link text)
   // content -> SW

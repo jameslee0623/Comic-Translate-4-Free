@@ -4,7 +4,7 @@
 import { MSG, STORE_URLS, FEEDBACK_MAILTO } from '../shared/contracts.js';
 import { MODEL_GROUPS, getModelStatus, getModelDownloadState, deleteModelGroup, computeModelFingerprint } from '../shared/model-specs.js';
 import { getSettings, updateSettingsField } from '../shared/settings.js';
-import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense, DODO_CHECKOUT_URL } from '../shared/pro.js';
+import { canAutoOrPre, addProUsageForImages, anyProFeatureOn, proIsActive, proCheckDue, validateProLicense, DODO_CHECKOUT_URL, dateStr } from '../shared/pro.js';
 import { recordBenchRun } from '../shared/bench.js';
 import {
   makeTextBlock, mergeOverlappingBoxes, sortBlocks,
@@ -2393,29 +2393,31 @@ ensureModelWatchdog();
 // a duplicate start.
 restoreModelDownloadInflight();
 
-// One-time support popup: the FIRST time the user hits the 50/day free
-// limit, offer the store rating / free trial / feedback once, in the middle
-// of the page. One-time only — the flag is set only when the content script
-// confirms the modal actually rendered (it returns ok:true), so a render
-// failure does not lose the popup forever (2.2.12). Old installs may still
-// carry { translatedTotal, shown } from the old 50-lifetime trigger; the
-// `shown` flag is honoured either way, so a user who already saw the popup
-// once never sees it again.
+// Daily support popup: the first time the user hits the 50/day free limit
+// ON EACH DAY, offer the store rating / free trial / feedback once, in the
+// middle of the page. Once per day — the shown date is stored, so a second
+// limit hit the same day does not show it again, but tomorrow it shows
+// again. The flag is set only when the content script confirms the modal
+// actually rendered (it returns ok:true), so a render failure does not lose
+// the popup for that day (2.2.12). Old installs may still carry
+// { translatedTotal, shown } from the old 50-lifetime trigger, or
+// { shown: true } with no date — a flag with no date is treated as shown on
+// an unknown past day, so the popup can show again today.
 const SUPPORT_POPUP_KEY = 'ctSupportPopup';
 let supportPopupSendInFlight = false; // one send at a time — two tabs hitting the limit together must not both render
 async function maybeShowSupportPopupAtLimit(tabId) {
   if (supportPopupSendInFlight) return;
-  let shown = false;
   try {
     const saved = await chrome.storage.local.get(SUPPORT_POPUP_KEY);
-    shown = !!((saved && saved[SUPPORT_POPUP_KEY]) || {}).shown;
+    const rec = (saved && saved[SUPPORT_POPUP_KEY]) || {};
+    if (rec.shownDate === dateStr()) return; // already shown today
   } catch { /* storage read failed — try again at the next limit hit */ return; }
-  if (shown) return;
   supportPopupSendInFlight = true;
+  let shown = false;
   try {
     // Resolves only if the tab's content script is listening. If the tab
     // is gone, shown stays false and the next limit hit tries again — the
-    // user must actually see the popup once. The checkout URL rides along
+    // user must actually see the popup once a day. The checkout URL rides along
     // so the content script (a classic script, no imports) can turn the
     // Rate button into a Redeem button without a second source of truth.
     const resp = await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT, checkoutUrl: DODO_CHECKOUT_URL }), MSG_TIMEOUT_MS, 'show support');
@@ -2423,7 +2425,7 @@ async function maybeShowSupportPopupAtLimit(tabId) {
   } catch { /* tab gone / no content script — retry at the next limit hit */ }
   finally { supportPopupSendInFlight = false; }
   if (!shown) return;
-  try { await chrome.storage.local.set({ [SUPPORT_POPUP_KEY]: { shown: true } }); } catch {}
+  try { await chrome.storage.local.set({ [SUPPORT_POPUP_KEY]: { shown: true, shownDate: dateStr() } }); } catch {}
 }
 
 // Shared page-cache lookup (normal runs + pre-translation): Tier 1 first,
@@ -5116,10 +5118,10 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
           error: 'Free limit reached: ' + gate.used + '/' + gate.limit + ' auto-translate images today. Get Pro in Settings for unlimited auto-translate.',
         }), MSG_TIMEOUT_MS, 'free limit notice');
       } catch {}
-      // First time the free limit is hit, show the one-time support popup
+      // First time the free limit is hit today, show the daily support popup
       // (Rate it in store → Redeem free trial). Fire-and-forget: it must
       // never block or slow this return, and it no-ops once the popup has
-      // been shown. The pre-translate limit skip does not trigger it — the
+      // been shown today. The pre-translate limit skip does not trigger it — the
       // user never sees that one, so a popup there would surprise them.
       try { maybeShowSupportPopupAtLimit(tabId).catch(() => {}); } catch {}
       return;
