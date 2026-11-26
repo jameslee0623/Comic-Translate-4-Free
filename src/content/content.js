@@ -2044,10 +2044,16 @@
           }
           const allTimings = { ...(timings || {}) };
           allTimings.render = Math.round(performance.now() - renderT0);
+          // Stage times only — tier, ocrEngine and blockCount are NOT times
+          // (tier/ocrEngine are strings, blockCount is a count of blocks),
+          // so they show without "ms" and must stay out of the sums:
+          // adding a string to a number concatenates, which turned seqMs
+          // into garbage and hid the "parallelism saved" line.
+          const TIME_KEYS = new Set(['capture', 'detect', 'blocks', 'ocr', 'translate', 'mask', 'inpaint', 'render']);
           const totalMs = allTimings.total != null
             ? allTimings.total
-            : Object.entries(allTimings).filter(([k]) => k !== 'total').reduce((a, [, v]) => a + (v || 0), 0);
-          const seqMs = Object.entries(allTimings).filter(([k]) => k !== 'total' && k !== 'render').reduce((a, [, v]) => a + (v || 0), 0);
+            : Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k)).reduce((a, [, v]) => a + (v || 0), 0);
+          const seqMs = Object.entries(allTimings).filter(([k]) => TIME_KEYS.has(k) && k !== 'render').reduce((a, [, v]) => a + (v || 0), 0);
           stageTabs['render'] = {
             title: 'Render',
             ms: allTimings.render,
@@ -2057,7 +2063,7 @@
           lastRunTimes = {
             totalMs,
             seqMs,
-            breakdown: Object.entries(allTimings).filter(([k]) => k !== 'total').map(([k, v]) => `${k} ${v}ms`).join(' · '),
+            breakdown: Object.entries(allTimings).filter(([k]) => k !== 'total').map(([k, v]) => `${k} ${v}${TIME_KEYS.has(k) ? 'ms' : ''}`).join(' · '),
           };
           if (debug && !debugPanelSuppressed) {
             ensureOverlay();
