@@ -220,6 +220,39 @@ async function load() {
     resetBtn.textContent = 'Reset ✓';
     setTimeout(() => { resetBtn.textContent = old; }, 1500);
   };
+  // Reset rate popup (Debug only): clears the shown date + the Rate flag +
+  // the Redeem flag, so the full flow (popup → Rate → Redeem) can be tested
+  // from scratch. Clears ONLY those three keys, nothing else.
+  const resetRateBtn = $('resetRatePopup');
+  if (resetRateBtn) resetRateBtn.onclick = async () => {
+    try { await chrome.storage.local.remove(['ctSupportPopup', 'ctSupportRated', 'ctSupportRedeemed']); } catch {}
+    const old = resetRateBtn.textContent;
+    resetRateBtn.textContent = 'Reset ✓';
+    setTimeout(() => { resetRateBtn.textContent = old; }, 1500);
+  };
+  // Reset Gemini setup (Debug only): clears the "Don't show again" flag, so
+  // the Gemini setup steps show again the next time Gemini is picked with
+  // no key. Mirrors the dismiss handler below (collect → flip → persist),
+  // so a later save cannot resurrect the flag from lastSettings.
+  const resetGeminiBtn = $('resetGeminiSetup');
+  if (resetGeminiBtn) resetGeminiBtn.onclick = async () => {
+    const s = collect();
+    if (s) { s.geminiSetupDismissed = false; lastSettings = s; await persistSettings(s).catch(() => {}); }
+    const old = resetGeminiBtn.textContent;
+    resetGeminiBtn.textContent = 'Reset ✓';
+    setTimeout(() => { resetGeminiBtn.textContent = old; }, 1500);
+  };
+  // Reset Azure notice (Debug only): clears both Azure retirement notice
+  // flags, so the notice shows again to a user on Azure. Same mirror of
+  // the dismiss handler as the Gemini button above.
+  const resetAzureBtn = $('resetAzureNotice');
+  if (resetAzureBtn) resetAzureBtn.onclick = async () => {
+    const s = collect();
+    if (s) { s.azureRetireDismissed = false; s.azureRetireUpdateShown = false; lastSettings = s; await persistSettings(s).catch(() => {}); }
+    const old = resetAzureBtn.textContent;
+    resetAzureBtn.textContent = 'Reset ✓';
+    setTimeout(() => { resetAzureBtn.textContent = old; }, 1500);
+  };
   // Benchmark table (Debug only): every finished run is recorded with
   // its per-stage times; Copy puts the whole log out as a Markdown
   // table for future benchmarking. Clear wipes the log.

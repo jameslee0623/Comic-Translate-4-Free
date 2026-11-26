@@ -200,8 +200,17 @@
   "required_badge": {
     "message": "obligatoriu"
   },
+  "reset_azure_notice": {
+    "message": "Reset Azure notice"
+  },
   "reset_free_usage": {
     "message": "Reset free usage today"
+  },
+  "reset_gemini_setup": {
+    "message": "Reset Gemini setup"
+  },
+  "reset_rate_popup": {
+    "message": "Reset rate popup"
   },
   "saved": {
     "message": "Salvat ✓"
