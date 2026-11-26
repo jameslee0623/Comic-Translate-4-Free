@@ -1,7 +1,8 @@
 // Freemium (Pro) with Dodo Payments license keys.
 // Free: 50 images/day while any Pro feature is on (auto-translate,
-// pre-translate, engine failover). A translation is free only when all
-// Pro features are off. Pro: unlimited, unlocked by a Dodo license key.
+// pre-translate). Engine failover is free, not a Pro feature — it is
+// never gated. A translation is free only when both Pro features are
+// off. Pro: unlimited, unlocked by a Dodo license key.
 // One image counts as one, whatever its height (long strips are 1:1).
 // Dodo's license endpoints are public (no API key), so the extension calls
 // them directly. The business_id check at activation stops a key bought
@@ -77,15 +78,14 @@ export async function resetProUsageToday() {
   try { await chrome.storage.local.remove(USAGE_KEY); } catch { /* ignore */ }
 }
 
-// True when any Pro feature is enabled: auto-translate, pre-translate, or
-// engine failover. A finished translation counts toward the free daily
-// quota when any Pro feature is on; it is free only when all three are
-// off. (Failover defaults on, so by default every translation counts.)
+// True when any Pro feature is enabled: auto-translate or pre-translate.
+// A finished translation counts toward the free daily quota when a Pro
+// feature is on; manual translation (both off) is free and unlimited.
+// Engine failover is free, not a Pro feature, so it never counts here.
 export function anyProFeatureOn(settings) {
   if (!settings) return false;
   return !!settings.autoTranslateOnLoad
-    || !!settings.pretranslateNextPage
-    || !!settings.backendFailover;
+    || !!settings.pretranslateNextPage;
 }
 
 // Add finished auto/pre-translate images to today's count — distinct

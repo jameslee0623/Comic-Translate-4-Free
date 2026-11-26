@@ -56,7 +56,7 @@ service you selected in settings:
 ## Pro subscriptions (Dodo Payments)
 
 Pro is an optional paid subscription ($3/month or $30/year) that unlocks
-unlimited auto-translate, pre-translate, and engine failover. Payments are
+unlimited auto-translate and pre-translate. Payments are
 processed by Dodo Payments, the merchant of record. The extension never sees
 or stores your payment details — card numbers, billing addresses, and
 payment history live with Dodo, under Dodo's privacy policy.

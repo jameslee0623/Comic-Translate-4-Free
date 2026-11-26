@@ -46,7 +46,7 @@ Comic Translate 4 Free translates manga and comic pages automatically as you bro
 - Automatic translation (Pro) — open a manga page on an allowed site and the translated version appears in place, no button click needed. Free for 50 images a day; unlimited with Pro.
 - Every picture on the page — auto-translate handles all pictures on a page (up to 50 per run), not just the main image.
 - Pre-translate the next page (Pro) — while you read the current page, the next page's picture is translated in the background, so it is ready the moment you open it (one picture only; on by default, turn it off in Settings). Free for 50 images a day; unlimited with Pro.
-- Engine failover (Pro) — if the selected translation engine fails, the extension automatically tries another one. Free for 50 images a day; unlimited with Pro.
+- Engine failover — if the selected translation engine fails, the extension automatically tries another one. Free, always on.
 - Right-click any image — choose "Send to Comic Translate 4 Free" to translate a specific picture, even one smaller than the minimum size.
 - 114 target languages via Google Translator, Gemini, Azure Translator, or your own local LM Studio server.
 - Source language auto-detect — Japanese, English, Simplified/Traditional Chinese identified automatically from the OCR'd text.
@@ -110,7 +110,7 @@ Gemini gives the best manga translations. To use it as the translation engine:
 
 ## 💎 Pro
 
-Translations count toward the free 50 images a day while any Pro feature is on. One image counts as one, whatever its height. Turn all Pro features off and translating is free and unlimited. Auto-translate, pre-translate, and engine failover are Pro features — free for 50 images a day, unlimited with a Pro subscription.
+Translations count toward the free 50 images a day while any Pro feature is on. One image counts as one, whatever its height. Turn both Pro features off and translating is free and unlimited. Auto-translate and pre-translate are Pro features — free for 50 images a day, unlimited with a Pro subscription.
 
 - $3/month or $30/year
 - Buy a license key, paste it into the License key field in the extension's Settings, and click Activate Pro. The key works on 2 browsers.

@@ -1779,10 +1779,8 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
     const resolved = tier1Entry.sourceLang || detectPageLang(blocks.map(b => b.text));
     effSettings = { ...settings, sourceLang: resolved || 'ja' };
   }
-  // Failover is a Pro feature: free users get it while under the daily
-  // limit; after 50 images/day it turns off (the Settings toggle locks too).
-  const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
-  if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
+  // Failover is free, not a Pro feature (2026-11-26): never gated by
+  // the daily limit, so a Gemini failure always falls over to Google.
   const runController = runs.get(runId)?.abortController || new AbortController();
   // Tier-1 translate needs its own 30s abort (the full pipeline has one;
   // this path had none, so a stalled backend hung forever). Local
@@ -2973,10 +2971,8 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
       effSettings = { ...settings, sourceLang: detected || 'ja' };
       for (const b of blocks) b.source_lang = effSettings.sourceLang;
     }
-    // Failover is a Pro feature: free users get it while under the daily
-    // limit; after 50 images/day it turns off (the Settings toggle locks too).
-    const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
-    if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
+    // Failover is free, not a Pro feature (2026-11-26): never gated by
+    // the daily limit, so a Gemini failure always falls over to Google.
     // ---- translate + mask/inpaint in parallel; render waits for both.
     const entry = runs.get(runId);
     const abortController = (entry && entry.abortController) || new AbortController();
@@ -3129,10 +3125,8 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
     const resolved = tier1Entry.sourceLang || detectPageLang(blocks.map(b => b.text));
     effSettings = { ...settings, sourceLang: resolved || 'ja' };
   }
-  // Failover is a Pro feature: free users get it while under the daily
-  // limit; after 50 images/day it turns off (the Settings toggle locks too).
-  const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
-  if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
+  // Failover is free, not a Pro feature (2026-11-26): never gated by
+  // the daily limit, so a Gemini failure always falls over to Google.
   const entry = runs.get(runId);
   const abortController = (entry && entry.abortController) || new AbortController();
   // 30s aborts the current attempt so translateBlocks can fail over; the
@@ -3916,10 +3910,8 @@ async function runPipeline(tabId, opts = {}) {
         effSettings = { ...settings, sourceLang: detected || 'ja' };
         for (const b of blocks) b.source_lang = effSettings.sourceLang;
       }
-      // Failover is a Pro feature: free users get it while under the daily
-      // limit; after 50 images/day it turns off (the Settings toggle locks too).
-      const foGate = await canAutoOrPre(settings).catch(() => ({ ok: true }));
-      if (!foGate.ok) effSettings = { ...effSettings, backendFailover: false };
+      // Failover is free, not a Pro feature (2026-11-26): never gated by
+      // the daily limit, so a Gemini failure always falls over to Google.
 
       // ---- 5+6+7. translate || (mask -> inpaint). Translate and mask both need
       // only the OCR text and are independent of each other (translate: network
@@ -4575,8 +4567,8 @@ async function runPipeline(tabId, opts = {}) {
     if (settings.debugMode) await sendDiagLog(tabId, runId);
     result = { runId, ok: true, images: doneImgs.length, imageSrcs: doneSrcs, failed: failedImgs, ...(opts.resume ? { resumed: true, alreadyDone } : {}) };
     // Freemium: a finished translation counts toward the free daily quota
-    // when any Pro feature is on (auto, pre-translate, or failover).
-    // It is free only when all three are off. Pro users are not counted.
+    // when any Pro feature is on (auto-translate or pre-translate).
+    // It is free only when both are off. Pro users are not counted.
     // A run cancelled in the middle throws above, so it counts nothing.
     // This covers auto and manual runs alike — the auto handler no longer
     // counts separately.

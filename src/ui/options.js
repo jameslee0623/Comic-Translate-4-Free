@@ -291,7 +291,7 @@ async function refreshPro() {
   // the toggles come back on their own tomorrow or when Pro is activated.
   const gate = await canAutoOrPre(s).catch(() => ({ ok: true }));
   const locked = !gate.ok;
-  const at = $('autoTranslate'), pt = $('pretranslateNext'), fo = $('backendFailover');
+  const at = $('autoTranslate'), pt = $('pretranslateNext');
   if (at) {
     at.disabled = locked;
     at.checked = locked ? false : !!s.autoTranslateOnLoad;
@@ -300,12 +300,8 @@ async function refreshPro() {
     pt.disabled = locked;
     pt.checked = locked ? false : s.pretranslateNextPage !== false;
   }
-  // Failover is a Pro feature too: same lock — off and grayed out once
-  // the daily free limit is hit, back on its own tomorrow or with Pro.
-  if (fo) {
-    fo.disabled = locked;
-    fo.checked = locked ? false : !!s.backendFailover;
-  }
+  // Failover is free, not a Pro feature (2026-11-26): never locked.
+  // Its checkbox always follows the stored setting (setChecked above).
   // A stale Pro validation re-checks in the background.
   if (active && proCheckDue(s)) {
     validateProLicense(s).then(r => {
@@ -416,7 +412,7 @@ function collect() {
     minImageSize: minImg.ok ? Math.round(minImg.value) : (lastSettings.minImageSize ?? DEFAULTS.minImageSize),
     debugMode: $('debugMode').checked,
     ocrDistilTest: $('ocrDistilTest').checked,
-    backendFailover: $('backendFailover').disabled ? !!lastSettings.backendFailover : $('backendFailover').checked,
+    backendFailover: $('backendFailover').checked,
     siteWhitelist: [...allowedSites], autoTranslateOnLoad: $('autoTranslate').disabled ? !!lastSettings.autoTranslateOnLoad : $('autoTranslate').checked,
     pretranslateNextPage: $('pretranslateNext').disabled ? lastSettings.pretranslateNextPage !== false : $('pretranslateNext').checked,
     playDing: $('playDing').checked,

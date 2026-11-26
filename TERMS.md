@@ -19,15 +19,16 @@ it as part of a commercial service.
 The core translation tool is free. Manual translation is free and unlimited
 when all Pro features are turned off in Settings.
 
-Auto-translate, pre-translate, and engine failover are Pro features. They
+Auto-translate and pre-translate are Pro features. They
 are free for 50 images a day. After 50 images in a day, those features stop
-until the next day, unless you have an active Pro subscription. One image
+until the next day, unless you have an active Pro subscription. Engine
+failover is free, not a Pro feature — it always works. One image
 counts as one, whatever its height. Re-translating the same image
 does not count again.
 
 ## Pro subscription
 
-Pro unlocks unlimited auto-translate, pre-translate, and engine failover.
+Pro unlocks unlimited auto-translate and pre-translate.
 
 - Price: $3/month or $30/year.
 - You buy a license key through the checkout link in the extension's
