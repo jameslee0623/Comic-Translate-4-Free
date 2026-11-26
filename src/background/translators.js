@@ -231,7 +231,15 @@ function applySourceLanguageGuard(out, texts, settings, backend) {
     return out;
   }
   tlog(`${backend} returned source-language output (${hit.why}) — ${hit.badCount} of ${out.length} entries bad, failing over`);
-  throw new Error(`${backend}: returned source-language text (${hit.why}), failing over`);
+  const err = new Error(`${backend}: returned source-language text (${hit.why}), failing over`);
+  // Guard-failure marker: lets the Gemini path tell a bad-content reply
+  // apart from an HTTP/network failure, so it can retry the request once
+  // with a correction instead of failing over at once. Inert for every
+  // other caller (LM Studio throws the same error as before).
+  err.guardFailure = true;
+  err.guardWhy = hit.why;
+  err.guardBadCount = hit.badCount;
+  throw err;
 }
 
 // Fetch with timeout and retry for LM Studio (the flakiest backend).
@@ -957,11 +965,34 @@ function geminiNormalizeTranslations(list, expected) {
   return list.map(v => (v === null || v === undefined ? '' : String(v)));
 }
 
-async function gemini(texts, settings, signal, deadlineAt) {
+// Minimum remaining budget (ms) worth spending on a Gemini second chance.
+// A normal Gemini reply takes ~1–3s (measured 2026-11-26: 955–2701ms),
+// so with less than 2s left the retry cannot usefully complete — the
+// informative guard error is more useful to failover than a doomed retry
+// that would surface a timeout error instead.
+const GEMINI_GUARD_RETRY_MIN_MS = 2000;
+
+// Second-chance prompt: the first reply failed the source-language guard
+// (it came back in the source language). Reuse the normal prompt — no
+// duplicated builder — and add a correction note AFTER the texts, the last
+// thing the model reads, naming what went wrong so the retry is not a
+// blind repeat.
+export function geminiRetryPrompt(texts, settings, guardWhy) {
+  const to = langName(settings.targetLang);
+  return geminiPrompt(texts, settings) +
+    '\nYour previous reply was still in the source language' +
+    (guardWhy ? ' (' + guardWhy + ')' : '') +
+    '. Translate every string into ' + to + ' this time — do not return any source-language text.';
+}
+
+async function gemini(texts, settings, signal, deadlineAt, promptOverride = null, guardRetried = false) {
   const key = (settings.geminiApiKey || '').trim();
   if (!key) throw new Error('gemini: API key not set — add it in Settings');
+  // promptOverride / guardRetried are the second-chance path (below): a
+  // retry after a guard failure re-enters here with the correction prompt
+  // and guardRetried=true, so it can only happen once.
   const body = JSON.stringify({
-    contents: [{ parts: [{ text: geminiPrompt(texts, settings) }] }],
+    contents: [{ parts: [{ text: promptOverride || geminiPrompt(texts, settings) }] }],
     generationConfig: { temperature: 0 },
   });
   // Like the Google/Azure paths: one throttled call (429/5xx) must not kill
@@ -1139,7 +1170,27 @@ async function gemini(texts, settings, signal, deadlineAt) {
   // were translated. Shared guard (see checkSourceLanguageOutput):
   // kana in the output, identity with the source, or an empty entry
   // for a non-empty source all fail the batch.
-  return applySourceLanguageGuard(out, texts, settings, 'gemini');
+  // Second chance (James, 2026-11-26): the prompt already says "do not
+  // return the source language", but Gemini sometimes does anyway — so
+  // one guard failure earns ONE retry with a correction note naming
+  // what went wrong, before translateBlocks fails over to Google. Only
+  // a guard failure retries here: HTTP 429/5xx/timeout keep their own
+  // retry loop above and never reach this catch. A second guard failure
+  // throws as before (guardRetried=true blocks a third try).
+  try {
+    return applySourceLanguageGuard(out, texts, settings, 'gemini');
+  } catch (e) {
+    if (e && e.guardFailure && !guardRetried) {
+      const rem = remainingMs(deadlineAt);
+      if (rem <= GEMINI_GUARD_RETRY_MIN_MS) {
+        tlog(`gemini: guard failed (${e.guardWhy}) but only ${Math.max(0, Math.round(rem))}ms remain — failing over instead of retrying`);
+        throw e;
+      }
+      tlog(`gemini: guard failed (${e.guardWhy}) — second chance: retrying once with a correction note`);
+      return gemini(texts, settings, signal, deadlineAt, geminiRetryPrompt(texts, settings, e.guardWhy), true);
+    }
+    throw e;
+  }
 }
 
 
