@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "Versuchen Sie, die Erweiterung unter about:debugging neu zu laden, und öffnen Sie diese Seite dann erneut."
   },
+  "bypass_inpaint": {
+    "message": "Inpainting überspringen (Test)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Wenn aktiviert, wird LaMa nie geladen und der übersetzte Text erscheint über dem Originalbild.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "bereit"
   },

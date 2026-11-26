@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "Coba muat ulang ekstensi di about:debugging, lalu buka kembali halaman ini."
   },
+  "bypass_inpaint": {
+    "message": "Lewati inpaint (uji)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Saat aktif, LaMa tidak pernah dimuat dan teks terjemahan tampil di atas gambar asli.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "siaga"
   },

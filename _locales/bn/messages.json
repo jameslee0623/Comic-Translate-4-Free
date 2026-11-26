@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "about:debugging-এ এক্সটেনশনটি পুনরায় লোড করে এই পেজটি আবার খুলুন।"
   },
+  "bypass_inpaint": {
+    "message": "ইনপেইন্ট এড়িয়ে যান (পরীক্ষা)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "চালু থাকলে, LaMa কখনও লোড হয় না এবং অনুবাদিত লেখা মূল ছবির উপরে দেখায়।",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "নিষ্ক্রিয়"
   },

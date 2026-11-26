@@ -74,6 +74,14 @@
   "bg_unreachable_hint": {
     "message": "about:debugging पर एक्सटेंशन रीलोड करके देखें, फिर यह पेज फिर से खोलें।"
   },
+  "bypass_inpaint": {
+    "message": "इनपेंट छोड़ें (परीक्षण)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "चालू होने पर, LaMa कभी लोड नहीं होता और अनुवादित पाठ मूल छवि के ऊपर दिखता है।",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "cancel": {
     "message": "रद्द करें"
   },

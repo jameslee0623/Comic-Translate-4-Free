@@ -74,6 +74,14 @@
   "bg_unreachable_hint": {
     "message": "about:debugging پر ایکسٹینشن دوبارہ لوڈ کرنے کی کوشش کریں، پھر یہ صفحہ دوبارہ کھولیں۔"
   },
+  "bypass_inpaint": {
+    "message": "ان پینٹ چھوڑیں (ٹیسٹ)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "آن ہونے پر، LaMa کبھی لوڈ نہیں ہوتا اور ترجمہ شدہ متن اصل تصویر کے اوپر دکھائی دیتا ہے۔",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "cancel": {
     "message": "منسوخ کریں"
   },

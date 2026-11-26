@@ -129,8 +129,6 @@
     <div class="langfield"><label data-i18n="source_lang">Source language</label><select id="sourceLang"></select></div>
     <div class="langfield"><label data-i18n="target_lang">Target language</label><select id="targetLang"></select></div>
   </div>
-  <div class="row"><span class="rowtitle"><label for="ocrDistilTest" data-i18n="ocr_distil_test">Use distil OCR for Japanese (test)</label></span><label class="switch"><input type="checkbox" id="ocrDistilTest"><span class="slider"></span></label></div>
-  <p class="hint" data-i18n="ocr_distil_test_hint">Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR.</p>
 
   <h2 data-i18n="translation_backend" id="engineSection">Translating engine</h2>
   <div class="row"><label data-i18n="backend">Translating engine</label><select id="backend">
@@ -192,6 +190,10 @@
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
   <div class="row"><span class="rowtitle"><label for="backendFailover" data-i18n="backend_failover">Drop untranslated text</label></span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="backend_failover_hint">When on, text Gemini returns untranslated is dropped and retried with Google. When off, it is kept and the OCR is logged.</p>
+  <div class="row"><span class="rowtitle"><label for="ocrDistilTest" data-i18n="ocr_distil_test">Use distil OCR for Japanese (test)</label></span><label class="switch"><input type="checkbox" id="ocrDistilTest"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="ocr_distil_test_hint">Small fast OCR for Japanese pages only. Needs the distil model downloaded below. English and Chinese stay on the normal OCR.</p>
+  <div class="row"><span class="rowtitle"><label for="bypassInpaint" data-i18n="bypass_inpaint">Skip inpaint (test)</label></span><label class="switch"><input type="checkbox" id="bypassInpaint"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="bypass_inpaint_hint">When on, LaMa never loads and the translated text renders over the original image.</p>
   <div class="row"><button id="resetFreeUsage" style="font-size:13px" data-i18n="reset_free_usage">Reset free usage today</button></div>
   <div class="row" style="gap:8px"><button id="copyBenchTable" style="font-size:13px" data-i18n="bench_copy_table">Copy benchmark table</button><button id="clearBenchLog" style="font-size:13px" data-i18n="bench_clear">Clear</button><span id="benchCount" style="font-size:12px;color:#8a8a8f"></span></div>
 

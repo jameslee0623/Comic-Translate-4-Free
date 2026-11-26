@@ -74,6 +74,14 @@
   "bg_unreachable_hint": {
     "message": "Попробуйте перезагрузить расширение в about:debugging, затем снова откройте эту страницу."
   },
+  "bypass_inpaint": {
+    "message": "Пропустить инпейнтинг (тест)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Когда включено, LaMa не загружается, а переведённый текст отображается поверх исходного изображения.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "cancel": {
     "message": "Отмена"
   },

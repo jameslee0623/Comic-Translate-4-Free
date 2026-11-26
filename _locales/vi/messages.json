@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "Thử tải lại tiện ích tại about:debugging, rồi mở lại trang này."
   },
+  "bypass_inpaint": {
+    "message": "Bỏ qua inpaint (thử nghiệm)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Khi bật, LaMa không bao giờ tải và văn bản đã dịch hiển thị trên ảnh gốc.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "chờ"
   },

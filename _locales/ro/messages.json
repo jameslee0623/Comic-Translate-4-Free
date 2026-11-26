@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "Încearcă să reîncarci extensia la about:debugging, apoi redeschide această pagină."
   },
+  "bypass_inpaint": {
+    "message": "Sari peste inpainting (test)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Când este activat, LaMa nu se încarcă niciodată, iar textul tradus apare peste imaginea originală.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "inactiv"
   },

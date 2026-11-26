@@ -4,6 +4,7 @@
 export const DEFAULT_SETTINGS = {
   sourceLang: 'auto', // 'auto' = detect from the OCR'd text; or 'ja' | 'en' | 'zh-CN' | 'zh-TW'
   ocrDistilTest: false, // distil OCR test (2026-11-25): when on, Japanese (or auto) pages OCR with the small distil model instead of Baberu; EN/ZH stay on Baberu
+  bypassInpaint: false, // skip inpaint test (2026-11-26): when on, LaMa never loads and the translated text renders over the original image; hidden in the Debug section
   targetLang: 'en', // static fallback only — with no stored value, readSettingsRaw()/getSettings() use the browser language instead (browserTargetLang, below)
   translationBackend: 'google', // 'google' | 'azure' | 'gemini' | 'lmstudio' | 'local-llm'
   backendFailover: true, // Debug "Drop untranslated text" switch (2026-11-26): ON (default) drops untranslated output — guard + Gemini second chance, then failover to Google. OFF keeps it and logs the OCR. Failover itself is always on regardless of this setting.

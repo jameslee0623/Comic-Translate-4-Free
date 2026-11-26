@@ -25,12 +25,9 @@ import {
 import { baseDomain, displayHost, hostOf, isSiteAllowed, imageHostOrigins, originAccessPatterns } from '../shared/site-access.js';
 import { urlShape, applyPattern, patternNumber, observeRules, observeLinkRules, observePicLinkRules, activeRuleFor, activeLinkTexts, activePicLinkRule, noteLearnResult } from '../shared/next-page-learn.js';
 
-// NO-INPAINT test build (Orion): when true, LaMa is never loaded and the
-// translated text renders over the original image. Default false — a
-// release build never sets this. The test XPI flips it to true in the
-// dist copy only (src stays false), so the flag can never leak into a
-// release by accident.
-const NO_INPAINT = false;
+// Skip-inpaint is a Debug setting now (settings.bypassInpaint), not a
+// build flag. When on, LaMa never loads and the translated text renders
+// over the original image. Default false.
 
 // Translated-page cache is session-scoped: initPageCache() wipes the store on
 // every browser startup (via a chrome.storage.session marker) and the
@@ -202,8 +199,12 @@ async function loadGpuInpaintDead() {
   } catch {}
 }
 loadGpuInpaintDead().catch(() => {});
-// NO-INPAINT test build marker: the pasted log must say which build it is.
-if (NO_INPAINT) diagPush('NO-INPAINT test build — LaMa inpaint disabled, text renders over the original');
+// Skip-inpaint marker (Debug setting): the pasted log must say when the
+// bypass is on, so a log with un-inpainted text is not misread as a bug.
+// Settings are read at run time — the switch can be toggled in Settings
+// without reloading the background, so no module-level constant may
+// cache it.
+getSettings().then(s => { if (s && s.bypassInpaint) diagPush('SKIP-INPAINT on — LaMa inpaint disabled, text renders over the original'); }).catch(() => {});
 
 // 2.3.15/1.7.15: device + browser line in the diag log, so a pasted log
 // says which device and browser it came from — no need to ask the user
@@ -3028,9 +3029,9 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     };
     const runMaskInpaint = async () => {
       checkCancelled(runId);
-      // NO-INPAINT test build: skip LaMa entirely — the page cache gets
+      // Skip-inpaint (Debug setting): skip LaMa entirely — the page cache gets
       // the original image, and the text renders over it.
-      if (NO_INPAINT) return new Uint8ClampedArray(rgba);
+      if (settings.bypassInpaint) return new Uint8ClampedArray(rgba);
       const pageGray = toGrayU8(rgba, w, h);
       const { mask: fullMask, entries } = generateMask(rgba, w, h, pageGray, blocks, 5);
       const spreadMap = await readInpaintSpread();
@@ -3271,8 +3272,8 @@ async function runPipeline(tabId, opts = {}) {
     // WASM heap. A fragmented heap can't provide the contiguous block LaMa needs.
     // (2.2.19: moved after the model gate — the preload is an ML call, and
     // no ML runs before the models are ready.)
-    // NO-INPAINT test build: never load LaMa at all.
-    if (directHandlers() && !NO_INPAINT) {
+    // Skip-inpaint (Debug setting): never load LaMa at all.
+    if (directHandlers() && !settings.bypassInpaint) {
       persistDiagStage(runId, 'lama-preload');
       try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
     }
@@ -4012,10 +4013,10 @@ async function runPipeline(tabId, opts = {}) {
       };
       const runInpaint = async ({ fullMask, entries, maskMs }) => {
         checkCancelled(runId);
-        // NO-INPAINT test build: skip LaMa entirely — the translated text
+        // Skip-inpaint (Debug setting): skip LaMa entirely — the translated text
         // renders over the original image. The model is never loaded, so
         // a device that dies loading LaMa stays alive.
-        if (NO_INPAINT) {
+        if (settings.bypassInpaint) {
           parProgress('inpaint', 1);
           return { inpainted: new Uint8ClampedArray(rgba), inpaintMs: 0, maskMs, totalInpaintMs: 0 };
         }

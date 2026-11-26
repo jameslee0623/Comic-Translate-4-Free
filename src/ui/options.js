@@ -172,6 +172,7 @@ function applyToForm(s) {
   setVal('minImageSize', s.minImageSize);
   setChecked('debugMode', s.debugMode);
   setChecked('ocrDistilTest', !!s.ocrDistilTest);
+  setChecked('bypassInpaint', !!s.bypassInpaint);
   setChecked('autoTranslate', s.autoTranslateOnLoad);
   setChecked('pretranslateNext', s.pretranslateNextPage !== false);
   setChecked('playDing', s.playDing !== false);
@@ -370,7 +371,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 for (const id of ['sourceLang', 'targetLang', 'backend', 'backendFailover', 'azureKey', 'azureRegion', 'geminiKey',
     'lmStudioUrl', 'lmStudioApi', 'lmStudioKey',
     'minImageSize',
-    'debugMode', 'ocrDistilTest', 'autoTranslate', 'pretranslateNext', 'playDing']) {
+    'debugMode', 'ocrDistilTest', 'bypassInpaint', 'autoTranslate', 'pretranslateNext', 'playDing']) {
   const el = $(id);
   if (!el) continue;
   const evt = el.type === 'text' || el.type === 'password' || el.type === 'number' ? 'input' : 'change';
@@ -412,6 +413,7 @@ function collect() {
     minImageSize: minImg.ok ? Math.round(minImg.value) : (lastSettings.minImageSize ?? DEFAULTS.minImageSize),
     debugMode: $('debugMode').checked,
     ocrDistilTest: $('ocrDistilTest').checked,
+    bypassInpaint: $('bypassInpaint').checked,
     backendFailover: $('backendFailover').checked,
     siteWhitelist: [...allowedSites], autoTranslateOnLoad: $('autoTranslate').disabled ? !!lastSettings.autoTranslateOnLoad : $('autoTranslate').checked,
     pretranslateNextPage: $('pretranslateNext').disabled ? lastSettings.pretranslateNextPage !== false : $('pretranslateNext').checked,

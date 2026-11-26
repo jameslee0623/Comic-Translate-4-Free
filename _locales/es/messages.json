@@ -74,6 +74,14 @@
   "bg_unreachable_hint": {
     "message": "Intenta recargar la extensión en about:debugging y vuelve a abrir esta página."
   },
+  "bypass_inpaint": {
+    "message": "Omitir inpainting (prueba)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "Cuando está activado, LaMa nunca se carga y el texto traducido se muestra sobre la imagen original.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "cancel": {
     "message": "Cancelar"
   },

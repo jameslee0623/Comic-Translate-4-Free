@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "请在 about:debugging 中重新加载扩展，然后重新打开此页面。"
   },
+  "bypass_inpaint": {
+    "message": "跳过修复（测试）",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "开启后，LaMa 不会加载，翻译文本会显示在原始图片之上。",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "空闲"
   },

@@ -281,6 +281,14 @@
   "bg_unreachable_hint": {
     "message": "about:debugging で拡張機能を再読み込みしてから、このページを開き直してください。"
   },
+  "bypass_inpaint": {
+    "message": "インペイントをスキップ（テスト）",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "オンにすると、LaMa は読み込まれず、翻訳文が元の画像の上に表示されます。",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "stage_idle": {
     "message": "待機中"
   },

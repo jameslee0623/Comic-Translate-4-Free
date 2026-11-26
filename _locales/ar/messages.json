@@ -74,6 +74,14 @@
   "bg_unreachable_hint": {
     "message": "جرّب إعادة تحميل الإضافة من about:debugging، ثم أعد فتح هذه الصفحة."
   },
+  "bypass_inpaint": {
+    "message": "تخطَّي الرسم الداخلي (اختبار)",
+    "description": "Checkbox: skip the LaMa inpainter (test)"
+  },
+  "bypass_inpaint_hint": {
+    "message": "عند التفعيل، لا يتم تحميل LaMa أبدًا ويظهر النص المترجم فوق الصورة الأصلية.",
+    "description": "Hint under the skip-inpaint checkbox"
+  },
   "cancel": {
     "message": "إلغاء"
   },
