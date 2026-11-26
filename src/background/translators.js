@@ -1700,6 +1700,15 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   // 30s (leaving 10s for failover) is a design decision for James —
   // .58 deliberately gave the primary the full 30s.
   let azureConsumed = false;
+  // translateBlocks state: the primary result, the last error (primary
+  // or fallback, for the combined throw), and which backend actually
+  // produced the result. These MUST be declared: this file is an ES
+  // module (strict mode), so assigning to an undeclared variable throws
+  // ReferenceError on every call. (Restored 2026-11-26 — commit a1783a5
+  // dropped them and broke every translation.)
+  let results;
+  let lastErr = null;
+  let backendUsed = backend;
   // Absolute deadline (Date.now() clock) for the Google/Azure/Gemini
   // retry loops, so their per-attempt timers and backoff caps can be
   // computed against the same budget LM Studio gets as deadlineMs.
