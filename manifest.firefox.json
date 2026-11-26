@@ -62,7 +62,7 @@
     "unlimitedStorage",
     "contextMenus"
   ],
-  "version": "1.8.7",
+  "version": "1.8.8",
   "default_locale": "en",
   "web_accessible_resources": [
     {
