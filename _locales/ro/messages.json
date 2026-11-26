@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "Traduce această pagină"
   },
+  "translate_this_image": {
+    "message": "Traduce această imagine"
+  },
   "translation_backend": {
     "message": "Motor de traducere"
   },

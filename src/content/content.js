@@ -79,6 +79,85 @@
   }
   window.addEventListener('contextmenu', unblockImageContextMenu, true);
 
+  // Long-press translate icon (2.4.3): the browser's context menu item
+  // ("Send to Comic Translate 4 Free") is broken on Vivaldi Android (tap
+  // does nothing) and unsupported on Firefox Android (the menus API does
+  // not exist there, Bug 1595822), so the menu cannot start a single-image
+  // translation on phones. Instead, when the user long-presses an image,
+  // show a small floating icon; tap it to translate just that image, and
+  // the icon goes away. A long-press fires `contextmenu`; a mouse
+  // right-click fires it too, so tell them apart by the last touch: only
+  // a touch within the last 1.5s counts as a long-press (desktop
+  // right-click keeps using the working menu item, no icon). The icon is
+  // a plain button, not the browser menu — it does not suppress the
+  // native menu, it floats above it (max z-index) and disappears on tap,
+  // on a tap elsewhere, on scroll, or after 8s.
+  let lpIcon = null, lpIconTimer = null, lpLastTouch = null;
+  function hideLpIcon() {
+    try {
+      if (lpIconTimer) { clearTimeout(lpIconTimer); lpIconTimer = null; }
+      if (lpIcon) { lpIcon.remove(); lpIcon = null; }
+    } catch {}
+  }
+  try {
+    window.addEventListener('touchstart', e => {
+      try {
+        const t = (e.touches && e.touches[0]) || null;
+        lpLastTouch = t ? { at: Date.now(), x: t.clientX, y: t.clientY } : null;
+      } catch {}
+    }, { capture: true, passive: true });
+    window.addEventListener('touchend', () => { lpLastTouch = null; }, { capture: true, passive: true });
+    window.addEventListener('touchcancel', () => { lpLastTouch = null; }, { capture: true, passive: true });
+  } catch {}
+  window.addEventListener('contextmenu', e => {
+    try {
+      hideLpIcon();
+      const t = e.target;
+      if (!t) return;
+      const img = t.tagName === 'IMG' ? t : (t.closest ? t.closest('img') : null);
+      if (!img) return;
+      // Long-press only: a touch must have started recently. A mouse
+      // right-click has no preceding touchstart.
+      if (!lpLastTouch || Date.now() - lpLastTouch.at > 1500) return;
+      const src = img.currentSrc || img.src || '';
+      if (!src) return;
+      const btn = document.createElement('button');
+      btn.id = 'ct-lp-icon';
+      let title = 'Translate this image';
+      try {
+        const m = (typeof chrome !== 'undefined' && chrome.i18n) ? chrome.i18n.getMessage('translate_this_image') : '';
+        if (m) title = m;
+      } catch {}
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+      btn.textContent = 'A文';
+      // Above the finger so it stays visible, clamped inside the viewport.
+      const x = Math.max(8, Math.min(window.innerWidth - 64, (e.clientX || 0) - 28));
+      const y = Math.max(8, Math.min(window.innerHeight - 64, (e.clientY || 0) - 84));
+      btn.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;width:56px;height:56px;z-index:2147483647;' +
+        'background:#1c1c22;color:#fff;font:700 20px/1 sans-serif;border:2px solid #4a90d9;border-radius:50%;' +
+        'box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer;padding:0;text-align:center;';
+      btn.addEventListener('click', ev => {
+        try { ev.stopPropagation(); ev.preventDefault(); } catch {}
+        hideLpIcon();
+        try { chrome.runtime.sendMessage({ type: 'ct/translate-image', srcUrl: src }); } catch {}
+      });
+      document.documentElement.appendChild(btn);
+      lpIcon = btn;
+      // Gone on a tap elsewhere, on scroll, or after 8s.
+      lpIconTimer = setTimeout(hideLpIcon, 8000);
+      try {
+        window.addEventListener('touchstart', function onTouch(ev) {
+          try { if (ev.target !== btn && !btn.contains(ev.target)) hideLpIcon(); } catch {}
+        }, { capture: true, passive: true, once: true });
+        window.addEventListener('mousedown', function onMouse(ev) {
+          try { if (ev.target !== btn && !btn.contains(ev.target)) hideLpIcon(); } catch {}
+        }, { capture: true, once: true });
+        window.addEventListener('scroll', hideLpIcon, { capture: true, passive: true, once: true });
+      } catch {}
+    } catch {}
+  }, true);
+
   // Browser canvas size guards (mirrors src/shared/image-ops.js renderScale —
   // this is a classic script, no modules, so the constants are duplicated).
   // Chrome ~16384px side, Firefox ~11180, Safari ~4096-8192.

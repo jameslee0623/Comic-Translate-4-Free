@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "Terjemahkan halaman ini"
   },
+  "translate_this_image": {
+    "message": "Terjemahkan gambar ini"
+  },
   "translation_backend": {
     "message": "Mesin penerjemah"
   },

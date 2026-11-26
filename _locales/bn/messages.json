@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "এই পেজ অনুবাদ করুন"
   },
+  "translate_this_image": {
+    "message": "এই ছবিটি অনুবাদ করুন"
+  },
   "translation_backend": {
     "message": "অনুবাদ ইঞ্জিন"
   },

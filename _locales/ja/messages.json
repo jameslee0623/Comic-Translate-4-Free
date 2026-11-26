@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "このページを翻訳"
   },
+  "translate_this_image": {
+    "message": "この画像を翻訳"
+  },
   "translation_backend": {
     "message": "翻訳エンジン"
   },

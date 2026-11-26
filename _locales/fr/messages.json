@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "Traduire cette page"
   },
+  "translate_this_image": {
+    "message": "Traduire cette image"
+  },
   "translation_backend": {
     "message": "Moteur de traduction"
   },

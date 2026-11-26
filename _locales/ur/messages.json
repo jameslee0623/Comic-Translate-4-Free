@@ -449,6 +449,9 @@
   "translate_page": {
     "message": "اس صفحے کا ترجمہ کریں"
   },
+  "translate_this_image": {
+    "message": "اس تصویر کا ترجمہ کریں"
+  },
   "translation_backend": {
     "message": "ترجمے کا انجن"
   },

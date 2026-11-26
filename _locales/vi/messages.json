@@ -253,6 +253,9 @@
   "translate_page": {
     "message": "Dịch trang này"
   },
+  "translate_this_image": {
+    "message": "Dịch hình ảnh này"
+  },
   "translation_backend": {
     "message": "Công cụ dịch"
   },

@@ -5592,6 +5592,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     } catch {}
     return false;
   }
+  // 2.4.3: long-press translate icon (content -> SW one-way). The
+  // content script shows a floating icon when the user long-presses an
+  // image (the browser's context menu is broken on Vivaldi Android and
+  // unsupported on Firefox Android, so the menu item cannot do this).
+  // Tap the icon to translate just that image — same pipeline as the
+  // context-menu send (handleTranslateImage), same gates.
+  if (msg && msg.type === MSG.TRANSLATE_IMAGE) {
+    try {
+      const tab = sender && sender.tab;
+      if (tab && tab.id !== undefined && tab.id !== null && msg.srcUrl) {
+        // Return the promise so the worker stays alive for the run.
+        return handleTranslateImage(tab.id, msg.srcUrl);
+      }
+    } catch {}
+    return false;
+  }
   // Debug panel Hide button (content -> SW, one-way). Same as turning
   // the debug switch off in Settings: sets debugMode=false in storage,
   // so the Settings Debug section hides too (options.js re-applies on

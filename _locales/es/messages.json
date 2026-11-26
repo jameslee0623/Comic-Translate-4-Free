@@ -449,6 +449,9 @@
   "translate_page": {
     "message": "Traducir esta página"
   },
+  "translate_this_image": {
+    "message": "Traducir esta imagen"
+  },
   "translation_backend": {
     "message": "Motor de traducción"
   },

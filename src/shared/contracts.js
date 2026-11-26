@@ -52,6 +52,7 @@ export const MSG = {
   // content -> SW
   OPEN_LINK: 'ct/open-link',             // {url} -> {ok} (support popup buttons; SW allowlists the URL and opens a tab)
   AUTO_START: 'ct/auto-start',           // {} (content -> SW one-way: page loaded on an allowed site; ask for an auto run)
+  TRANSLATE_IMAGE: 'ct/translate-image', // {srcUrl} (content -> SW one-way: long-press icon tapped; translate this one image)
   SET_DEBUG_MODE: 'ct/set-debug-mode',   // {on} (content -> SW one-way: debug panel Hide button; set debugMode in settings, same as the Settings switch)
 };
 
