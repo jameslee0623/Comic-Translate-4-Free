@@ -32,30 +32,29 @@ import { urlShape, applyPattern, patternNumber, observeRules, observeLinkRules, 
 // Translated-page cache is session-scoped: initPageCache() wipes the store on
 // every browser startup (via a chrome.storage.session marker) and the
 // get/put/stats helpers await that check before touching the store.
-// DIAGNOSTIC (temporary): panel log buffer. The console does not work
-// for this user (pastes are samples, Objects cannot be opened), so the
-// log also goes to our own debug panel on the page, where it can be
-// copied in full. diagPush logs to console AND buffers (cap 200).
+// DIAGNOSTIC: panel log buffer. The console does not work for this user
+// (pastes are samples, Objects cannot be opened), so the log goes only
+// to our own buffer + the persisted trace, shown in Settings where it
+// can be copied in full. diagPush does NOT write to the console (James,
+// 2026-11-26: the console log is never used) and adds no '[ct-diag] '
+// tag (every line in the Settings text box is already a diag line, so
+// the tag was 9 useless characters per line). Cap 2000.
 // Defined here (before any use) so top-level calls cannot hit TDZ.
 const diagLogBuf = [];
 function diagPush(line) {
   try {
-    // 1.4.0 (m7): only real failure/recovery/timeout lines go out as
-    // console.error. Benign diagnostic lines (loaded, keepalive,
-    // thread-info, start/done, tiles) go to console.debug, so the
-    // console is not a wall of red "errors" that are not errors. The
-    // panel-log buffer is unchanged (every line is still buffered).
+    // No console writes, no prefix (James, 2026-11-26): the log is never
+    // read from the console — the user copies it from Settings on the
+    // phone — so every line goes only to the buffer + the persisted
+    // trace, as the plain line.
     const s = String(line);
-    if (/fail|error|timeout|watchdog|orphan|alarm/i.test(s)) console.error('[ct-diag] ' + line);
-    else if (typeof console.debug === 'function') console.debug('[ct-diag] ' + line);
-    else console.log('[ct-diag] ' + line);
-    diagLogBuf.push('[ct-diag] ' + line);
-    // 2.1.55: persist the line (last 200) so a background restart does
+    diagLogBuf.push(s);
+    // 2.1.55: persist the line (last 2000) so a background restart does
     // not wipe the log orphan recovery needs. Fire-and-forget, chained.
-    try { diagTracePersist('[ct-diag] ' + line); } catch {}
-    // 2.1.49: keep 2000 lines, not 200. A multi-pic run makes ~15 lines per
-    // picture (up to ~33 for a dense one), so even a 50-picture run
-    // (~1700 lines worst case) keeps the early inventory-diag lines. The
+    try { diagTracePersist(s); } catch {}
+    // 2.1.49: keep 2000 lines, not 200. A multi-pic run makes ~3-4 lines
+    // per picture (measured 2026-11-26), so a 50-picture run is ~150-200
+    // lines; the cap is headroom plus multi-run accumulation. The
     // run-end missed accounting is written last, so it survives regardless.
     if (diagLogBuf.length > 2000) diagLogBuf.shift();
   } catch {}
@@ -116,12 +115,14 @@ async function readDiagTrace() {
 // device line, and gpu-disabled line re-print on every background start
 // (Firefox restarts the background often), filling the log with repeats.
 // This checks the persisted trace first and skips the line if it is
-// already there. Old repeats already in the trace age out (last 200).
+// already there. Old repeats already in the trace age out (last 2000).
 async function diagPushOnce(line) {
-  const s = '[ct-diag] ' + String(line);
+  const s = String(line);
   try {
     const arr = await readDiagTrace();
-    if (arr.includes(s)) return;
+    // Old stored lines still carry the '[ct-diag] ' prefix until they
+    // age out, so strip it when comparing.
+    if (arr.some((l) => l.replace(/^\[ct-diag\] /, '') === s)) return;
   } catch {}
   diagPush(line);
 }
@@ -141,7 +142,7 @@ async function replayDiagTrace() {
     if (diagTraceReplayedCount > 0) return diagTraceReplayedCount;
     const recovered = await readDiagTrace();
     if (!recovered.length) return 0;
-    diagLogBuf.push('[ct-diag] --- log from before the restart (recovered) ---');
+    diagLogBuf.push('--- log from before the restart (recovered) ---');
     for (const l of recovered) diagLogBuf.push(l);
     diagTraceReplayedCount = recovered.length;
     return recovered.length;
