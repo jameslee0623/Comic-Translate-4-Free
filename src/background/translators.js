@@ -411,55 +411,22 @@ function langName(code) {
 }
 
 async function googleFree(texts, src, dst, signal, deadlineAt) {
-  // One batched request: all texts go as repeated q= params in a single
-  // gtx GET, and data[0] comes back with one segment per q, in order.
-  // A single request needs no inter-request pacing and no lane pool —
-  // the old 3-lane / 120ms machinery existed only to throttle many
-  // requests, and it is deleted with it.
+  // One request per text, in order. Reverted 2026-11-26 (James): the
+  // 2.3.62 multi-q batch does not work live — gtx returns 1 segment for
+  // a multi-q request, so the batch always fell back to per-text and the
+  // batch request itself was wasted. No batch request is sent on any
+  // path now. Sequential, not pooled: each googleOne carries its own
+  // retry loop, and a pool would only add abort-sharing complexity.
   if (!texts.length) return [];
-  const url = googleBatchUrl(texts, src, dst);
-  // Never send a GET the URL cannot hold: a very long combined URL
-  // comes back 414, which is not rate-limiting and cannot be fixed by
-  // retrying. Check before sending and go per-text instead. The
-  // per-text 6000-char guard also stays: a single text that long fails
-  // the same way as before (googleOne throws, the backend fails over).
-  const urlTooLong = url.length > GOOGLE_BATCH_URL_MAX;
-  const textTooLong = texts.some(t => encodeURIComponent(t).length > 6000);
-  if (urlTooLong || textTooLong) {
-    tlog(`google: ${urlTooLong ? `batch URL ${url.length} chars exceeds ${GOOGLE_BATCH_URL_MAX}` : 'a text exceeds the 6000-char per-text limit'} — falling back to one request per text`);
-    return googlePerText(texts, src, dst, signal, deadlineAt);
-  }
-  try {
-    return await googleBatch(texts, src, dst, signal, deadlineAt);
-  } catch (e) {
-    // The batch itself is the problem (400/414, or a reply that does not
-    // line up with the request): retry one text at a time. Any other
-    // failure (429, 5xx, timeout, cancel) propagates as before so the
-    // caller fails over to the next backend.
-    if (e && e.batchSuspect) {
-      tlog(`google: batch failed (${String(e.message).slice(0, 120)}) — falling back to one request per text`);
-      return googlePerText(texts, src, dst, signal, deadlineAt);
-    }
-    throw e;
-  }
+  return googlePerText(texts, src, dst, signal, deadlineAt);
 }
 
-// Max URL length for a batched gtx GET. Many servers and proxies reject
-// URLs over ~8 KB (the long-standing 8 KB de-facto limit), and the gtx
-// endpoint is a GET — the combined URL must stay under it. 8000 leaves
-// room for the ~120-char base URL plus the per-text 6000-char guard on a
-// single text, so a one-text batch is never pushed to the fallback by
-// this check alone.
-const GOOGLE_BATCH_URL_MAX = 8000;
-
-// Build the batched gtx URL: one q= param per text, in order. For a
-// single text this is exactly the URL googleOne used to build, so the
-// one-text case behaves identically to before.
-function googleBatchUrl(texts, src, dst) {
-  let url = 'https://translate.googleapis.com/translate_a/single?client=gtx' +
-    `&sl=${encodeURIComponent(src)}&tl=${encodeURIComponent(dst)}&dt=t`;
-  for (const t of texts) url += `&q=${encodeURIComponent(t)}`;
-  return url;
+// Build the gtx URL for one text. This is exactly the URL googleOne used
+// to build before the 2.3.62 batch, so the one-text path behaves
+// identically to before.
+function googleUrl(t, src, dst) {
+  return 'https://translate.googleapis.com/translate_a/single?client=gtx' +
+    `&sl=${encodeURIComponent(src)}&tl=${encodeURIComponent(dst)}&dt=t&q=${encodeURIComponent(t)}`;
 }
 
 // One gtx segment as its translation text. A segment is normally
@@ -474,12 +441,10 @@ function gtxSegmentText(seg) {
   return (seg[0] || '');
 }
 
-// Parse a gtx reply for `count` texts: data[0] holds one segment per q,
-// in order. A single q may hold several sentence segments, so those join
-// into the one translation. Throws when the reply cannot be mapped onto
-// the request — a segment-count mismatch is marked batchSuspect so the
-// caller falls back to one request per text.
-function parseGtxTranslations(data, count) {
+// Parse a gtx reply for one text: data[0] holds the sentence segments,
+// joined into the one translation. Throws when the reply cannot be
+// mapped — never return '' for a non-empty source.
+function parseGtxTranslation(data) {
   // 2.2.12: a valid JSON non-array (e.g. an error object) used to yield
   // '' silently — an empty translation with no error and no failover.
   // Throw so the caller fails over to the next backend instead.
@@ -487,19 +452,11 @@ function parseGtxTranslations(data, count) {
   // An empty data[0] is an empty reply, not a translation — never return
   // '' for a non-empty source.
   if (!Array.isArray(data[0]) || data[0].length === 0) throw new Error('google translate: empty reply');
-  if (count === 1) return [data[0].map(gtxSegmentText).join('')];
-  if (data[0].length !== count) {
-    const err = new Error(`google translate: reply has ${data[0].length} segments for ${count} texts`);
-    err.batchSuspect = true;
-    throw err;
-  }
-  return data[0].map(gtxSegmentText);
+  return data[0].map(gtxSegmentText).join('');
 }
 
-// One gtx GET with the full retry machinery, shared by the batched
-// request and the single-text fallback: `parse` turns the JSON body into
-// the return value. One request = one retry unit — the whole batch
-// retries together, never per-text.
+// One gtx GET with the full retry machinery: `parse` turns the JSON body
+// into the return value. One request = one retry unit.
 // The gtx endpoint is unofficial and rate-limits aggressively (HTTP 500 /
 // 429 in bursts). One failure must not kill the whole page: retry with
 // exponential backoff + jitter before giving up.
@@ -618,21 +575,10 @@ async function googleRequest(url, parse, signal, deadlineAt) {
     }
     const mapped = mapHttpStatus(resp.status, 'google translate');
     // 400 / 414: the request itself is the problem, not the server.
-    // A batched request that fails this way may still succeed one text
-    // at a time — mark it so the caller falls back to per-text instead
-    // of failing over to the next backend at once.
-    const err = new Error(`${mapped || `google translate: HTTP ${resp.status} after retries`}${slice ? ' — ' + slice : ''}`);
-    if (resp.status === 400 || resp.status === 414) err.batchSuspect = true;
-    throw err;
+    throw new Error(`${mapped || `google translate: HTTP ${resp.status} after retries`}${slice ? ' — ' + slice : ''}`);
   }
   const data = await readJsonChecked(resp, 'google translate');
   return parse(data);
-}
-
-// All texts in one gtx GET as repeated q= params. The retry loop in
-// googleRequest treats the whole batch as one retry unit.
-async function googleBatch(texts, src, dst, signal, deadlineAt) {
-  return googleRequest(googleBatchUrl(texts, src, dst), data => parseGtxTranslations(data, texts.length), signal, deadlineAt);
 }
 
 async function googleOne(t, src, dst, signal, deadlineAt) {
@@ -641,17 +587,14 @@ async function googleOne(t, src, dst, signal, deadlineAt) {
   if (encodeURIComponent(t).length > 6000) {
     throw new Error('google translate: text too long for Google URL — failing over to a POST backend');
   }
-  // Same URL as before: googleBatchUrl with one text builds exactly the
-  // old single-q URL, and parseGtxTranslations with count 1 joins the
-  // sentence segments exactly as the old parse did. Unwrap the one
-  // translation — googleOne returns a string, not the batch's array.
-  return googleRequest(googleBatchUrl([t], src, dst), data => parseGtxTranslations(data, 1)[0], signal, deadlineAt);
+  // Same URL as before the 2.3.62 batch, and parseGtxTranslation joins
+  // the sentence segments exactly as the old parse did.
+  return googleRequest(googleUrl(t, src, dst), parseGtxTranslation, signal, deadlineAt);
 }
 
-// One request per text, in order — the fallback when the batch itself is
-// the problem. Sequential, not pooled: this path is rare (oversized
-// batch, or a batch-shaped 400/414), and each googleOne still carries its
-// own retry loop, so a pool would only add abort-sharing complexity.
+// One request per text, in order — the Google path (reverted 2026-11-26,
+// James; see googleFree). Sequential, not pooled: each googleOne carries
+// its own retry loop, so a pool would only add abort-sharing complexity.
 async function googlePerText(texts, src, dst, signal, deadlineAt) {
   const out = [];
   for (let i = 0; i < texts.length; i++) out.push(await googleOne(texts[i], src, dst, signal, deadlineAt));
