@@ -46,7 +46,9 @@ Comic Translate 4 Free translates manga and comic pages automatically as you bro
 - Automatic translation (Pro) — open a manga page on an allowed site and the translated version appears in place, no button click needed. Free for 50 images a day; unlimited with Pro.
 - Every picture on the page — auto-translate handles all pictures on a page (up to 50 per run), not just the main image.
 - Pre-translate the next page (Pro) — while you read the current page, the next page's picture is translated in the background, so it is ready the moment you open it (one picture only; on by default, turn it off in Settings). Free for 50 images a day; unlimited with Pro.
-- Engine failover — if the selected translation engine fails, the extension automatically tries another one. Free, always on.
+- Engine failover — if the selected translation engine fails, or returns text in the wrong language, the extension automatically tries another one. Free, always on.
+- OCR (testing) — a fast test OCR engine for Japanese pages. Turn it on in Settings, under Debug. Much faster on phones.
+- One tab at a time — while one tab is translating, the other tab's Translate is grayed out. Cancel reads "Cancel other tab".
 - Right-click any image — choose "Send to Comic Translate 4 Free" to translate a specific picture, even one smaller than the minimum size.
 - 114 target languages via Google Translator, Gemini, Azure Translator, or your own local LM Studio server.
 - Source language auto-detect — Japanese, English, Simplified/Traditional Chinese identified automatically from the OCR'd text.
@@ -114,6 +116,7 @@ Translations count toward the free 50 images a day while any Pro feature is on. 
 
 - $3/month or $30/year
 - Buy a license key, paste it into the License key field in the extension's Settings, and click Activate Pro. The key works on 2 browsers.
+- When you hit the 50-image free limit, a popup reminds you once a day. After you rate the extension, Get Pro becomes "Copy Discount Code: 5STARS" — tap it to copy the code and open checkout.
 
 ---
 
