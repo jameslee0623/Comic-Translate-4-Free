@@ -2697,7 +2697,7 @@ async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
   {
     const gate = await canAutoOrPre(settings);
     if (!gate.ok) { diagPush('pre-translate skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)'); return; }
-    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).catch(() => {});
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
   }
   try { if (await isIncognitoTab(sourceTabId)) return; } catch { /* proceed */ }
   cancelPretranslate();
@@ -4706,7 +4706,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
       } catch {}
       return;
     }
-    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).catch(() => {});
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
     diagPush('auto diag start: ' + url.slice(0, 120) + srcTag);
     // New page: drop whatever the tab was doing and start fresh immediately.
     // A stale run must never finish on top of the new page.

@@ -308,7 +308,14 @@ async function refreshPro() {
   }
   // A stale Pro validation re-checks in the background.
   if (active && proCheckDue(s)) {
-    validateProLicense(s).then(r => { if (r.ok) refreshPro(); }).catch(() => {});
+    validateProLicense(s).then(r => {
+      if (r && r.ok) { refreshPro(); return; } // covers valid:false — Pro ended, refresh at once
+      if (r && r.ok === false) {
+        // Unknown, not revoked: Dodo could not be reached or errored, or
+        // the check is backed off — Pro stays on, say so without alarming.
+        if (resultEl) { resultEl.className = 'check-result'; resultEl.textContent = 'Could not re-check Pro just now — Pro stays on'; }
+      }
+    }).catch(() => {});
   }
 }
 $('proActivate').onclick = async () => {
@@ -330,8 +337,15 @@ $('proActivate').onclick = async () => {
 $('proDeactivate').onclick = async () => {
   const resultEl = $('proResult');
   const s = await getSettings().catch(() => ({}));
-  await deactivateProLicense(s);
-  if (resultEl) { resultEl.className = 'check-result ok'; resultEl.textContent = 'Pro deactivated'; }
+  const r = await deactivateProLicense(s);
+  // deactivateProLicense always clears locally, but returns warned when
+  // Dodo could not confirm the seat was freed — show that warning instead
+  // of a plain success, so the user knows the 2-device limit may still
+  // count the seat.
+  if (resultEl) {
+    if (r && r.warned) { resultEl.className = 'check-result'; resultEl.textContent = r.warned; }
+    else { resultEl.className = 'check-result ok'; resultEl.textContent = 'Pro deactivated'; }
+  }
   refreshPro();
 };
 
