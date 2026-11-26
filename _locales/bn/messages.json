@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "ডিটেকশন ও রেন্ডারিং"
   },
+  "discount_code_5stars": {
+    "message": "ডিসকাউন্ট কোড: 5STARS"
+  },
   "do_not_show_again": {
     "message": "আর দেখাবেন না"
   },

@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "偵測與渲染"
   },
+  "discount_code_5stars": {
+    "message": "折扣碼：5STARS"
+  },
   "do_not_show_again": {
     "message": "不再顯示"
   },

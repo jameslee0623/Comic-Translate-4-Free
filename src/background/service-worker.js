@@ -2428,8 +2428,8 @@ async function maybeShowSupportPopupAtLimit(tabId) {
     // Resolves only if the tab's content script is listening. If the tab
     // is gone, shown stays false and the next limit hit tries again — the
     // user must actually see the popup once a day. The checkout URL rides along
-    // so the content script (a classic script, no imports) can turn the
-    // Rate button into a Redeem button without a second source of truth.
+    // so the content script (a classic script, no imports) can render the
+    // Get Pro button without a second source of truth.
     const resp = await withTimeout(chrome.tabs.sendMessage(tabId, { type: MSG.SHOW_SUPPORT, checkoutUrl: DODO_CHECKOUT_URL }), MSG_TIMEOUT_MS, 'show support');
     if (resp && resp.ok) shown = true;
   } catch { /* tab gone / no content script — retry at the next limit hit */ }
@@ -5129,7 +5129,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
         }), MSG_TIMEOUT_MS, 'free limit notice');
       } catch {}
       // First time the free limit is hit today, show the daily support popup
-      // (Rate it in store → Redeem free trial). Fire-and-forget: it must
+      // (Rate it in store → Discount Code: 5STARS). Fire-and-forget: it must
       // never block or slow this return, and it no-ops once the popup has
       // been shown today. The pre-translate limit skip does not trigger it — the
       // user never sees that one, so a popup there would surprise them.
@@ -5628,7 +5628,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Support popup buttons (content script). Only the popup's own links may
   // be opened this way — anything else is refused, so a compromised page
   // can never use this channel to open an arbitrary URL. The checkout URL
-  // is allowlisted so the Redeem button can open the Pro checkout.
+  // is allowlisted so the Get Pro button can open the Pro checkout.
   if (msg && msg.type === MSG.OPEN_LINK && typeof msg.url === 'string') {
     const ok = msg.url === STORE_URLS.chrome || msg.url === STORE_URLS.firefox ||
       msg.url === FEEDBACK_MAILTO || msg.url === DODO_CHECKOUT_URL;

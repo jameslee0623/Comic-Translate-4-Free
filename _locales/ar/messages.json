@@ -129,6 +129,9 @@
   "detection_rendering": {
     "message": "الكشف والعرض"
   },
+  "discount_code_5stars": {
+    "message": "رمز الخصم: 5STARS"
+  },
   "do_not_show_again": {
     "message": "عدم الإظهار مرة أخرى"
   },

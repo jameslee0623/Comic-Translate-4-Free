@@ -129,6 +129,9 @@
   "detection_rendering": {
     "message": "डिटेक्शन और रेंडरिंग"
   },
+  "discount_code_5stars": {
+    "message": "डिस्काउंट कोड: 5STARS"
+  },
   "do_not_show_again": {
     "message": "फिर से न दिखाएँ"
   },

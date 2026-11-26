@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "检测与渲染"
   },
+  "discount_code_5stars": {
+    "message": "折扣码：5STARS"
+  },
   "do_not_show_again": {
     "message": "不再显示"
   },

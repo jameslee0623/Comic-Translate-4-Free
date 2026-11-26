@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Phát hiện & hiển thị"
   },
+  "discount_code_5stars": {
+    "message": "Mã giảm giá: 5STARS"
+  },
   "do_not_show_again": {
     "message": "Không hiển thị nữa"
   },

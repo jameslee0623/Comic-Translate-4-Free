@@ -1066,12 +1066,12 @@
   // ------------------------------------------------------------ one-time support popup
   // Shown once, the first time the user hits the 50/day free limit
   // (the SW sends 'ct/show-support'). Centered over a dimmed
-  // page, X top right, two buttons. Only X closes it (2.2.20): the
+  // page, X top right, three buttons. Only X closes it (2.2.20): the
   // buttons open their link and leave the modal open, backdrop click
   // and Escape do nothing. It never shows again: the SW marks it shown
   // only when the content script confirms the modal actually rendered.
-  // The Rate button turns into "Redeem free trial" after it is clicked
-  // (and renders as Redeem from the start if the user rated before).
+  // The Rate button turns into "Discount Code: 5STARS" after it is clicked
+  // (and renders as the discount code from the start if the user rated before).
   let supportModal = null;
   function supportStoreUrl() {
     // Same two URLs as STORE_URLS in shared/contracts.js (classic script,
@@ -1096,7 +1096,7 @@
     supportModal = null;
   }
   // "Rated" flag for the support popup: once the user clicks "Rate it in
-  // store", the button becomes "Redeem free trial" — in this render and in
+  // store", the button becomes "Discount Code: 5STARS" — in this render and in
   // any later render of the modal. Stored in chrome.storage.local (the
   // content script's own key; the SW never needs it).
   function supportRated() {
@@ -1115,42 +1115,25 @@
       chrome.storage.local.set({ ctSupportRated: true }, () => {});
     } catch { /* best-effort — the button still transforms in this render */ }
   }
-  // "Redeemed" flag for the support popup: once the user clicks "Redeem free
-  // trial", the button is hidden — in this render and in any later render of
-  // the modal. The popup still shows daily at the limit, but without the
-  // Redeem button once it has been clicked. Stored in chrome.storage.local
-  // (the content script's own key; the SW never needs it).
-  function supportRedeemed() {
-    return new Promise((resolve) => {
-      try {
-        if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return resolve(false);
-        chrome.storage.local.get('ctSupportRedeemed', (res) => {
-          try { resolve(!!(res && res.ctSupportRedeemed)); } catch { resolve(false); }
-        });
-      } catch { resolve(false); }
-    });
-  }
-  function markSupportRedeemed() {
-    try {
-      if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
-      chrome.storage.local.set({ ctSupportRedeemed: true }, () => {});
-    } catch { /* best-effort — the button is hidden in this render anyway */ }
-  }
+  // 2.3.83: the "Redeem free trial" state is gone — the Rate button now
+  // shows "Discount Code: 5STARS" after the click and is never hidden.
+  // The old supportRedeemed / markSupportRedeemed helpers and the
+  // ctSupportRedeemed flag were removed with it; the free trial is
+  // reached through the "Get Pro" button instead.
   // "Do not show again" flag for the support popup: once the user clicks
   // "Do not show again", the popup never shows again — the SW's daily gate
   // checks this flag first. Stored under its own key
   // (ctSupportPopupDismissed), separate from the ctSupportPopup record, so
   // the SW's whole-record shownDate write can never clobber it (and this
-  // write can never clobber shownDate). Mirrors markSupportRated /
-  // markSupportRedeemed. The content script never needs to read it — the
-  // SW gates on it before sending.
+  // write can never clobber shownDate). Mirrors markSupportRated. The
+  // content script never needs to read it — the SW gates on it before sending.
   function markSupportPopupDismissed() {
     try {
       if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.local) return;
       chrome.storage.local.set({ ctSupportPopupDismissed: true }, () => {});
     } catch { /* best-effort — the modal still closes in this render */ }
   }
-  function showSupportModal(rated, checkoutUrl, redeemed) {
+  function showSupportModal(rated, checkoutUrl) {
     if (supportModal) return false; // already showing
     const wrap = document.createElement('div');
     wrap.id = 'ct-support-modal';
@@ -1185,33 +1168,24 @@
       };
       return b;
     };
-    // Rate button: first click opens the store and turns this button into
-    // "Redeem free trial" (which opens the Pro checkout). If the user
-    // already rated (stored flag), it renders as Redeem from the start.
-    // Without a checkout URL it stays a plain Rate button — a missing URL
-    // must never produce a dead Redeem button. Once the user clicks Redeem,
-    // the button is hidden (stored flag) and never renders again — the
-    // popup still shows daily at the limit, just without the Redeem button.
-    // If already redeemed, no Rate/Redeem button renders at all.
-    let rateIsRedeem = !!rated;
+    // Rate button: every click opens the store. First click also turns this
+    // button into "Discount Code: 5STARS" (stored flag), so a later render
+    // shows the code from the start. The button is never hidden and never
+    // links to the checkout — the free trial is reached through the
+    // "Get Pro" button instead. It needs no checkout URL at all.
+    let rateIsDiscount = !!rated;
     const hasCheckout = typeof checkoutUrl === 'string' && !!checkoutUrl;
     const rateBtn = document.createElement('button');
     const setRateLabel = () => {
-      rateBtn.textContent = supportMsg(rateIsRedeem ? 'redeem_free_trial' : 'rate_store', rateIsRedeem ? '🎁 Redeem free trial' : '⭐ 5 stars at store');
+      rateBtn.textContent = supportMsg(rateIsDiscount ? 'discount_code_5stars' : 'rate_store', rateIsDiscount ? 'Discount Code: 5STARS' : '⭐ 5 stars at store');
     };
     rateBtn.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
     setRateLabel();
     rateBtn.onclick = () => {
-      if (rateIsRedeem) {
-        try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: checkoutUrl }); } catch { /* link open failed — modal stays */ }
-        try { markSupportRedeemed(); } catch {}
-        try { rateBtn.remove(); } catch { /* already gone */ }
-        return;
-      }
       try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: supportStoreUrl() }); } catch { /* link open failed — modal stays */ }
-      if (hasCheckout) {
+      if (!rateIsDiscount) {
         try { markSupportRated(); } catch {}
-        rateIsRedeem = true;
+        rateIsDiscount = true;
         setRateLabel();
       }
     };
@@ -1219,10 +1193,10 @@
     // the popup's main job is reminding the user the free auto-translate limit
     // is reached. Only rendered when a checkout URL is present; a missing URL
     // must never produce a dead button. It does not close the modal and does
-    // not touch the rated / redeemed flags. Reuses the pro_get_short locale
+    // not touch the rated flag. Reuses the pro_get_short locale
     // key ("Get Pro"), the same label the popup Pro row uses.
     if (hasCheckout) btns.appendChild(mkBtn('pro_get_short', 'Get Pro', checkoutUrl));
-    if (!redeemed) btns.appendChild(rateBtn);
+    btns.appendChild(rateBtn);
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:jameslee0623@muse.ai?subject=Comic%20Translate%204%20Free%20feedback'));
     // "Do not show again": closes the popup and stops it permanently — the
     // SW's daily gate checks the dismiss flag first and never sends again.
@@ -1884,14 +1858,13 @@
       // — the old code sent ok:true even when showSupportModal threw, so
       // the SW marked it shown on delivery and a render failure lost the
       // popup for that day. The render is async (it reads the stored "rated"
-      // and "redeemed" flags first), so return true to keep the channel open.
+      // flag first), so return true to keep the channel open.
       (async () => {
         let shown = false;
         try {
           const rated = await supportRated();
-          const redeemed = await supportRedeemed();
           const checkoutUrl = typeof msg.checkoutUrl === 'string' ? msg.checkoutUrl : '';
-          shown = showSupportModal(rated, checkoutUrl, redeemed) === true;
+          shown = showSupportModal(rated, checkoutUrl) === true;
         } catch { shown = false; }
         try { sendResponse({ ok: shown }); } catch {}
       })();

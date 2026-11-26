@@ -100,6 +100,9 @@
   "detection_rendering": {
     "message": "Detecção e renderização"
   },
+  "discount_code_5stars": {
+    "message": "Código de desconto: 5STARS"
+  },
   "do_not_show_again": {
     "message": "Não mostrar novamente"
   },
