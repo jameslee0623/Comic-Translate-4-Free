@@ -147,10 +147,12 @@
       // and clamped inside the viewport.
       const bw = 210;
       const x = Math.max(8, Math.min(window.innerWidth - bw - 8, (e.clientX || 0) - bw / 2));
-      const y = Math.max(8, Math.min(window.innerHeight - 56, (e.clientY || 0) - 76));
+      const y = Math.max(8, Math.min(window.innerHeight - 52, (e.clientY || 0) - 76));
+      // 44px tall (phone touch target) and 20% transparent.
       btn.style.cssText = 'position:fixed;left:' + x + 'px;top:' + y + 'px;z-index:2147483647;' +
-        'display:flex;align-items:center;gap:8px;background:#1c1c22;color:#fff;font:700 15px/1 sans-serif;' +
-        'border:2px solid #4a90d9;border-radius:28px;padding:8px 14px;' +
+        'display:flex;align-items:center;gap:8px;box-sizing:border-box;height:44px;' +
+        'background:#1c1c22;color:#fff;font:700 15px/1 sans-serif;' +
+        'border:2px solid #4a90d9;border-radius:28px;padding:8px 14px;opacity:0.8;' +
         'box-shadow:0 4px 16px rgba(0,0,0,.6);cursor:pointer;';
       btn.addEventListener('click', ev => {
         try { ev.stopPropagation(); ev.preventDefault(); } catch {}
