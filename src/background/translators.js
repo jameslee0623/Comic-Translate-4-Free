@@ -34,6 +34,30 @@ function sleepAbortable(ms, signal) {
   });
 }
 
+// Retry-After: when a backend answers 429 it tells us how long to wait,
+// as seconds ("5") or an HTTP date. Read that number instead of guessing
+// a backoff — it is the server's own signal, so it is the fastest correct
+// wait. Returns milliseconds, or null when the header is absent or
+// unparseable (then the caller falls back to its fixed delay).
+// RETRY_AFTER_MAX_MS: the longest Retry-After worth waiting out. It is the
+// old max blind delay (10000ms), not a new magic number. A server that
+// says "come back in 60s" is down for longer than our translate budget,
+// so the caller breaks out of the retry loop at once and fails over to
+// Google instead of burning the budget waiting.
+const RETRY_AFTER_MAX_MS = 10000;
+function retryAfterMs(resp) {
+  if (!resp || !resp.headers || typeof resp.headers.get !== 'function') return null;
+  const v = resp.headers.get('Retry-After');
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const secs = Number(s);
+  if (Number.isFinite(secs) && secs >= 0) return secs * 1000;
+  const t = Date.parse(s);
+  if (Number.isFinite(t)) return Math.max(0, t - Date.now());
+  return null;
+}
+
 // Fetch with timeout and retry for LM Studio (the flakiest backend).
 // NOTE: the old "10-min timeout per attempt; 2 retries with 2s/6s backoff"
 // line was stale and is corrected here — the code caps each attempt at 60s
@@ -234,10 +258,26 @@ async function googleOne(t, src, dst, signal) {
     if (resp && resp.ok) break;
     const retryable = !resp || resp.status === 429 || resp.status >= 500;
     if (!retryable || attempt === delays.length) break;
-    // Jitter (0–800ms, random) spreads simultaneous retries so lanes
-    // don't re-hit the endpoint in lockstep. 800ms is an arbitrary
-    // spread, not a measured value — verify.
-    const wait = delays[attempt] + Math.random() * 800;
+    // Retry-After first: on a 429 the server tells us how long to wait.
+    // Use its number (no jitter — it is the server's own instruction).
+    // Longer than RETRY_AFTER_MAX_MS means the backend is down for a
+    // while, so break out at once and let the caller fail over to Google
+    // instead of burning the budget waiting.
+    let wait;
+    if (resp && resp.status === 429) {
+      const ra = retryAfterMs(resp);
+      if (ra != null && ra > RETRY_AFTER_MAX_MS) {
+        typeof tlog === 'function' && tlog(`translate retry google: Retry-After ${Math.round(ra)}ms too long, failing over instead of waiting`);
+        break;
+      }
+      if (ra != null) wait = ra;
+    }
+    if (wait == null) {
+      // Jitter (0–800ms, random) spreads simultaneous retries so lanes
+      // don't re-hit the endpoint in lockstep. 800ms is an arbitrary
+      // spread, not a measured value — verify.
+      wait = delays[attempt] + Math.random() * 800;
+    }
     typeof tlog === 'function' && tlog(`translate retry google attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
     await sleepAbortable(wait, signal);
     resp = null;
@@ -357,8 +397,21 @@ async function azure(texts, settings, signal) {
       if (resp && resp.ok) break;
       const retryable = !resp || resp.status === 429 || resp.status >= 500;
       if (!retryable || attempt === delays.length) break;
-      typeof tlog === 'function' && tlog(`translate retry azure attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(delays[attempt])}ms`);
-      await sleepAbortable(delays[attempt] + Math.random() * 800, signal);
+      // Retry-After first (see googleOne): on a 429 use the server's own
+      // wait; longer than RETRY_AFTER_MAX_MS means break out and fail over
+      // to Google instead of burning the budget waiting.
+      let wait;
+      if (resp && resp.status === 429) {
+        const ra = retryAfterMs(resp);
+        if (ra != null && ra > RETRY_AFTER_MAX_MS) {
+          typeof tlog === 'function' && tlog(`translate retry azure: Retry-After ${Math.round(ra)}ms too long, failing over instead of waiting`);
+          break;
+        }
+        if (ra != null) wait = ra;
+      }
+      if (wait == null) wait = delays[attempt] + Math.random() * 800;
+      typeof tlog === 'function' && tlog(`translate retry azure attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
+      await sleepAbortable(wait, signal);
       resp = null;
     }
     if (!resp) throw new Error('azure translator: network error — ' + String(lastErr).slice(0, 120));
@@ -503,8 +556,21 @@ async function gemini(texts, settings, signal) {
     if (resp && resp.ok) break;
     const retryable = !resp || resp.status === 429 || resp.status >= 500;
     if (!retryable || attempt === delays.length) break;
-    typeof tlog === 'function' && tlog(`translate retry gemini attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(delays[attempt])}ms`);
-    await sleepAbortable(delays[attempt] + Math.random() * 800, signal);
+    // Retry-After first (see googleOne): on a 429 use the server's own
+    // wait; longer than RETRY_AFTER_MAX_MS means break out and fail over
+    // to Google instead of burning the budget waiting.
+    let wait;
+    if (resp && resp.status === 429) {
+      const ra = retryAfterMs(resp);
+      if (ra != null && ra > RETRY_AFTER_MAX_MS) {
+        typeof tlog === 'function' && tlog(`translate retry gemini: Retry-After ${Math.round(ra)}ms too long, failing over instead of waiting`);
+        break;
+      }
+      if (ra != null) wait = ra;
+    }
+    if (wait == null) wait = delays[attempt] + Math.random() * 800;
+    typeof tlog === 'function' && tlog(`translate retry gemini attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
+    await sleepAbortable(wait, signal);
     resp = null;
   }
   if (!resp) throw new Error('gemini: network error — ' + String(lastErr).slice(0, 120));
@@ -1009,16 +1075,14 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   if (!texts.length) return translated;
   const backend = settings.translationBackend || 'google';
   const translateStart = performance.now();
-  // Reserve for Azure: if Azure is configured and still to come, a
-  // non-Azure attempt must leave it enough time for one attempt plus
-  // one retry — a batch fetch is ~2s and Azure's first retry delay is
-  // 1.5s, so 8s covers attempt + delay + attempt with lane overhead.
-  // Without this, a slow LM Studio — or a Google retry cycle, which has
-  // no per-attempt cap — could burn the whole budget and Azure would
-  // never get its turn. Applies to the primary call and to failover.
-  // NOTE: 8s is derived arithmetic from the ~2s fetch + 1.5s first-delay
-  // estimates above, not a measured p95 — if Azure's real attempt time
-  // is longer, the reserve under-covers; verify against real timings.
+  // Azure reserve (RETAINED but NOT APPLIED since 2026-11-26: failover
+  // goes to Google only, so Azure never comes after the primary and no
+  // reserve is held for it — azureStillToCome below is false). The old
+  // rule: if Azure was configured and still to come, a non-Azure attempt
+  // had to leave it enough time for one attempt plus one retry (a batch
+  // fetch is ~2s and Azure's first retry delay is 1.5s, so 8s covers
+  // attempt + delay + attempt with lane overhead). 8s is derived
+  // arithmetic, not a measured p95.
   const AZURE_RESERVE_MS = 8000;
   const runBackend = async (b, attemptDeadlineMs, sig = signal) => {
     if (b === 'azure') return await azure(texts, settings, sig);
@@ -1034,12 +1098,15 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
   // 2.2.12: cap the PRIMARY call too. The old code ran the primary with
   // no deadline — a slow Google primary could eat the whole 30s budget,
   // so `remaining` was <= 0 at the first loop-top check and failover never
-  // ran. When Azure is configured and failover is on, the primary leaves
-  // the 8s Azure reserve (same rule as failover attempts); otherwise it
-  // gets the full deadline. Google gets a per-attempt abort timer (it has
-  // no deadline parameter); LM Studio takes the cap as its deadline.
+  // ran. The primary used to leave an 8s Azure reserve when Azure was
+  // configured and still to come; since 2026-11-26 failover goes to
+  // Google only, so the primary always gets the full deadline. Google
+  // gets a per-attempt abort timer (it has no deadline parameter); LM
+  // Studio takes the cap as its deadline.
   const azureConfigured = !!(settings.azureKey || '').trim();
-  const azureStillToCome = settings.backendFailover && azureConfigured && backend !== 'azure';
+  // James's rule (2026-11-26): failover goes to Google only, so Azure
+  // never comes after the primary — no reserve is held for it.
+  const azureStillToCome = false;
   const primaryCapMs = azureStillToCome ? Math.max(0, deadlineMs - AZURE_RESERVE_MS) : deadlineMs;
   let primarySig = signal;
   let primaryTimer = null;
@@ -1080,15 +1147,13 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
     // Opt-in failover: try the next backend. Never silently fail over to
     // paid Azure without the opt-in — the setting gates it.
     if (settings.backendFailover) {
-      // Failover order: prefer free/local backends first, then Azure if configured.
-      // Gemini sits after Google: it is free (500/day) and reads manga sound
-      // effects better than Google, so it is the better next try.
+      // James's rule (2026-11-26): every backend fails over to Google
+      // only, not to each other. Google is the free fallback for all of
+      // them. Chaining through LM Studio / Azure burned the budget on
+      // backends that were never the right next try (no LM Studio on a
+      // phone, Azure is being retired).
       const candidates = [];
-      const geminiConfigured = !!(settings.geminiApiKey || '').trim();
       if (backend !== 'google') candidates.push('google');
-      if (geminiConfigured && backend !== 'gemini') candidates.push('gemini');
-      if (backend !== 'lmstudio') candidates.push('lmstudio');
-      if (azureConfigured && backend !== 'azure') candidates.push('azure');
       // If the primary died by timeout-abort, the caller's signal is dead:
       // failover attempts on it would die instantly. Rescue on a fresh
       // signal with its own 20s budget, so stall (30s) + rescue fits
