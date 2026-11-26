@@ -92,6 +92,18 @@
   // replaces the browser menu: preventDefault() stops it from opening
   // under the pill. The icon disappears on tap, on a tap elsewhere, on
   // scroll, or after 8s.
+  // Long-press callout (2.4.8): on Vivaldi Android, preventDefault() on
+  // contextmenu alone does not stop the native menu — it still opens and
+  // covers the pill. -webkit-touch-callout: none tells the browser not
+  // to show the callout at all. Scoped to pictures on allowed sites
+  // (this script only runs there), so the pill is what a long-press
+  // shows. Best-effort: if the style cannot be added, preventDefault
+  // below is still the fallback.
+  try {
+    const lpStyle = document.createElement('style');
+    lpStyle.textContent = 'img{-webkit-touch-callout:none !important}';
+    (document.head || document.documentElement).appendChild(lpStyle);
+  } catch {}
   let lpIcon = null, lpIconTimer = null, lpLastTouch = null;
   function hideLpIcon() {
     try {
