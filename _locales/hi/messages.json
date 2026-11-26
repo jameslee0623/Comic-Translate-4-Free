@@ -45,12 +45,12 @@
     "message": "अनुवाद इंजन"
   },
   "backend_failover": {
-    "message": "दूसरा इंजन आज़माएँ",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "बिना अनुवाद वाला टेक्स्ट हटाएँ",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "रुकने के बजाय अपने-आप काम कर रहे इंजन पर चला जाता है।",
-    "description": "Hint under the failover checkbox"
+    "message": "चालू होने पर, Gemini द्वारा बिना अनुवाद लौटाया गया टेक्स्ट हटा दिया जाता है और Google से पुनः प्रयास किया जाता है। बंद होने पर, उसे रखा जाता है और OCR लॉग किया जाता है।",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google के लिए न तो कुंजी चाहिए, न ही कोई सेटअप।",

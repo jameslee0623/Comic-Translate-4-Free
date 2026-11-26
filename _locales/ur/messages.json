@@ -45,12 +45,12 @@
     "message": "ترجمے کا انجن"
   },
   "backend_failover": {
-    "message": "دوسرا انجن آزمائیں",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "ترجمہ نہ شدہ متن چھوڑ دیں",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "رکنے کے بجائے خودکار طور پر کام کرنے والے انجن پر چلا جاتا ہے۔",
-    "description": "Hint under the failover checkbox"
+    "message": "آن ہونے پر، Gemini کی طرف سے بغیر ترجمہ واپس کیا گیا متن چھوڑ دیا جاتا ہے اور Google سے دوبارہ کوشش کی جاتی ہے۔ بند ہونے پر، اسے رکھا جاتا ہے اور OCR لاگ کیا جاتا ہے۔",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google کو نہ کلید چاہیے، نہ سیٹ اپ۔",

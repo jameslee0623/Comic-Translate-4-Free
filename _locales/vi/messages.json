@@ -33,12 +33,12 @@
     "message": "Công cụ dịch"
   },
   "backend_failover": {
-    "message": "Thử công cụ khác",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Bỏ văn bản chưa dịch",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Tự động chuyển sang công cụ đang hoạt động thay vì dừng lại.",
-    "description": "Hint under the failover checkbox"
+    "message": "Khi bật, văn bản Gemini trả về mà chưa dịch sẽ bị bỏ và thử lại bằng Google. Khi tắt, văn bản được giữ lại và OCR được ghi vào nhật ký.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google không cần khóa và không cần cài đặt.",

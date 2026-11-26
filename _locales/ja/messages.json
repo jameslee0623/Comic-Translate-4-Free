@@ -33,12 +33,12 @@
     "message": "翻訳エンジン"
   },
   "backend_failover": {
-    "message": "別のエンジンを試す",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "未翻訳の文を破棄",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "停止する代わりに、動作するエンジンに自動で切り替えます。",
-    "description": "Hint under the failover checkbox"
+    "message": "オンの場合、Geminiが未翻訳で返した文は破棄され、Googleで再試行されます。オフの場合、そのまま表示され、OCR結果がログに記録されます。",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Googleはキーも設定も不要です。",

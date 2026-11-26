@@ -45,12 +45,12 @@
     "message": "محرك الترجمة"
   },
   "backend_failover": {
-    "message": "جرّب محركًا آخر",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "تجاهل النص غير المترجم",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "يبدّل تلقائيًا إلى محرك يعمل بدلًا من التوقف.",
-    "description": "Hint under the failover checkbox"
+    "message": "عند التفعيل، يتم تجاهل النص الذي يعيده Gemini دون ترجمة وإعادة المحاولة مع Google. وعند إيقافه، يتم الاحتفاظ به وتسجيل نص OCR.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google لا يحتاج إلى مفتاح ولا إلى إعداد.",

@@ -190,8 +190,8 @@
   <h2 data-i18n="debug" id="debugSection">Debug</h2>
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>
   <p class="hint" data-i18n="debug_hint">Shows every pipeline stage's output in a side panel so each stage can be checked.</p>
-  <div class="row"><span class="rowtitle"><label for="backendFailover" data-i18n="backend_failover">Try another engine</label></span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
-  <p class="hint" data-i18n="backend_failover_hint">Automatically switches to a working engine instead of stopping.</p>
+  <div class="row"><span class="rowtitle"><label for="backendFailover" data-i18n="backend_failover">Drop untranslated text</label></span><label class="switch"><input type="checkbox" id="backendFailover"><span class="slider"></span></label></div>
+  <p class="hint" data-i18n="backend_failover_hint">When on, text Gemini returns untranslated is dropped and retried with Google. When off, it is kept and the OCR is logged.</p>
   <div class="row"><button id="resetFreeUsage" style="font-size:13px" data-i18n="reset_free_usage">Reset free usage today</button></div>
   <div class="row" style="gap:8px"><button id="copyBenchTable" style="font-size:13px" data-i18n="bench_copy_table">Copy benchmark table</button><button id="clearBenchLog" style="font-size:13px" data-i18n="bench_clear">Clear</button><span id="benchCount" style="font-size:12px;color:#8a8a8f"></span></div>
 

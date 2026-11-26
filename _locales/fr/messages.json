@@ -33,12 +33,12 @@
     "message": "Moteur de traduction"
   },
   "backend_failover": {
-    "message": "Essayer un autre moteur",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Ignorer le texte non traduit",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Bascule automatiquement vers un moteur qui fonctionne au lieu de s’arrêter.",
-    "description": "Hint under the failover checkbox"
+    "message": "Activé : le texte que Gemini renvoie sans traduction est ignoré et réessayé avec Google. Désactivé : il est conservé et l'OCR est journalisée.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google n'a besoin ni de clé ni de configuration.",

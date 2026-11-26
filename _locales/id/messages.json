@@ -33,12 +33,12 @@
     "message": "Mesin penerjemah"
   },
   "backend_failover": {
-    "message": "Coba mesin lain",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Buang teks yang tidak diterjemahkan",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Otomatis beralih ke mesin yang berfungsi, bukan berhenti.",
-    "description": "Hint under the failover checkbox"
+    "message": "Jika aktif, teks yang dikembalikan Gemini tanpa terjemahan akan dibuang dan dicoba lagi dengan Google. Jika nonaktif, teks dipertahankan dan OCR dicatat.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google tidak butuh kunci maupun pengaturan.",

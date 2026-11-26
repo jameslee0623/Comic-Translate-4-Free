@@ -33,12 +33,12 @@
     "message": "翻译引擎"
   },
   "backend_failover": {
-    "message": "尝试其他引擎",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "舍弃未翻译的文字",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "自动切换到可用的引擎，而不是停止。",
-    "description": "Hint under the failover checkbox"
+    "message": "开启时，Gemini 未翻译就返回的文字会被舍弃，并改用 Google 重试。关闭时会保留原文，并将 OCR 记录到日志。",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google 不需要密钥，也不需要设置。",

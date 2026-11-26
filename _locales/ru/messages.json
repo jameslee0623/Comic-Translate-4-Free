@@ -45,12 +45,12 @@
     "message": "Движок перевода"
   },
   "backend_failover": {
-    "message": "Попробовать другой движок",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Отбрасывать непереведённый текст",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Автоматически переключается на работающий движок вместо остановки.",
-    "description": "Hint under the failover checkbox"
+    "message": "Когда включено, текст, который Gemini вернул без перевода, отбрасывается и повторяется через Google. Когда выключено, он сохраняется, а OCR записывается в журнал.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google не нужен ни ключ, ни настройка.",

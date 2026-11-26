@@ -33,12 +33,12 @@
     "message": "অনুবাদ ইঞ্জিন"
   },
   "backend_failover": {
-    "message": "অন্য ইঞ্জিন চেষ্টা করুন",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "অনুবাদ না হওয়া লেখা বাদ দিন",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "থেমে যাওয়ার বদলে নিজে থেকেই চালু থাকা ইঞ্জিনে চলে যায়।",
-    "description": "Hint under the failover checkbox"
+    "message": "চালু থাকলে, Gemini অনুবাদ না করে ফেরত দেওয়া লেখা বাদ দিয়ে Google দিয়ে আবার চেষ্টা করা হয়। বন্ধ থাকলে, লেখাটি রাখা হয় এবং OCR লগ করা হয়।",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google-এর জন্য কোনো কী বা সেটআপের প্রয়োজন নেই।",

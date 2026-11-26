@@ -33,12 +33,12 @@
     "message": "Translating engine"
   },
   "backend_failover": {
-    "message": "Try another engine",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Drop untranslated text",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Automatically switches to a working engine instead of stopping.",
-    "description": "Hint under the failover checkbox"
+    "message": "When on, text Gemini returns untranslated is dropped and retried with Google. When off, it is kept and the OCR is logged.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google needs no key and no setup.",

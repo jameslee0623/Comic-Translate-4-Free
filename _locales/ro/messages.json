@@ -33,12 +33,12 @@
     "message": "Motor de traducere"
   },
   "backend_failover": {
-    "message": "Încearcă alt motor",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "Renunță la textul netradus",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "Comută automat la un motor care funcționează, în loc să se oprească.",
-    "description": "Hint under the failover checkbox"
+    "message": "Când este activat, textul returnat netradus de Gemini este eliminat și se reîncearcă cu Google. Când este dezactivat, este păstrat și OCR-ul este înregistrat.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google nu are nevoie de cheie și nici de configurare.",

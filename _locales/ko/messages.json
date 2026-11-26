@@ -33,12 +33,12 @@
     "message": "번역 엔진"
   },
   "backend_failover": {
-    "message": "다른 엔진 시도",
-    "description": "Checkbox: try another translation backend if the selected one fails"
+    "message": "번역되지 않은 텍스트 버리기",
+    "description": "Checkbox: drop text the engine returns untranslated (guard + retry, then Google failover)"
   },
   "backend_failover_hint": {
-    "message": "멈추는 대신 작동하는 엔진으로 자동 전환합니다.",
-    "description": "Hint under the failover checkbox"
+    "message": "켜져 있으면 Gemini가 번역 없이 반환한 텍스트를 버리고 Google로 다시 시도합니다. 꺼져 있으면 그대로 두고 OCR을 로그에 기록합니다.",
+    "description": "Hint under the drop-untranslated checkbox"
   },
   "backend_google_note": {
     "message": "Google은 키도 설정도 필요 없습니다.",
