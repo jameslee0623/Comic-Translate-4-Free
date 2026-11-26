@@ -35,10 +35,16 @@ self.onmessage = async (e) => {
     self.postMessage({ ok: true, translated, backendUsed: blocks[0]?.backendUsed });
   } catch (err) {
     clearTimeout(deadlineId);
-    // Aborted on deadline: say so plainly instead of surfacing 'cancelled'.
-    const msg = ctrl.signal.aborted
-      ? `translate timed out after ${DEADLINE_MS / 1000}s — the translation backend may be stuck`
-      : (err.message || String(err));
+    // Prefer the real error: translateBlocks already produces a specific
+    // failover error (primary + fallback causes). Use the generic
+    // timeout wording only when the error really is a bare abort — a
+    // message of exactly 'cancelled' (or no message at all) with the
+    // deadline signal fired. Otherwise the specific cause is lost.
+    const msg = (err && err.message && err.message !== 'cancelled')
+      ? err.message
+      : ctrl.signal.aborted
+        ? `translate timed out after ${DEADLINE_MS / 1000}s — the translation backend may be stuck`
+        : (err.message || String(err));
     self.postMessage({ ok: false, error: msg });
   }
 };
