@@ -1676,6 +1676,7 @@ if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
 // normally closed, so those failures are expected, not a signal.
 let diagProgressFails = 0;
 let diagProgressLastOk = 0;
+let lastProgressFailRunId = null;
 function setProgress(runId, stage, progress, extra = {}) {
   currentRun = { runId, stage, progress };
   // FIX1: persist stage changes only (not every progress tick, and never
@@ -1694,7 +1695,15 @@ function setProgress(runId, stage, progress, extra = {}) {
       () => { diagProgressLastOk = Date.now(); },
       () => {
         diagProgressFails++;
-        diagPush('progress send failed #' + diagProgressFails + ' run ' + runId + ' stage ' + stage + ' progress ' + progress + ' tab ' + tabId + ' lastOk ' + (diagProgressLastOk ? new Date(diagProgressLastOk).toISOString() : 'never'));
+        // One line per run: a dead content script fails EVERY progress
+        // tick (~7 stages x N pictures of the same line). The first
+        // failure is the actionable fact ("progress sends are failing
+        // for this run"); the total is in the run-end line. Log only
+        // the first failure of each run.
+        if (lastProgressFailRunId !== runId) {
+          lastProgressFailRunId = runId;
+          diagPush('progress send failed #' + diagProgressFails + ' run ' + runId + ' stage ' + stage + ' progress ' + progress + ' tab ' + tabId + ' lastOk ' + (diagProgressLastOk ? new Date(diagProgressLastOk).toISOString() : 'never'));
+        }
       }
     );
   }

@@ -208,6 +208,7 @@ async function load() {
   // no Refresh button any more — switching to the tab is the refresh.
   window.addEventListener('focus', refreshDiagLog);
   $('copyDiagLog').onclick = copyDiagLog;
+  $('copyDiagLogFull').onclick = copyDiagLogFull;
   // Reset free usage (Debug only): clears today's count so testing can
   // continue past the 50/day limit while Dodo screening is pending.
   // refreshPro() re-reads the count and unlocks the Pro checkboxes.
@@ -675,7 +676,9 @@ async function onClearCacheClick() {
 // and the active-run records (which hold the fine stage each run died
 // at) directly from chrome.storage.local, so the log is here even when
 // the background is dead. No sendMessage anywhere in this path.
-function formatDiagLog(trace, runs) {
+// totalLines: the full trace length, when trace is a slice (the latest-100
+// copy). Omitted when trace is the whole log, as the display path calls it.
+function formatDiagLog(trace, runs, totalLines) {
   const lines = [];
   const runIds = runs ? Object.keys(runs) : [];
   if (runIds.length) {
@@ -690,8 +693,22 @@ function formatDiagLog(trace, runs) {
     lines.push('--- no runs in storage ---');
   }
   const traceLines = Array.isArray(trace) ? trace : [];
-  lines.push('--- diagnostic log (' + traceLines.length + ' lines) ---');
-  for (const l of traceLines) lines.push(String(l));
+  // Human-friendly (James, 2026-11-26): collapse consecutive identical
+  // lines — a repeated line is shown once with a count. Display/copy
+  // time only; the stored trace keeps every line, so nothing is lost.
+  const collapsed = [];
+  for (const l of traceLines) {
+    const s = String(l);
+    const last = collapsed[collapsed.length - 1];
+    if (last && last.text === s) last.count++;
+    else collapsed.push({ text: s, count: 1 });
+  }
+  let header = '--- diagnostic log (' + traceLines.length + ' lines';
+  if (totalLines != null && totalLines > traceLines.length) header += ', latest ' + traceLines.length + ' of ' + totalLines;
+  if (collapsed.length !== traceLines.length) header += ', ' + collapsed.length + ' shown (repeats collapsed)';
+  header += ') ---';
+  lines.push(header);
+  for (const c of collapsed) lines.push(c.count > 1 ? c.text + ' (x' + c.count + ')' : c.text);
   return lines.join('\n');
 }
 async function refreshDiagLog() {
@@ -706,10 +723,9 @@ async function refreshDiagLog() {
   }
   box.textContent = text;
 }
-async function copyDiagLog() {
-  const btn = $('copyDiagLog');
-  const text = ($('diagLog') && $('diagLog').textContent) || '';
-  const done = (t) => { if (btn) { btn.textContent = t; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); } };
+// Shared clipboard write + button feedback for both diag-log copy buttons.
+async function writeDiagLogToClipboard(text, btn, idleLabel) {
+  const done = (t) => { if (btn) { btn.textContent = t; setTimeout(() => { btn.textContent = idleLabel; }, 1500); } };
   try {
     await navigator.clipboard.writeText(text);
     done('Copied');
@@ -724,6 +740,36 @@ async function copyDiagLog() {
       done('Copied');
     } catch { done('Copy failed'); }
   }
+}
+// Normal copy (James, 2026-11-26): only the LATEST 100 lines. A full run
+// is ~200 lines, so 100 covers the recent end — the part that shows what
+// just went wrong — without pasting 2000 lines every time.
+async function copyDiagLog() {
+  const btn = $('copyDiagLog');
+  let text;
+  try {
+    const saved = await chrome.storage.local.get(['diagTrace', 'ct-active-runs']);
+    const trace = Array.isArray(saved['diagTrace']) ? saved['diagTrace'] : [];
+    text = formatDiagLog(trace.slice(-100), saved['ct-active-runs'], trace.length);
+  } catch {
+    // Fall back to the displayed box, sliced to its last 100 lines.
+    const shown = ($('diagLog') && $('diagLog').textContent) || '';
+    text = shown.split('\n').slice(-100).join('\n');
+  }
+  return writeDiagLogToClipboard(text, btn, 'Copy log (latest 100)');
+}
+// Full copy: everything in storage (last 2000 lines) + the runs section.
+// Settings page only — this button lives inside #debugWrap and nowhere else.
+async function copyDiagLogFull() {
+  const btn = $('copyDiagLogFull');
+  let text;
+  try {
+    const saved = await chrome.storage.local.get(['diagTrace', 'ct-active-runs']);
+    text = formatDiagLog(saved['diagTrace'], saved['ct-active-runs']);
+  } catch {
+    text = ($('diagLog') && $('diagLog').textContent) || '';
+  }
+  return writeDiagLogToClipboard(text, btn, 'Copy full log (2000 lines)');
 }
 
 async function refreshModels() {
