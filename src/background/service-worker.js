@@ -59,6 +59,68 @@ function diagPush(line) {
     if (diagLogBuf.length > 2000) diagLogBuf.shift();
   } catch {}
 }
+
+// Human-readable log format (James, 2026-11-26): plain words, no repeats,
+// no noise. One run header, one block per picture, one run footer.
+// These helpers keep every call site producing the same shape.
+function fmtBytes(n) {
+  if (n == null || !Number.isFinite(n)) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+// Short plain reason for a failed capture tier, from the raw error text.
+// Browser messages ("Tainted canvases may not be exported", "Failed to
+// fetch") mean nothing to a human — map them to what actually happened.
+function shortCaptureWhy(err) {
+  const s = String(err || '');
+  if (/Tainted canvases/i.test(s)) return 'blocked';
+  if (/timed out after/i.test(s)) return 'timed out';
+  if (/skipped \(host failed recently\)/i.test(s)) return 'skipped (host failed recently)';
+  if (/skipped \(overall capture budget/i.test(s)) return 'skipped (capture budget exhausted)';
+  if (/HTTP 403/i.test(s)) return 'blocked (HTTP 403)';
+  if (/HTTP 429/i.test(s)) return 'rate-limited (HTTP 429)';
+  if (/HTTP 404/i.test(s)) return 'not found (HTTP 404)';
+  if (/HTTP 5\d\d/i.test(s)) return 'server error';
+  if (/Failed to fetch/i.test(s)) return 'failed';
+  if (/blank/i.test(s)) return 'blank';
+  if (/no pixels/i.test(s)) return 'no pixels';
+  if (/different image than the page shows/i.test(s)) return 'wrong image from server';
+  return (s.replace(/^(page canvas|page download|download):\s*/i, '').slice(0, 60) || 'failed');
+}
+// Plain name for a capture tier, for the per-picture capture line.
+function plainTierName(tier) {
+  if (tier === 'page-canvas') return 'page canvas';
+  if (tier === 'page-fetch') return 'page fetch';
+  if (tier === 'fallback-tab') return 'background tab';
+  return tier || 'worker-fetch';
+}
+// One failover log line (James, 2026-11-26): the guard line and the
+// failover line are the same event, so they are one line —
+// "<Engine> returned untranslated text (source: ...). Trying Google
+// instead." or "<Engine> failed (<reason>). Trying Google instead."
+// `prefix` is for the pre-translate flow ("Pre-translate:"); the main
+// run uses the 2-space picture-block indent instead.
+function logFailoverLine(p, prefix) {
+  if (!p || !p.failoverFrom || !p.failoverTo) return;
+  const from = BACKEND_SHORT_LABEL[p.failoverFrom] || p.failoverFrom;
+  const to = BACKEND_SHORT_LABEL[p.failoverTo] || p.failoverTo;
+  const head = prefix ? prefix + ' ' : '  ';
+  if (p.failoverWhy === 'untranslated text') {
+    diagPush(`${head}${from} returned untranslated text${p.failoverSource ? ' (source: ' + p.failoverSource + ')' : ''}. Trying ${to} instead.`);
+  } else {
+    const why = String(p.failoverWhy || 'failed');
+    // The reason often already names the engine ("Gemini returned no text
+    // (PROHIBITED_CONTENT)") — use it as the sentence instead of repeating
+    // the engine ("Gemini failed (Gemini returned ...)").
+    if (why.toLowerCase().startsWith(from.toLowerCase())) {
+      const sentence = why.charAt(0).toUpperCase() + why.slice(1);
+      diagPush(`${head}${sentence}${sentence.endsWith('.') ? '' : '.'} Trying ${to} instead.`);
+    } else {
+      diagPush(`${head}${from} failed (${why}). Trying ${to} instead.`);
+    }
+  }
+}
 // Translate retries log to the Diagnostic log (so a slow translate shows
 // its retries, not just one slow call). translators.js is a module — it
 // cannot see diagPush directly, so the logger is injected here.
@@ -66,13 +128,16 @@ setTranslateLogger(diagPush);
 
 // 2.1.20: bench trace — every bench line, persisted. diagPush alone is
 // in-memory, so a worker restart wipes the bench lines before the next
-// run's log can show them. benchTracePush also appends the line to
+// run's log can show them. benchTracePush appends the line to
 // storage.local 'benchTrace' (last 100 lines), so the next run can show
 // the full trace even after a restart. Writes are chained so they land
 // in order. Fire-and-forget: never blocks the pipeline.
+// Human-readable log (James, 2026-11-26): bench chatter (thread-bench
+// trigger, keepalive pings) no longer goes to the diagnostic log — it is
+// noise James never reads there. It still lands in benchTrace storage,
+// where the benchmark UI reads it.
 let benchTraceChain = Promise.resolve();
 function benchTracePush(line) {
-  try { diagPush(line); } catch {}
   benchTraceChain = benchTraceChain.then(async () => {
     try {
       const saved = await chrome.storage.local.get('benchTrace');
@@ -195,7 +260,7 @@ async function loadGpuInpaintDead() {
     gpuInpaintDead = true;
     if (!gpuInpaintDeadLogged) {
       gpuInpaintDeadLogged = true;
-      diagPushOnce('inpaint gpu disabled (known failure — using WASM)').catch(() => {});
+      diagPushOnce('Inpaint GPU is off (known failure — using WASM).').catch(() => {});
     }
   } catch {}
 }
@@ -205,7 +270,7 @@ loadGpuInpaintDead().catch(() => {});
 // Settings are read at run time — the switch can be toggled in Settings
 // without reloading the background, so no module-level constant may
 // cache it.
-getSettings().then(s => { if (s && s.bypassInpaint) diagPush('SKIP-INPAINT on — LaMa inpaint disabled, text renders over the original'); }).catch(() => {});
+getSettings().then(s => { if (s && s.bypassInpaint) diagPush('Skip inpaint is on — text renders over the original picture.'); }).catch(() => {});
 
 // 2.3.15/1.7.15: device + browser line in the diag log, so a pasted log
 // says which device and browser it came from — no need to ask the user
@@ -524,7 +589,7 @@ async function callMlChecked(runId, msg) {
     // errors are not retried — they are likely persistent, and a retry
     // would only double the wait.
     if (e && e.mlTimeout) {
-      diagPush(`ML timeout on ${msg.type}, retrying once (run ${runId})`);
+      diagPush(`ML call timed out (${msg.type}) — retrying once.`);
       try {
         return await callMl(msg, { tabId: runs.get(runId)?.tabId });
       } catch (e2) {
@@ -672,7 +737,7 @@ async function imageHttpError(res) {
   } catch { /* body unreadable — status alone is enough */ }
   const cfRay = res.headers.get('cf-ray') || '';
   const ra = res.headers.get('retry-after');
-  if (snippet || cfRay || ra) diagPush(`worker-fetch: HTTP ${st}${cfRay ? ' cf-ray ' + cfRay : ''}${ra ? ' retry-after ' + ra : ''}${snippet ? ' body: ' + snippet.slice(0, 200) : ''}`);
+
   let msg;
   if (st === 404) msg = 'this image link no longer exists on the server (HTTP 404) — reload the page for a fresh link';
   else if (st === 429) msg = 'image host is rate-limiting (HTTP 429), retry later';
@@ -757,7 +822,7 @@ async function fetchImagePixels(url, referrer) {
         // Redirect: log only. Real reader CDNs redirect across
         // subdomains, so a cross-origin redirect is not refused here
         // (unverified whether any host needs blocking — log, do not block).
-        if (res.url && res.url !== url) diagPush(`worker-fetch: redirected ${url.slice(0, 80)} -> ${res.url.slice(0, 120)}`);
+
         if (!res.ok) {
           lastErr = await imageHttpError(res);
           const st = res.status;
@@ -765,15 +830,15 @@ async function fetchImagePixels(url, referrer) {
             const ra = parseRetryAfterMs(res.headers);
             if (ra != null && ra <= RATE_LIMIT_WAIT_CAP_MS && !retried) {
               retried = true;
-              diagPush(`worker-fetch: HTTP 429, retry-after ${Math.round(ra / 1000)}s — waiting once, then retrying`);
+              diagPush(`  Download rate-limited (HTTP 429) — waiting ${Math.round(ra / 1000)}s, then retrying once.`);
               await wait(ra);
               continue;
             }
             if (ra != null) {
               if (rateHost) imageHostRateLimited.set(rateHost, Date.now() + ra);
-              diagPush(`worker-fetch: HTTP 429, retry-after ${Math.round(ra / 1000)}s exceeds the 5s in-run cap — failing fast, host marked rate-limited`);
+              diagPush(`  Download rate-limited (HTTP 429), wait ${Math.round(ra / 1000)}s is too long — failing fast.`);
             } else {
-              diagPush('worker-fetch: HTTP 429 with no Retry-After — one 5s backoff, then failing');
+              diagPush('  Download rate-limited (HTTP 429), no wait time given — one 5s backoff, then failing.');
               await wait(5000);
               if (rateHost) imageHostRateLimited.set(rateHost, Date.now() + 5000);
             }
@@ -783,7 +848,7 @@ async function fetchImagePixels(url, referrer) {
           if (st === 408 || (st >= 500 && st < 600)) {
             if (!retried) {
               retried = true;
-              diagPush(`worker-fetch: HTTP ${st} — retrying once after ${TRANSIENT_RETRY_WAIT_MS / 1000}s`);
+              diagPush(`  Download failed (HTTP ${st}) — retrying once after ${TRANSIENT_RETRY_WAIT_MS / 1000}s.`);
               await wait(TRANSIENT_RETRY_WAIT_MS);
               continue;
             }
@@ -821,7 +886,7 @@ async function fetchImagePixels(url, referrer) {
           break;
         }
         if (expectedLen && blob.size < expectedLen) {
-          diagPush(`worker-fetch: truncated body, expected ${expectedLen} got ${blob.size} for ${url.slice(0, 80)}`);
+          diagPush(`  Download cut off early (expected ${expectedLen} bytes, got ${blob.size}).`);
           if (!retried) { retried = true; continue; }
           fatal = Object.assign(new Error(`truncated response body (expected ${expectedLen} got ${blob.size})`), { status: res.status });
           break;
@@ -843,7 +908,7 @@ async function fetchImagePixels(url, referrer) {
         if (e instanceof TypeError && /failed to fetch|networkerror|network error|load failed/i.test(String((e && e.message) || ''))) {
           if (!retried) {
             retried = true;
-            diagPush('worker-fetch: network/CORS failure (no HTTP status) — retrying once after 1s');
+            diagPush('  Download failed (network/CORS) — retrying once after 1s.');
             await wait(1000);
             continue;
           }
@@ -904,12 +969,19 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
     return { images: [info], skipped: [], ignored: 0 };
   }
   let list = [], total = 0;
+  // Hosts of every big picture (for the run header) and any of them
+  // missing host permission. Computed here, logged once in the run
+  // header — not as a separate inventory line.
+  let inventoryHosts = [], inventoryMissing = [];
   try {
     const r = await withTimeout(chrome.tabs.sendMessage(tabId, { type: 'ct/list-images' }), DATA_TIMEOUT_MS, 'list-images');
     list = r?.images || [];
     total = r?.total || list.length;
-    if (!opts.quiet) {
-      if (r?.diag) for (const l of String(r.diag).split('\n')) diagPush('inventory-diag ' + l);
+    // Content-script inventory note: only present when big pictures were
+    // left out of the inventory (e.g. still loading). Plain, one line.
+    if (!opts.quiet && r?.diag) {
+      const d = String(r.diag).trim();
+      if (d) diagPush(d);
     }
     // Permission for EVERY big picture's host — including the ones that did
     // not make the inventory — so a missing grant on a 403 CDN host is
@@ -920,10 +992,9 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
     // the run's inventory call below.
     if (!opts.quiet && Array.isArray(r?.bigSrcs) && r.bigSrcs.length) {
       try {
-        const missing = await checkImageHostPermissions(r.bigSrcs.map(src => ({ src })));
-        const hosts = [...new Set(r.bigSrcs.map(s => { try { return new URL(s).hostname.toLowerCase(); } catch { return ''; } }).filter(Boolean))];
-        diagPush('inventory-diag big-pic hosts: ' + hosts.join(', ') + ' — missing permission: ' + (missing.length ? missing.join(', ') : 'none'));
-      } catch (e) { diagPush('inventory-diag host permission check failed: ' + String((e && e.message) || e).slice(0, 80)); }
+        inventoryMissing = await checkImageHostPermissions(r.bigSrcs.map(src => ({ src })));
+        inventoryHosts = [...new Set(r.bigSrcs.map(s => { try { return new URL(s).hostname.toLowerCase(); } catch { return ''; } }).filter(Boolean))];
+      } catch (e) { diagPush('Host permission check failed: ' + String((e && e.message) || e).slice(0, 80)); }
     }
   } catch { list = []; }
   if (!list.length) {
@@ -951,7 +1022,7 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
   if (!picked.length) throw new Error(`no usable pictures on this page (${skipped.join('; ')}).`);
   // Pictures the inventory never considered (icons, spacers, hidden or
   // still-loading <img>) — reported so untranslated ones are accounted for.
-  return { images: picked, skipped, skippedDetail, ignored: Math.max(0, total - list.length) };
+  return { images: picked, skipped, skippedDetail, ignored: Math.max(0, total - list.length), inventoryHosts, inventoryMissing, inventoryTotal: total };
 }
 
 // One picture's pixels, loaded just before its stages run and released after.
@@ -1005,17 +1076,17 @@ function markPageFetchDead(host, errText) {
   const m = /HTTP (\d{3})/.exec(text);
   const status = m ? Number(m[1]) : 0;
   if (/could not reach the image host/i.test(text)) {
-    diagPush(`page-fetch: host ${host} not marked dead (offline/network, not a host block)`);
+    diagPush(`Page fetch on ${host} failed (offline/network) — host not blocked.`);
     return;
   }
   if (/Failed to fetch|network\/CORS failure|TypeError/i.test(text)) {
     pageFetchDead.set(host, Date.now());
-    diagPush(`page-fetch: host ${host} marked dead for 30 min (CORS/TypeError failure)`);
+    diagPush(`Page fetch on ${host} blocked (CORS) — skipping it for 30 min.`);
     return;
   }
   if (status === 429 || (status >= 500 && status < 600) || /timed out after 11s/.test(text)) {
     pageFetchDeadShort.set(host, Date.now());
-    diagPush(`page-fetch: host ${host} skipped for 5 min (transient ${status || 'timeout'})`);
+    diagPush(`Page fetch on ${host} skipped for 5 min (${status || 'timeout'}).`);
     return;
   }
   if (status) {
@@ -1024,13 +1095,13 @@ function markPageFetchDead(host, errText) {
     pageFetchFailStreak.set(host, { status, n });
     if (n >= 2) {
       pageFetchDead.set(host, Date.now());
-      diagPush(`page-fetch: host ${host} marked dead for 30 min (repeated HTTP ${status})`);
+      diagPush(`Page fetch on ${host} keeps failing (HTTP ${status}) — skipping it for 30 min.`);
     }
     return;
   }
   // Decode / empty-body / wrong-type failures after bytes arrived: never
   // mark the host dead.
-  diagPush(`page-fetch: host ${host} not marked dead (${text.slice(0, 60)})`);
+  diagPush(`Page fetch on ${host} failed — host not blocked (${text.slice(0, 60)}).`);
 }
 
 // Per-image overall cap across capture tiers (120 s). 120 s is
@@ -1140,7 +1211,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
       const mismatch = decodedSizeMismatch(w, h, info);
       if (mismatch) {
         failures.push('page download: ' + mismatch);
-        diagPush('capture: ' + mismatch + ' (page-fetch)');
+        diagPush('  ' + mismatch + ' (page fetch).');
       } else {
         const b64 = f.dataUrl.split(',')[1] || '';
         // The host works now — clear any earlier failure so it is not skipped.
@@ -1170,7 +1241,7 @@ async function loadPipelineImagePixels(tabId, info, settings, tabUrl, opts = {})
     const mismatch = decodedSizeMismatch(w, h, info);
     if (mismatch) {
       failures.push('download: ' + mismatch);
-      diagPush('capture: ' + mismatch + ' (worker-fetch)');
+      diagPush('  ' + mismatch + ' (download).');
     } else {
       attempts.push({ tier: 'worker-fetch', ms: Math.round(performance.now() - c0), ok: true, bytes });
       return { rgba, w, h, mode: 'replace', tier: 'worker-fetch', attempts };
@@ -1703,7 +1774,7 @@ function setProgress(runId, stage, progress, extra = {}) {
         // the first failure of each run.
         if (lastProgressFailRunId !== runId) {
           lastProgressFailRunId = runId;
-          diagPush('progress send failed #' + diagProgressFails + ' run ' + runId + ' stage ' + stage + ' progress ' + progress + ' tab ' + tabId + ' lastOk ' + (diagProgressLastOk ? new Date(diagProgressLastOk).toISOString() : 'never'));
+          diagPush('Progress update could not be sent (content script unreachable) — first failure this run, stage ' + stage + '.');
         }
       }
     );
@@ -1763,7 +1834,7 @@ async function sendRender(tabId, runId, mode, imageDataUrl, w, h, blocks, timing
       ...(extra.uid ? { uid: extra.uid } : {}),
     }), DATA_TIMEOUT_MS, 'render');
   } catch (e) {
-    diagPush('sendRender send failed run ' + runId + ' tab ' + tabId + ': ' + String((e && e.message) || e));
+    diagPush('Could not send the finished picture to the page: ' + String((e && e.message) || e).slice(0, 120));
     throw e;
   }
   // Surface a content-side render failure instead of silently reporting
@@ -1822,7 +1893,7 @@ async function renderFromTier1(tabId, runId, tier1Entry, tier2Key, settings, tim
   const tier1TimeoutId = setTimeout(() => { try { translateController.abort(); } catch {} }, 30000);
   const failoverNotice = (p) => {
     if (p && p.failoverFrom && p.failoverTo) {
-      diagPush(`translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+      logFailoverLine(p);
       chrome.tabs.sendMessage(tabId, {
         type: MSG.PILL_NOTICE,
         text: `Engine ${p.failoverFrom} failed — retrying with ${p.failoverTo}`,
@@ -1942,7 +2013,7 @@ function recordModelDownloadError(fileId, err) {
   const prev = modelDownloadErrors.get(fileId);
   // Log a failure once per distinct text — a retry that fails the same way
   // updates the timestamp (which drives the back-off) without spamming.
-  if (!prev || prev.error !== text) diagPush('model download failed for ' + fileId + ': ' + text);
+  if (!prev || prev.error !== text) diagPush('Model download failed (' + fileId + '): ' + text);
   modelDownloadErrors.set(fileId, { error: text, at: Date.now() });
 }
 // Shared restart/give-up decision for waitForModels (counts: its own
@@ -2137,7 +2208,7 @@ async function waitForModels(runId) {
         const decision = modelRestartDecision(f.id, restartCounts, gaveUp);
         if (decision === 'gaveup') throw new Error(modelWaitGiveUpMessage(f.id, gaveUp));
         if (decision === 'backoff') continue;
-        diagPush('model download never started, restarting: ' + f.id);
+        diagPush('Model download never started, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         triggerModelDownload(f.id);
       }
@@ -2173,7 +2244,7 @@ async function waitForModels(runId) {
         const decision = modelRestartDecision(f.id, restartCounts, gaveUp);
         if (decision === 'gaveup') throw new Error(modelWaitGiveUpMessage(f.id, gaveUp));
         if (decision === 'backoff') continue; // keep perFileProgress: restart promptly once the back-off expires
-        diagPush('model download stalled, restarting: ' + f.id);
+        diagPush('Model download stalled, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         perFileProgress.delete(f.id);
         triggerModelDownload(f.id);
@@ -2256,7 +2327,7 @@ async function modelWatchdogTick() {
         if (modelDownloadErrors.has(f.id)) {
           if (modelDownloadGaveUp.has(f.id)) continue;
           const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
-          if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+          if (decision === 'gaveup') { diagPush('Model download gave up (' + f.id + '): ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
           if (decision === 'backoff') continue;
         }
         triggerModelDownload(f.id); continue;
@@ -2264,9 +2335,9 @@ async function modelWatchdogTick() {
       if (Date.now() - (inflight.startedAt || 0) > MODEL_DOWNLOAD_STALL_MS) {
         if (modelDownloadGaveUp.has(f.id)) continue;
         const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
-        if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+        if (decision === 'gaveup') { diagPush('Model download gave up (' + f.id + '): ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
         if (decision === 'backoff') continue;
-        diagPush('model download never started, restarting: ' + f.id);
+        diagPush('Model download never started, restarting: ' + f.id);
         modelDownloadInflight.delete(f.id);
         triggerModelDownload(f.id);
       }
@@ -2279,10 +2350,10 @@ async function modelWatchdogTick() {
       if (modelDownloadGaveUp.has(f.id)) continue;
       if (modelDownloadErrors.has(f.id)) {
         const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
-        if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+        if (decision === 'gaveup') { diagPush('Model download gave up (' + f.id + '): ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
         if (decision === 'backoff') continue;
       }
-      diagPush('model download not in flight, restarting: ' + f.id);
+      diagPush('Model download not in flight, restarting: ' + f.id);
       modelWatchdogProgress.delete(f.id);
       triggerModelDownload(f.id);
       continue;
@@ -2300,9 +2371,9 @@ async function modelWatchdogTick() {
     } else if (Date.now() - prev.at > MODEL_DOWNLOAD_STALL_MS) {
       if (modelDownloadGaveUp.has(f.id)) continue;
       const decision = modelRestartDecision(f.id, modelWatchdogRestarts, modelDownloadGaveUp);
-      if (decision === 'gaveup') { diagPush('model download gave up for ' + f.id + ': ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
+      if (decision === 'gaveup') { diagPush('Model download gave up (' + f.id + '): ' + ((modelDownloadGaveUp.get(f.id) || {}).reason || 'too many restarts')); continue; }
       if (decision === 'backoff') continue; // keep modelWatchdogProgress: restart promptly once the back-off expires
-      diagPush('model download stalled, restarting: ' + f.id);
+      diagPush('Model download stalled, restarting: ' + f.id);
       modelDownloadInflight.delete(f.id);
       modelWatchdogProgress.delete(f.id);
       triggerModelDownload(f.id);
@@ -2372,7 +2443,6 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
     // dims. A mismatch means the entry was stored at different dims
     // (e.g. before the R3 normalization) — treat as miss and overwrite.
     if (tier1Entry && (tier1Entry.width !== w || tier1Entry.height !== h)) {
-      diagPush(`page-cache MISS tier1 ${tier1Key.split('~')[1]?.slice(0, 12)} dims ${tier1Entry.width}x${tier1Entry.height} != ${w}x${h} (tier ${tier})`);
       tier1Entry = null;
     }
     if (tier1Entry) {
@@ -2390,7 +2460,6 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
       const hasBlocks = Array.isArray(tier1Entry.blocks) && tier1Entry.blocks.length > 0;
       if (usableTranslations && hasBlocks) {
         // Full hit: apply cached translations to the Tier-1 blocks.
-        diagPush(`page-cache HIT tier1+2 ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
         const blocks = tier1Entry.blocks.map((b, i) => ({
           ...b, translation: tier2Entry.translations[i] || '',
         }));
@@ -2402,27 +2471,28 @@ async function lookupPageCache(rgba, w, h, settings, tabId, tier) {
       // to a full miss so the pipeline re-detects instead of
       // re-rendering the original forever.
       if (hasBlocks) {
-        diagPush(`page-cache HIT tier1 only ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
         return { tier1Only: true, entry: tier1Entry, tier2Key };
       }
-      diagPush(`page-cache MISS tier1 ${tier1Key.split('~')[1]?.slice(0, 12)} empty entry (tier ${tier})`);
+      // Poisoned entry (a transient failure saved as "no text") — worth
+      // one line, so a picture that keeps re-running the full pipeline
+      // shows why the cache did not hit. A normal miss (no entry at all)
+      // stays silent.
+      diagPush('  Cached entry is empty (no text blocks) — running the full pipeline instead.');
       tier1Entry = null;
     }
     // No Tier 1: try the legacy v1 key for backward compatibility.
-    diagPush(`page-cache MISS tier1 ${tier1Key.split('~')[1]?.slice(0, 12)} image ${w}x${h} (tier ${tier})`);
     const legacy = await pageCacheGet(await buildCacheKey(rgba, w, h, settings));
     // 2.3.6: same usable check for legacy entries — blocks with no
     // non-empty translation render as the original.
     if (legacy && Array.isArray(legacy.blocks) &&
         legacy.blocks.some(b => b && typeof b.translation === 'string' && b.translation.trim())) {
-      diagPush(`page-cache HIT legacy v1 image ${w}x${h} (tier ${tier})`);
       return legacy;
     }
-    if (legacy) diagPush(`page-cache MISS legacy v1 image ${w}x${h} (tier ${tier}) empty entry`);
+    if (legacy) diagPush('  Cached entry is empty (no usable translation) — running the full pipeline instead.');
     return null;
   } catch (e) {
     console.warn('[ct] page-cache lookup failed:', String((e && e.message) || e).slice(0, 120));
-    diagPush('page-cache lookup failed: ' + String((e && e.message) || e).slice(0, 120));
+    diagPush('Cache lookup failed: ' + String((e && e.message) || e).slice(0, 120));
     return null;
   }
 }
@@ -2466,7 +2536,7 @@ async function writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, set
     // READ fallback stays, so entries written by older builds still serve.
   } catch (e) {
     console.warn('[ct] page-cache write failed:', String((e && e.message) || e).slice(0, 120));
-    diagPush('page-cache write failed: ' + String((e && e.message) || e).slice(0, 120));
+    diagPush('Cache write failed: ' + String((e && e.message) || e).slice(0, 120));
   }
 }
 
@@ -2669,8 +2739,8 @@ function startPretranslateJob(nextUrl, sourceTabId, sourceUrl, settings, learned
       pretranslateDoneUrls.add(nextUrl);
       if (pretranslateDoneUrls.size > 20) pretranslateDoneUrls.delete(pretranslateDoneUrls.values().next().value);
     } catch (e) {
-      if (e && e.cancelled) diagPush('pre-translate cancelled for ' + nextUrl);
-      else diagPush('pre-translate skipped ' + nextUrl + ': ' + String((e && e.message) || e).slice(0, 120));
+      if (e && e.cancelled) diagPush('Pre-translate cancelled for ' + nextUrl);
+      else diagPush('Pre-translate skipped ' + nextUrl + ': ' + String((e && e.message) || e).slice(0, 120));
     } finally {
       runs.delete(runId);
       keepAliveStop(runId);
@@ -2723,8 +2793,8 @@ async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
   // unless Pro is active. A stale Pro validation re-checks in the background.
   {
     const gate = await canAutoOrPre(settings);
-    if (!gate.ok) { diagPush('pre-translate skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)'); return; }
-    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
+    if (!gate.ok) { diagPush('Pre-translate skipped — free limit reached (' + gate.used + '/' + gate.limit + ' images today).'); return; }
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('Pro license check failed: ' + (r.error || 'unknown') + ' — keeping Pro state.'); }).catch(() => {});
   }
   try { if (await isIncognitoTab(sourceTabId)) return; } catch { /* proceed */ }
   cancelPretranslate();
@@ -2772,14 +2842,14 @@ async function pretranslateNextPage(sourceTabId, sourceUrl, settings) {
         } catch {}
       }
     } catch {
-      diagPush('pre-translate: tab gone, cannot ask for the next page');
+      diagPush('Pre-translate: tab gone, cannot ask for the next page.');
       return; /* tab gone / no content script */
     }
   }
   // Log the miss: a silent return here left no trace in the diag log,
   // so a "pre-translate does not work" report had nothing to check.
   if (!nextUrl) {
-    diagPush('pre-translate: no next page found from ' + (sourceUrl || ''));
+    diagPush('Pre-translate: no next page found from ' + (sourceUrl || ''));
     return;
   }
   if (pretranslateDoneUrls.has(nextUrl)) return;
@@ -2802,15 +2872,15 @@ async function recoverPretranslateJob() {
     const tab = await chrome.tabs.get(rec.sourceTabId).catch(() => null);
     const [decision, reason] = pretranslateResumeDecision(rec, tab, settings.pretranslateNextPage !== false);
     if (decision !== 'resume') {
-      diagPush('pre-translate: resume skipped ' + rec.nextUrl + ': ' + reason);
+      diagPush('Pre-translate: resume skipped ' + rec.nextUrl + ': ' + reason);
       await clearPretranslateJob(rec.nextUrl);
       return;
     }
     const attempts = (rec.attempts || 0) + 1;
-    diagPush('pre-translate: resuming ' + rec.nextUrl + ' after background restart (attempt ' + attempts + ' of ' + MAX_PRETRANSLATE_RESUMES + ')');
+    diagPush('Pre-translate: resuming ' + rec.nextUrl + ' after background restart (attempt ' + attempts + ' of ' + MAX_PRETRANSLATE_RESUMES + ').');
     startPretranslateJob(rec.nextUrl, rec.sourceTabId, rec.sourceUrl, settings, rec.learnedKey, attempts, rec.startedAt);
   } catch (e) {
-    diagPush('pre-translate: resume failed: ' + String((e && e.message) || e).slice(0, 120));
+    diagPush('Pre-translate: resume failed: ' + String((e && e.message) || e).slice(0, 120));
   }
 }
 
@@ -2837,13 +2907,13 @@ async function runPretranslate(job, sourceTabId, settings) {
         // retrying into a rate limit now would make it worse.
         if (res.status === 429) {
           const ra = parseRetryAfterMs(res.headers);
-          diagPush(`pre-translate: next page rate-limited (HTTP 429)${ra != null ? ', retry after ' + Math.round(ra / 1000) + 's' : ', no Retry-After'} — scoring a miss, not retrying`);
+          diagPush(`Pre-translate: next page rate-limited (HTTP 429)${ra != null ? ', retry after ' + Math.round(ra / 1000) + 's' : ', no wait time given'} — not retrying.`);
           throw new Error('next page fetch rate-limited: HTTP 429');
         }
         // 404/410: the next page does not exist — a miss for the learned
         // rule, not a generic failure.
         if (res.status === 404 || res.status === 410) {
-          diagPush(`pre-translate: next page does not exist (HTTP ${res.status}) — scoring a miss`);
+          diagPush(`Pre-translate: next page does not exist (HTTP ${res.status}).`);
           throw new Error('next page does not exist: HTTP ' + res.status);
         }
         throw new Error('next page fetch failed: HTTP ' + res.status);
@@ -2871,7 +2941,7 @@ async function runPretranslate(job, sourceTabId, settings) {
   if (!candidates.length && /\.(jpe?g|png|webp|avif|gif)(\?|#|$)/i.test(nextUrl)) {
     candidates = [{ url: nextUrl, w: 0, h: 0 }];
   }
-  if (!candidates.length) { diagPush('pre-translate: no pictures on ' + nextUrl); return; }
+  if (!candidates.length) { diagPush('Pre-translate: no pictures on ' + nextUrl); return; }
   // ---- resolve sizes: declared dims first; download the rest (cap 8) until
   // 2 qualify — then there is no single picture to translate, stop early.
   const minSize = settings.minImageSize || 460;
@@ -2889,7 +2959,7 @@ async function runPretranslate(job, sourceTabId, settings) {
         downloads++;
         w = px.w; h = px.h;
       } catch (e) {
-        diagPush('pre-translate: size probe failed, skipping ' + c.url.slice(0, 80) + ': ' + String((e && e.message) || e).slice(0, 80));
+        diagPush('Pre-translate: size check failed, skipping ' + c.url.slice(0, 80) + ': ' + String((e && e.message) || e).slice(0, 80));
         continue;
       }
       checkCancelled(runId);
@@ -2899,7 +2969,7 @@ async function runPretranslate(job, sourceTabId, settings) {
   }
   const target = pickSingleQualifying(withSize, minSize);
   if (!target) {
-    diagPush(`pre-translate: ${withSize.filter(x => Math.max(x.w, x.h) >= minSize).length} qualifying pictures on ${nextUrl} (need exactly 1) — skipping`);
+    diagPush(`Pre-translate: ${withSize.filter(x => Math.max(x.w, x.h) >= minSize).length} qualifying pictures on ${nextUrl} (need exactly 1) — skipping.`);
     return;
   }
   await pretranslateImage(job, target.url, nextUrl, sourceTabId, settings);
@@ -2925,19 +2995,19 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
       // background tab: the tab would hit the same dead/rate-limited URL.
       // Skip the candidate instead.
       if (e && (e.status === 404 || e.status === 429)) {
-        diagPush('pre-translate: picture download failed, skipping (' + (e.status === 404 ? 'image link no longer exists, HTTP 404' : 'image host rate-limiting, HTTP 429') + '): ' + imageUrl.slice(0, 80));
+        diagPush('Pre-translate: picture download failed, skipping (' + (e.status === 404 ? 'image link no longer exists, HTTP 404' : 'image host rate-limiting, HTTP 429') + '): ' + imageUrl.slice(0, 80));
         return;
       }
       try {
         ({ rgba, w, h } = await fallbackCaptureViaTab(sourceTabId, imageUrl, true));
-        diagPush('pre-translate: worker-fetch blocked, read via background tab');
+        diagPush('Pre-translate: download blocked, read via background tab.');
       } catch (e2) {
-        diagPush('pre-translate: picture download failed, skipping: ' + String((e2 && e2.message) || e2).slice(0, 120));
+        diagPush('Pre-translate: picture download failed, skipping: ' + String((e2 && e2.message) || e2).slice(0, 120));
         return;
       }
     }
     checkCancelled(runId);
-    if (meanBrightness(rgba) < 0.004) { diagPush('pre-translate: blank picture, skipping'); return; }
+    if (meanBrightness(rgba) < 0.004) { diagPush('Pre-translate: blank picture, skipping.'); return; }
     {
       const cs = renderScale(w, h);
       if (cs < 1) {
@@ -2950,7 +3020,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     const cacheHit = await lookupPageCache(rgba, w, h, settings, sourceTabId, 'pretranslate');
     if (cacheHit) {
       if (cacheHit.tier1Only) await pretranslateTier1Only(job, cacheHit.entry, cacheHit.tier2Key, settings);
-      diagPush('pre-translate: already cached ' + imageUrl.slice(0, 80));
+      diagPush('Pre-translate: already cached ' + imageUrl.slice(0, 80));
       return;
     }
     checkCancelled(runId);
@@ -2970,7 +3040,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     const blocks = buildBlocks(detections, w, h, rgba, settings);
     // No text: nothing to translate or cache (writePageCache refuses
     // empty blocks), and nothing to count toward the free quota.
-    if (!blocks.length) { diagPush('pre-translate: no text in ' + imageUrl.slice(0, 80)); return; }
+    if (!blocks.length) { diagPush('Pre-translate: no text in ' + imageUrl.slice(0, 80)); return; }
     // ---- OCR
     const crops = [];
     for (const [i, b] of blocks.entries()) {
@@ -3021,7 +3091,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
       // diag log, but show no pill (the user is not on this page).
       const failoverNotice = (p) => {
         if (p && p.failoverFrom && p.failoverTo) {
-          diagPush(`pre-translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+          logFailoverLine(p, 'Pre-translate:');
         }
       };
       let translated;
@@ -3080,7 +3150,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
           } catch (e) {
             checkCancelled(runId);
             gpuDowngraded = true;
-            diagPush('pre-translate inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+            diagPush('Pre-translate: Inpaint fell back to WASM (GPU failed: ' + String((e && e.message) || e).slice(0, 80) + ').');
             markGpuInpaintDead().catch(() => {});
             r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
           }
@@ -3095,11 +3165,11 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
           } catch (e) {
             checkCancelled(runId);
             if (e && e.gpuSkipped) {
-              diagPush('pre-translate inpaint gpu skipped: ' + String((e && e.message) || e));
+              diagPush('Pre-translate: Inpaint skipped GPU (' + String((e && e.message) || e).slice(0, 80) + '), using WASM.');
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             } else {
               gpuDowngraded = true;
-              diagPush('pre-translate inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+              diagPush('Pre-translate: Inpaint fell back to WASM (GPU failed: ' + String((e && e.message) || e).slice(0, 80) + ').');
               markGpuInpaintDead().catch(() => {});
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             }
@@ -3127,7 +3197,7 @@ async function pretranslateImage(job, imageUrl, pageUrl, sourceTabId, settings) 
     // ---- cache write (no render — the next visit renders from this entry).
     const finalDataUrl = await rgbaToDataURL(inpainted, w, h, Math.max(w, h));
     await writePageCache(rgba, w, h, finalDataUrl, blocks, effSettings, settings, sourceTabId, 'replace');
-    diagPush('pre-translate: done ' + imageUrl.slice(0, 80));
+    diagPush('Pre-translate: done ' + imageUrl.slice(0, 80));
     // Freemium: one newly translated image against the free daily limit.
     // Pro users are not counted. Distinct images only — a re-translation
     // of the same URL is free. One image counts as one, whatever its
@@ -3171,7 +3241,7 @@ async function pretranslateTier1Only(job, tier1Entry, tier2Key, settings) {
   // log, but show no pill (the user is not on this page).
   const failoverNotice = (p) => {
     if (p && p.failoverFrom && p.failoverTo) {
-      diagPush(`pre-translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+      logFailoverLine(p, 'Pre-translate:');
     }
   };
   let translated;
@@ -3207,6 +3277,13 @@ async function runPipeline(tabId, opts = {}) {
   // a 50-block translate doesn't keep burning quota after the user cancelled.
   const abortController = new AbortController();
   runs.set(runId, { cancelled: false, tabId, abortController });
+  // Run footer numbers — function scope, so the catch block can log the
+  // run footer on failure/cancel too. A let/const declared inside the try
+  // is invisible to the catch (that was a ReferenceError: the footer
+  // crashed instead of logging). runTotal/runAlreadyDone match the run
+  // header; doneImgs counts the pictures translated in this run.
+  let runTotal = 0, runAlreadyDone = 0;
+  const doneImgs = [];
   // 2.1.20: show the persisted bench trace at the top of this run's log,
   // so one paste shows the full bench history (trigger, start, saves)
   // even after a worker restart wiped the in-memory lines.
@@ -3285,7 +3362,7 @@ async function runPipeline(tabId, opts = {}) {
     // Skip-inpaint (Debug setting): never load LaMa at all.
     if (directHandlers() && !settings.bypassInpaint) {
       persistDiagStage(runId, 'lama-preload');
-      try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
+      try { await callMl({ type: MSG.ML_ENSURE, model: 'inpaint' }); } catch (e) { diagPush('Inpaint preload failed, loading on demand: ' + String((e && e.message) || e).slice(0, 120)); }
     }
     // MEASURE1: thread-info diagnostic (best-effort, never fails the run).
     // Served by the same ML host as compute (worker on Firefox, offscreen
@@ -3298,7 +3375,7 @@ async function runPipeline(tabId, opts = {}) {
       // saves when missing or changed, never blocks the run.
       saveDetectedCores(d && d.hardwareConcurrency, 'thread-info');
     } catch (e) {
-      diagPush('ML diag failed (thread info unavailable): ' + String((e && e.message) || e).slice(0, 120));
+      diagPush('Could not read thread info: ' + String((e && e.message) || e).slice(0, 120));
     }
     // Chrome GPU1 (2.0.7): warm the shared GPU worker NOW, at pipeline
     // start, so the ~6s LaMa load overlaps detect/OCR/translate instead
@@ -3417,18 +3494,18 @@ async function runPipeline(tabId, opts = {}) {
           new Promise((_, rej) => setTimeout(() => rej(new Error('force-load timeout')), 20000)),
         ]);
       } catch (e) {
-        diagPush('force-load images skipped: ' + String((e && e.message) || e).slice(0, 80));
+        diagPush('Force-load skipped: ' + String((e && e.message) || e).slice(0, 80));
         forceLoadSettled = true;
         forceLoadPromise = Promise.reject(e);
         forceLoadPromise.catch(() => {});
       }
       forceLoadPromise.then(
         r => {
-          diagPush('force-load images: ' + (r && r.ok ? (r.loaded + '/' + r.total + ' loaded in ' + r.ms + 'ms (direct ' + (r.directTriggered || 0) + ', ' + (r.scrolled ? r.steps + ' scroll steps' : 'no scroll') + ((r.filterSkipped || 0) ? ', filter skipped ' + r.filterSkipped : '')) : 'failed: ' + String((r && r.error) || 'no reply').slice(0, 80)));
+          diagPush('Force-load: ' + (r && r.ok ? (r.loaded + '/' + r.total + ' pictures loaded in ' + r.ms + 'ms' + (r.scrolled ? ' (' + r.steps + ' scroll steps)' : '') + ((r.filterSkipped || 0) ? ', ' + r.filterSkipped + ' skipped' : '')) : 'failed: ' + String((r && r.error) || 'no reply').slice(0, 80)));
           forceLoadSettled = true;
         },
         e => {
-          diagPush('force-load images skipped: ' + String((e && e.message) || e).slice(0, 80));
+          diagPush('Force-load skipped: ' + String((e && e.message) || e).slice(0, 80));
           forceLoadSettled = true;
         },
       );
@@ -3499,7 +3576,7 @@ async function runPipeline(tabId, opts = {}) {
     // Each one then runs the full pipeline; per-image stage progress maps onto
     // its slice of the overall run, debug titles carry the image index, and one
     // bad picture never kills the rest of the run.
-    let { images, skipped, skippedDetail, ignored } = await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc });
+    let { images, skipped, skippedDetail, ignored, inventoryHosts, inventoryMissing, inventoryTotal } = await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc });
     if (isPipelined) {
       // First batch through the queue state: already-translated pictures
       // are dropped here (counted in pipe.alreadyDone) instead of by the
@@ -3557,9 +3634,6 @@ async function runPipeline(tabId, opts = {}) {
         // already-translated pictures (counted in pipe.alreadyDone), so
         // `images` holds only pictures left to translate.
         alreadyDone = pipe.alreadyDone;
-        const skipTag = opts.resume ? 'auto-resume' : 'auto-skip';
-        diagPush(`${skipTag}: inventory ${pipe.pickedCount} picture(s), ${alreadyDone} already translated`);
-        if (alreadyDone) diagPush(`${skipTag}: skipping ${alreadyDone} already-translated picture(s), ${images.length} left`);
         if (!images.length) {
           if (!forceLoadSettled) {
             // Nothing to translate YET — more pictures may still load.
@@ -3572,6 +3646,7 @@ async function runPipeline(tabId, opts = {}) {
           if (!images.length && forceLoadSettled) {
             // Everything is already translated — nothing left to do.
             // (Refill above already ran the final poll, so this is final.)
+            diagPush(`All ${pipe.pickedCount} picture${pipe.pickedCount === 1 ? '' : 's'} already translated — nothing to do.`);
             ignored = pipe.ignored;
             timings.total = Math.round(performance.now() - pipelineT0);
             setProgress(runId, 'done', 1, { backendLabel: settings.translationBackend });
@@ -3590,17 +3665,16 @@ async function runPipeline(tabId, opts = {}) {
         }
       } else {
       alreadyDone = images.filter(im => im.translated).length;
-      // 2.1.57: always log the count, even when 0 — a resumed run that
-      // finds nothing already done is the clue that the inventory disagrees
+      // 2.1.57: always count, even when 0 — a resumed run that finds
+      // nothing already done is the clue that the inventory disagrees
       // with the recovery check (e.g. the page reloaded between the two).
-      const skipTag = opts.resume ? 'auto-resume' : 'auto-skip';
-      diagPush(`${skipTag}: inventory ${images.length} picture(s), ${alreadyDone} already translated`);
+      // The count goes in the run header below, not its own line.
       if (alreadyDone) {
-        diagPush(`${skipTag}: skipping ${alreadyDone} already-translated picture(s), ${images.length - alreadyDone} left`);
         images = images.filter(im => !im.translated);
       }
       if (!images.length) {
         // Everything is already translated — nothing left to do.
+        diagPush(`All ${alreadyDone} picture${alreadyDone === 1 ? '' : 's'} already translated — nothing to do.`);
         timings.total = Math.round(performance.now() - pipelineT0);
         setProgress(runId, 'done', 1, { backendLabel: settings.translationBackend });
         try {
@@ -3615,7 +3689,13 @@ async function runPipeline(tabId, opts = {}) {
       }
       }
     }
-    if (skipped.length) diagPush('skipping page images: ' + skipped.join(' | ').slice(0, 300));
+    // Run header numbers (logged once, after the permission gate below):
+    // total pictures found and how many were already translated. Pipelined
+    // counts from the queue state; otherwise the filtered list plus the
+    // already-done count. Skipped (below-min / over-cap) pictures are not
+    // listed here — the run-end footer names them.
+    runTotal = pipe ? pipe.pickedCount : images.length + alreadyDone;
+    runAlreadyDone = alreadyDone;
     // Permission gate: ask for ALL possible permissions ONCE, BEFORE the run
     // starts — the page host and every picture host (exact + wildcard), in a
     // single permissions.request. Do not rely on the contains check to decide
@@ -3644,15 +3724,12 @@ async function runPipeline(tabId, opts = {}) {
     if (!opts.auto) {
       try {
         promptGranted = await chrome.permissions.request({ origins: [...allOrigins] });
-        if (promptGranted) diagPush('permission gate: granted via prompt (all hosts)');
-      } catch (e) {
-        diagPush('permission gate: prompt failed: ' + String((e && e.message) || e).slice(0, 80));
-      }
+      } catch (e) { /* prompt failure is covered by the contains check below */ }
     }
     const missingHosts = await checkImageHostPermissions(images);
     if (missingHosts.length) {
       for (const h of missingHosts) await recordMissingHost('https://' + h + '/');
-      diagPush('permission gate: missing host permission for ' + missingHosts.join(', '));
+      diagPush('Host permission missing for ' + missingHosts.join(', ') + ' — open the popup and tap Grant access.');
       const label = displayHost(missingHosts[0]);
       try {
         await withTimeout(chrome.tabs.sendMessage(tabId, {
@@ -3673,13 +3750,21 @@ async function runPipeline(tabId, opts = {}) {
       // translates 8 of 30 shows no gate line at all, and permission for
       // the listed hosts cannot be confirmed from the log.
       const gateHosts = [...new Set((images || []).map(im => { try { return new URL(im.src).hostname.toLowerCase(); } catch { return ''; } }).filter(Boolean))];
-      diagPush('permission gate: all hosts permitted: ' + (gateHosts.join(', ') || 'none'));
+      // Run header — one line: how many pictures, on which hosts, how
+      // many already translated. (Human-readable log, James, 2026-11-26.)
+      const headerHosts = (inventoryHosts && inventoryHosts.length ? inventoryHosts : gateHosts).join(', ') || 'this page';
+      // A missing grant on a big picture that did NOT make the inventory
+      // (e.g. still loading) does not block this run — it is not being
+      // translated — but it is logged, so the reason it never appears is
+      // visible. (The old "inventory-diag big-pic hosts" line did this.)
+      if (inventoryMissing && inventoryMissing.length) diagPush('Host permission missing for ' + inventoryMissing.join(', ') + ' (pictures not in this run).');
+      diagPush(`Run: ${runTotal} picture${runTotal === 1 ? '' : 's'} on ${headerHosts}, ${runAlreadyDone} already translated, all hosts allowed`);
     }
     // Pipelined: the gate above covered exactly these pictures. Pictures
     // appended to `images` later were never seen by it, so the loop
     // checks each of them per image instead (see below).
     if (pipe) pipe.gatedCount = images.length;
-    const doneImgs = [], failedImgs = [];
+    const failedImgs = [];
     // URLs of the finished images, for the free daily quota — the quota
     // counts distinct images only, so a re-translation of the same URL
     // is free (see addProUsageForImages).
@@ -3707,7 +3792,7 @@ async function runPipeline(tabId, opts = {}) {
     // pixels are loaded just before its stages run; its pixel-bus keys are
     // dropped by the caller after each image, so only one image's bytes are
     // ever live alongside the WASM sessions.
-    async function runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, preCaptured) {
+    async function runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, preCaptured, imgNo) {
       // ---- 1. capture: the page's own picture (min-size gated), else viewport
       imgSetProgress('capture', 0.02);
       let t0 = performance.now();
@@ -3730,20 +3815,25 @@ async function runPipeline(tabId, opts = {}) {
       }
       imgTimings.capture = Math.round(performance.now() - t0);
       imgTimings.tier = tier;
-      // Capture diagnostic: which tier ran, how long each attempt took, and
-      // how big the download was — the log then answers "internet or local?"
-      // on its own, no debug mode needed. page-canvas is local (the picture
+      // Human-readable capture: one picture line (size, download bytes)
+      // and one capture line (which tier won, how long, what the failed
+      // tiers hit — plain words, not browser errors). The log answers
+      // "internet or local?" on its own: page canvas is local (the picture
       // was already in the page); page/worker-fetch download it, so a slow
       // fetch with a big byte count is the server or the connection.
       const capAttempts = attempts || [];
-      for (const a of capAttempts) {
-        diagPush('capture attempt ' + a.tier + ' ' + (a.ok ? 'ok' : 'failed') + ' ms ' + a.ms +
-          (a.bytes != null ? ' bytes ' + a.bytes : '') +
-          (a.error ? ' error ' + String(a.error).slice(0, 120) : ''));
-      }
       const capWin = capAttempts.find(a => a.ok);
-      diagPush('capture tier ' + tier + ' ms ' + imgTimings.capture + ' image ' + w + 'x' + h +
-        (capWin && capWin.bytes != null ? ' bytes ' + capWin.bytes : ''));
+      diagPush(`Picture ${imgNo || '?'}: ${w}x${h}${capWin && capWin.bytes != null ? ', ' + fmtBytes(capWin.bytes) : ''}`);
+      const capFails = capAttempts.filter(a => !a.ok);
+      let capLine = `  Captured by ${plainTierName(tier)} in ${imgTimings.capture} ms`;
+      if (capFails.length) {
+        const whys = capFails.map(a => {
+          const t = a.tier === 'page-canvas' ? 'Page canvas' : a.tier === 'page-fetch' ? 'page fetch' : plainTierName(a.tier);
+          return t + ' ' + shortCaptureWhy(a.error);
+        });
+        capLine += '. ' + whys.join(', ');
+      }
+      diagPush(capLine + '.');
       // Single source of truth for dimensions: normalize ALL capture tiers to
       // renderScale dims HERE, once. Tier 1a (page canvas) already downscales,
       // but tiers 1b/1c (fetches) return full-res — without this, detector
@@ -3781,9 +3871,14 @@ async function runPipeline(tabId, opts = {}) {
         if (cacheHit.tier1Only) {
           // Translate-only path: Tier-1 gave us inpainted base + OCR blocks.
           // Translate to the new targetLang, store Tier-2, render.
-          return await renderFromTier1(tabId, runId, cacheHit.entry, cacheHit.tier2Key,
+          const tier1Res = await renderFromTier1(tabId, runId, cacheHit.entry, cacheHit.tier2Key,
             settings, imgTimings, manualSrc || img.src, rgba, w, h, mode, tier, img.uid, imgSetProgress);
+          if (tier1Res && tier1Res.ok && Number.isFinite(imgTimings.translate)) {
+            diagPush(`  Translated by ${tier1Res.doneExtra?.backendLabel || settings.translationBackend} in ${imgTimings.translate} ms.`);
+          }
+          return tier1Res;
         }
+        diagPush('  Served from cache.');
         return await renderFromPageCache(tabId, runId, cacheHit, settings, imgTimings, manualSrc || img.src, { fromCache: true, uid: img.uid, onProgress: imgSetProgress });
       }
 
@@ -3829,7 +3924,7 @@ async function runPipeline(tabId, opts = {}) {
       // Promotion visibility: how many blocks came from bubbles with no
       // text box. 0 on a page where detection is already good (no-op).
       // A large number here on other pages would mean over-firing.
-      if (blocks.promotedCount) diagPush(`blocks promoted ${blocks.promotedCount} bubble(s) with no text box (of ${detections.length} detections -> ${blocks.length} blocks)`);
+      if (blocks.promotedCount) diagPush(`  ${blocks.promotedCount} text block${blocks.promotedCount === 1 ? '' : 's'} came from bubbles with no text box.`);
       await imgEmitDebug('blocks', {
         title: `Text blocks — ${blocks.length}` + (blocks.promotedCount ? ` (${blocks.promotedCount} promoted from bubbles)` : ''),
         blocks: blocks.map((b, i) => ({
@@ -3846,7 +3941,7 @@ async function runPipeline(tabId, opts = {}) {
       // the free quota either — counting it would charge the user for
       // nothing, and again on every revisit. The caller skips it in
       // doneImgs/doneCountEntries when r.noText is set.
-      if (!blocks.length) return { ok: true, noText: true };
+      if (!blocks.length) { diagPush('  No text in this picture.'); return { ok: true, noText: true }; }
 
       // ---- 4. OCR (sequential — the mask stage needs blk.text, so it must
       // wait for OCR; see buildBlockMaskData's `if (!blk.text ...)` guard).
@@ -3978,7 +4073,7 @@ async function runPipeline(tabId, opts = {}) {
         try {
           const failoverNotice = (p) => {
             if (p && p.failoverFrom && p.failoverTo) {
-              diagPush(`translate failover: ${p.failoverFrom} -> ${p.failoverTo}`);
+              logFailoverLine(p);
               chrome.tabs.sendMessage(tabId, {
                 type: MSG.PILL_NOTICE,
                 text: `Engine ${p.failoverFrom} failed — retrying with ${p.failoverTo}`,
@@ -4105,7 +4200,7 @@ async function runPipeline(tabId, opts = {}) {
               checkCancelled(runId);
               gpuDowngradedThisRun = true;
               inpaintPath = 'gpu-failed-wasm';
-              diagPush('inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+              diagPush('  Inpaint fell back to WASM (GPU failed: ' + String((e && e.message) || e).slice(0, 80) + ').');
               markGpuInpaintDead().catch(() => {});
               r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
             }
@@ -4134,12 +4229,12 @@ async function runPipeline(tabId, opts = {}) {
               checkCancelled(runId);
               if (e && e.gpuSkipped) {
                 inpaintPath = 'gpu-skipped-wasm';
-                diagPush('inpaint gpu skipped: ' + String((e && e.message) || e));
+                diagPush('  Inpaint skipped GPU (' + String((e && e.message) || e).slice(0, 80) + '), using WASM.');
                 r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
               } else {
                 gpuDowngradedThisRun = true;
                 inpaintPath = 'gpu-failed-wasm';
-                diagPush('inpaint gpu failed, GPU disabled (known failure — using WASM): ' + String((e && e.message) || e));
+                diagPush('  Inpaint fell back to WASM (GPU failed: ' + String((e && e.message) || e).slice(0, 80) + ').');
                 markGpuInpaintDead().catch(() => {});
                 r = await callMlChecked(runId, { type: MSG.ML_INPAINT, runId, patches: wirePatches });
               }
@@ -4296,6 +4391,7 @@ async function runPipeline(tabId, opts = {}) {
             // Failover notices arrive before the final ok/error — show a pill
             // but don't settle the promise.
             if (e.data && e.data.type === 'failover-notice') {
+              logFailoverLine(e.data);
               chrome.tabs.sendMessage(tabId, {
                 type: MSG.PILL_NOTICE,
                 text: `Engine ${e.data.failoverFrom} failed — retrying with ${e.data.failoverTo}`,
@@ -4380,6 +4476,9 @@ async function runPipeline(tabId, opts = {}) {
         [translateOut, inpaintOut] = await Promise.all([cancelOnFail(translateP), cancelOnFail(inpaintP)]);
       }
       imgTimings.translate = translateOut.translateMs;
+      // One translate line per picture: which engine actually translated
+      // (after failover it differs from the configured one) and how long.
+      diagPush(`  Translated by ${BACKEND_SHORT_LABEL[blocks[0]?.backendUsed || settings.translationBackend] || settings.translationBackend} in ${translateOut.translateMs} ms.`);
       imgTimings.mask = inpaintOut.maskMs;
       imgTimings.inpaint = inpaintOut.totalInpaintMs;
       const { inpainted } = inpaintOut;
@@ -4440,7 +4539,7 @@ async function runPipeline(tabId, opts = {}) {
           const lateMissing = await checkImageHostPermissions([img]);
           if (lateMissing.length) {
             for (const h of lateMissing) await recordMissingHost('https://' + h + '/');
-            diagPush('permission gate (late picture): missing host permission for ' + lateMissing.join(', '));
+            diagPush('Host permission missing for ' + lateMissing.join(', ') + ' — open the popup and tap Grant access.');
             if (!pipe.pillSent) {
               pipe.pillSent = true;
               try {
@@ -4454,7 +4553,7 @@ async function runPipeline(tabId, opts = {}) {
             throw new Error(`Pictures on ${displayHost(lateMissing[0])} need permission — open the extension popup and tap "Grant access", then run translate again.`);
           }
         }
-        const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0);
+        const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, undefined, imgIdx + 1);
         // No text in this picture: nothing was translated, nothing was
         // cached, so it counts as neither translated nor quota. It is
         // not a failure either — it just has no text.
@@ -4502,7 +4601,7 @@ async function runPipeline(tabId, opts = {}) {
         if (e && e.fallbackUrl && !manualSrc) {
           try {
             const pre = await fallbackCaptureViaTab(tabId, e.fallbackUrl);
-            const r2 = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, pre);
+            const r2 = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0, pre, imgIdx + 1);
             // No text: same as above — not translated, not counted.
             if (!r2 || !r2.noText) {
               doneImgs.push(imgIdx + 1);
@@ -4514,7 +4613,7 @@ async function runPipeline(tabId, opts = {}) {
             // Log the tab failure reason to the diag log (not just the
             // console): the original error alone hides WHY the tab read
             // failed (timeout, redirect, server refused the tab too).
-            diagPush(`background-tab read failed for image ${imgIdx + 1}: ${String((e2 && e2.message) || e2).slice(0, 160)}`);
+            diagPush(`Picture ${imgIdx + 1}: background tab read failed — ${String((e2 && e2.message) || e2).slice(0, 160)}`);
             console.warn('[ct] auto fallback capture failed for image ' + (imgIdx + 1) + ':', String((e2 && e2.message) || e2).slice(0, 120));
           }
         }
@@ -4522,7 +4621,6 @@ async function runPipeline(tabId, opts = {}) {
           if (e && e.fallbackUrl && !fallbackUrl) fallbackUrl = e.fallbackUrl;
           failedImgs.push(`image ${imgIdx + 1} (${img.w}×${img.h}): ${String((e && e.message) || e).slice(0, 120)}`);
           missedDetail.push({ idx: imgIdx + 1, w: img.w || 0, h: img.h || 0, src: img.src || '', reason: String((e && e.message) || e).slice(0, 120) });
-          diagPush(`image ${imgIdx + 1} failed: ${String((e && e.message) || e).slice(0, 200)}`);
         }
       } finally {
         for (const k of imgPxKeys.splice(0)) await pixelDrop(k);
@@ -4552,7 +4650,6 @@ async function runPipeline(tabId, opts = {}) {
       if (overCap) cumSkipped.push(`${overCap} over the ${MAX_IMAGES_PER_PAGE}-image per-run cap`);
       if (cumSkipped.length) {
         failedImgs.push(...cumSkipped);
-        diagPush('skipping page images: ' + cumSkipped.join(' | ').slice(0, 300));
       }
       alreadyDone = pipe.alreadyDone;
       ignored = pipe.ignored;
@@ -4571,10 +4668,15 @@ async function runPipeline(tabId, opts = {}) {
     // failures are in missedDetail. Together they name all of them — a run
     // that misses 6 of 30 lists all 6, not just the ones that failed
     // capture.
+    // Run footer (human-readable log, James): one line with the outcome,
+    // then one line per missed picture. Written last so it survives.
     try {
       const missed = [...(skippedDetail || []), ...missedDetail];
-      diagPush(`missed ${missed.length} of ${images.length + (skippedDetail || []).length} picked pictures (${doneImgs.length} translated):`);
-      for (const m of missed) diagPush(`missed ${m.idx ? '#' + m.idx + ' ' : ''}${m.w}x${m.h} ${hostOf(m.src) || '?'} ${m.reason}`);
+      // Done counts the pictures translated in this run plus the ones that
+      // were already translated (header total, so the two lines agree).
+      const doneCount = doneImgs.length + runAlreadyDone;
+      diagPush(`Run done. ${doneCount} of ${runTotal} picture${runTotal === 1 ? '' : 's'} done${missed.length ? ', ' + missed.length + ' missed' : ''}.`);
+      for (const m of missed) diagPush(`  Missed ${m.idx ? '#' + m.idx + ' ' : ''}${m.w}x${m.h} ${hostOf(m.src) || '?'} — ${m.reason}`);
     } catch { /* accounting is best-effort — the run already succeeded */ }
     // Surface the outcome on the PAGE too: runs take minutes and the popup is
     // usually closed by the time the last picture finishes, so without this a
@@ -4637,7 +4739,18 @@ async function runPipeline(tabId, opts = {}) {
     }
     // DIAGNOSTIC (temporary): one self-contained summary line, so ANY
     // paste containing it shows the true totals and the outcome.
-    diagPush('run ended run ' + runId + ' ok false error ' + msg + ' progressSendFails ' + diagProgressFails + ' lastProgress ' + (currentRun ? currentRun.stage + ' ' + currentRun.progress : 'none'));
+    // Run footer for a failed/cancelled run: outcome + how many pictures
+    // finished. No run id, no progress-send counts — noise. runTotal and
+    // doneImgs live in function scope (see above) so this catch can read
+    // them; a try-scoped let/const is invisible here.
+    {
+      const doneCount = doneImgs.length + runAlreadyDone;
+      if (msg === 'cancelled') {
+        diagPush(`Run cancelled. ${doneCount} of ${runTotal} picture${runTotal === 1 ? '' : 's'} done.`);
+      } else {
+        diagPush(`Run failed: ${String(msg).slice(0, 120)}. ${doneCount} of ${runTotal} picture${runTotal === 1 ? '' : 's'} done.`);
+      }
+    }
     // DIAGNOSTIC (temporary): send AFTER the summary is pushed, so the
     // panel log includes it. Error runs only (not user cancels), and only
     // when debug mode is on — otherwise the panel pops up even though the
@@ -4947,11 +5060,11 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     // the log then shows which. Silent for disallowed sites (chrome://
     // tabs would flood the log). One line per 'complete'.
     const url = tab.url || '';
-    if (!settings.autoTranslateOnLoad) { diagPush('auto diag skip: auto off ' + url.slice(0, 120) + srcTag); return; }
-    if (!tab || !tab.active) { diagPush('auto diag skip: tab not active ' + url.slice(0, 120) + srcTag); return; }
+    if (!settings.autoTranslateOnLoad) { diagPush('Auto-translate off — skipping ' + url.slice(0, 120) + srcTag); return; }
+    if (!tab || !tab.active) { diagPush('Auto-translate skipped — tab not active: ' + url.slice(0, 120) + srcTag); return; }
     const prev = autoFired.get(tabId);
     const now = Date.now();
-    if (prev && prev.url === url && now - prev.at < 120000) { diagPush('auto diag skip: dedupe 2min ' + url.slice(0, 120) + srcTag); return; } // same load, don't double-fire
+    if (prev && prev.url === url && now - prev.at < 120000) { diagPush('Auto-translate skipped — same page within 2 minutes: ' + url.slice(0, 120) + srcTag); return; } // same load, don't double-fire
     // Same page and a run for this tab is still working: a late 'complete'
     // (slow iframe, ad slot, …) is not a new page and must not kill the run
     // and restart it from scratch. This matters more now that tiled inpaint
@@ -4962,7 +5075,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     if (prev && prev.url === url && now - prev.at < 900000) {
       for (const [inFlightId, r] of runs) {
         if (r.tabId === tabId && !r.cancelled) {
-          diagPush('auto diag skip: run in flight ' + url.slice(0, 120) + srcTag);
+          diagPush('Auto-translate skipped — a run is already going on this page: ' + url.slice(0, 120) + srcTag);
           // The content script just injected (it sent this auto-start)
           // and missed the run's early progress: the first send failed
           // because the script was not there yet, so the pill never
@@ -4996,7 +5109,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
       // clear our own record (same url), so a newer fire's record survives.
       const cur = autoFired.get(tabId);
       if (cur && cur.url === url) autoFired.delete(tabId);
-      diagPush('auto diag skip: free limit reached (' + gate.used + '/' + gate.limit + ' images today)');
+      diagPush('Auto-translate skipped — free limit reached (' + gate.used + '/' + gate.limit + ' images today).');
       try {
         await withTimeout(chrome.tabs.sendMessage(tabId, {
           type: MSG.RUN_PROGRESS, direct: true, stage: 'error',
@@ -5011,8 +5124,8 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
       try { maybeShowSupportPopupAtLimit(tabId).catch(() => {}); } catch {}
       return;
     }
-    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('pro validate failed: ' + (r.error || 'unknown') + ' — keeping Pro state'); }).catch(() => {});
-    diagPush('auto diag start: ' + url.slice(0, 120) + srcTag);
+    if (gate.pro && proCheckDue(settings)) validateProLicense(settings).then(r => { if (r && r.ok === false) diagPush('Pro license check failed: ' + (r.error || 'unknown') + ' — keeping Pro state.'); }).catch(() => {});
+    diagPush('Auto-translate starting: ' + url.slice(0, 120) + srcTag);
     // New page: drop whatever the tab was doing and start fresh immediately.
     // A stale run must never finish on top of the new page. The fire was
     // already recorded above, before the gate await, so a second 'complete'
@@ -5034,7 +5147,7 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     }
   } catch (e) {
     console.warn('[ct] auto-translate error:', String((e && e.message) || e).slice(0, 120));
-    diagPush('auto-translate error: ' + String((e && e.message) || e).slice(0, 120));
+    diagPush('Auto-translate failed: ' + String((e && e.message) || e).slice(0, 120));
   }
 }
 // ---------------------------------------------------------------- message router
@@ -5197,7 +5310,7 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
         else tabHost = tabUrl.slice(0, 120); // e.g. about:neterror — no host, keep the whole URL
       } catch { tabHost = tabUrl; }
     } else tabHost = '(unknown)';
-    diagPush(`background-tab read failed (attempt ${attemptNo}): image ${imgHost}${imgPath} tab ${tabHost}${tabPath} err ${String((e && e.message) || e).slice(0, 120)}`);
+    diagPush(`Background tab read failed (attempt ${attemptNo}): ${String((e && e.message) || e).slice(0, 120)}`);
   };
   const isMissingHost = (e) => /Missing host permission for the tab/i.test(String((e && e.message) || e));
   // Label for an error-page tab URL: host+path when there is one (a
@@ -5288,7 +5401,7 @@ async function fallbackCaptureViaTab(origTabId, imageUrl, quiet) {
       // different host is diagnosable from the log even when the read
       // itself succeeds (a redirect to an error page fails below, and
       // logFailure names both URLs there too).
-      if (tabUrl && tabUrl !== imageUrl) diagPush(`background-tab: final tab URL ${tabUrl.slice(0, 120)} vs requested ${imageUrl.slice(0, 120)}`);
+      if (tabUrl && tabUrl !== imageUrl) diagPush('Background tab opened a different page than requested.');
       await withTimeout(chrome.scripting.executeScript({ target: { tabId: newTabId }, files: CONTENT_SCRIPT_FILES }), MSG_TIMEOUT_MS, 'content script injection');
       const p = await withTimeout(chrome.tabs.sendMessage(newTabId, { type: 'ct/get-image-pixels', srcUrl: imageUrl }), DATA_TIMEOUT_MS, 'get-image-pixels');
       if (!p || !p.ok || typeof p.dataUrl !== 'string') {
@@ -5433,8 +5546,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg && msg.type === MSG.ML_BENCH_RESULT) {
     // 2.1.20: persist every bench line to the trace (diagPush alone is
-    // lost on a worker restart).
-    try { if (typeof msg.line === 'string' && msg.line) benchTracePush(msg.line); } catch { try { if (typeof msg.line === 'string' && msg.line) diagPush(msg.line); } catch {} }
+    // lost on a worker restart). Bench lines stay in benchTrace storage
+    // only — they no longer go to the diagnostic log (James, 2026-11-26).
+    try { if (typeof msg.line === 'string' && msg.line) benchTracePush(msg.line); } catch {}
     try { if (typeof msg.line === 'string' && msg.line) chrome.storage.local.set({ benchLastLog: { line: msg.line, at: new Date().toISOString() } }); } catch {}
     return false;
   }
@@ -5699,11 +5813,11 @@ async function recoverOrphanedRuns() {
             hasMlAlarm = Object.keys(store || {}).some(k => k.startsWith('ct-ml-pending:') && k.includes(':' + orphanRunId + ':'));
           } catch { checkFailed = true; }
           if (checkFailed) {
-            diagPush('orphan skipped run ' + orphanRunId + ': ML alarm check failed, leaving record for next load');
+            diagPush('A run died mid-translate — ML alarm check failed, leaving its record for the next load.');
             continue;
           }
           if (hasMlAlarm) {
-            diagPush('orphan skipped run ' + orphanRunId + ': pending ML alarm will handle it');
+            diagPush('A run died mid-translate — its pending ML alarm will handle it.');
             continue;
           }
         }
@@ -5727,7 +5841,7 @@ async function recoverOrphanedRuns() {
               const list = (r && r.images) || [];
               const alreadyDone = list.filter(im => im && im.translated).length;
               if (alreadyDone > 0) {
-                diagPush(`orphan auto-resume run ${orphanRunId} tab ${rec.tabId}: ${alreadyDone} already done (resume ${resumes + 1} of ${MAX_AUTO_RESUMES})`);
+                diagPush(`A run died mid-translate — resuming it (resume ${resumes + 1} of ${MAX_AUTO_RESUMES}, ${alreadyDone} picture${alreadyDone === 1 ? '' : 's'} already done).`);
                 // Clear the dead run's record + keepalive alarm so it is
                 // not recovered again, then start the resumed run.
                 await clearRunRecord(orphanRunId);
@@ -5752,42 +5866,42 @@ async function recoverOrphanedRuns() {
                       if (p && p.catch) p.catch(() => {});
                     } catch {}
                   }
-                  if (keys.length) diagPush(`orphan auto-resume run ${orphanRunId}: cleared ${keys.length} pending ML alarm(s)`);
+                  if (keys.length) diagPush(`Resumed run: cleared ${keys.length} pending ML alarm(s) from the dead run.`);
                 } catch {}
                 runPipeline(rec.tabId, { resume: true, resumeCount: resumes, auto: true }).catch(() => {});
                 resumed = true;
               } else {
-                diagPush(`orphan auto-resume skipped run ${orphanRunId}: no picture finished yet (inventory ${list.length})`);
+                diagPush(`A run died mid-translate — not resuming it, no picture finished yet (${list.length} pictures on the page).`);
               }
             } else {
-              diagPush(`orphan auto-resume skipped run ${orphanRunId}: tab gone or page changed`);
+              diagPush('A run died mid-translate — not resuming it, the tab is gone or the page changed.');
             }
           } catch (e) {
-            diagPush('orphan auto-resume check failed run ' + orphanRunId + ': ' + String((e && e.message) || e).slice(0, 80));
+            diagPush('A run died mid-translate — resume check failed: ' + String((e && e.message) || e).slice(0, 80));
           }
           if (resumed) {
-            diagPush('orphan recovery done run ' + orphanRunId + ' (auto-resumed)');
+            diagPush('Dead run resumed.');
             continue;
           }
         } else {
           // 2.1.57: log why the resume was not even attempted, so a
           // skipped second resume is diagnosable instead of silent.
-          diagPush(`orphan auto-resume not attempted run ${orphanRunId}: resumes ${resumes}/${MAX_AUTO_RESUMES} tabId ${rec && rec.tabId} url ${rec && rec.url ? 'set' : 'MISSING'}`);
+          diagPush(`Dead run not resumed — already resumed ${resumes} of ${MAX_AUTO_RESUMES} times.`);
         }
         // 2.1.55: replay the persisted pre-restart log into the panel log,
         // so the user sees what the background was doing before it died.
         const recoveredCount = await replayDiagTrace();
         const msg = 'Translation stopped because the background restarted while it was at stage ' + (rec.stage || 'unknown') + ' — please run translate again.' + (recoveredCount > 0 ? ' (The log from before the restart is in the diagnostic panel below.)' : ' (The detailed log from before the restart was in memory only and is lost.)');
-        diagPush('orphan recovery run ' + orphanRunId + ' tab ' + rec.tabId + ' died at stage ' + (rec.stage || 'unknown') + ' started ' + (rec.startedAt ? new Date(rec.startedAt).toISOString() : 'unknown') + ' lastStageUpdate ' + (rec.updatedAt ? new Date(rec.updatedAt).toISOString() : 'unknown'));
+        diagPush('A run died at stage ' + (rec.stage || 'unknown') + ' — the background restarted.');
         const sent = await failOrphanedRun(orphanRunId, rec, msg);
         if (sent) {
-          diagPush('orphan error: ' + msg);
+          diagPush('Run died: ' + msg);
           if (rec.tabId != null) {
             const s = await getSettings().catch(() => null);
             if (s && s.debugMode) await sendDiagLog(rec.tabId, orphanRunId);
           }
         }
-        diagPush('orphan recovery done run ' + orphanRunId);
+        diagPush('Dead-run recovery done.');
       } catch {}
     }
   } catch {}
@@ -5806,16 +5920,16 @@ setMlAlarmRecoveryHook(async (entry, msg) => {
     try {
       const all = (await chrome.storage.local.get(ACTIVE_RUNS_KEY))[ACTIVE_RUNS_KEY] || {};
       if (!all[entry.runId]) {
-        diagPush('alarm recovery skipped run ' + entry.runId + ': no active-run record (already resumed or failed)');
+        diagPush('Alarm recovery skipped — no active run record (already resumed or failed).');
         return;
       }
     } catch {}
     // 2.1.55: replay the persisted pre-restart log, same as orphan recovery.
     await replayDiagTrace();
-    diagPush('alarm recovery run ' + entry.runId + ' type ' + entry.type + ' tab ' + entry.tabId);
+    diagPush('Alarm recovery: a run died mid-ML-call (' + entry.type + ').');
     const sent = await failOrphanedRun(entry.runId, { tabId: entry.tabId }, msg);
     if (sent) {
-      diagPush('alarm recovery error: ' + msg);
+      diagPush('Alarm recovery failed: ' + msg);
       if (entry.tabId != null) {
         const s = await getSettings().catch(() => null);
         if (s && s.debugMode) await sendDiagLog(entry.tabId, entry.runId);

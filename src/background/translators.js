@@ -15,6 +15,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let _translateLog = null;
 export function setTranslateLogger(fn) { _translateLog = typeof fn === 'function' ? fn : null; }
 function tlog(line) { try { if (_translateLog) _translateLog(line); } catch {} }
+// Plain retry line for the diagnostic log (James, 2026-11-26): which
+// backend, what happened, which retry, how long the wait is. Status is a
+// number (HTTP) or 'network'.
+function plainRetryLine(backend, attempt, total, status, waitMs) {
+  const label = backend === 'google' ? 'Google' : backend === 'gemini' ? 'Gemini' : backend === 'azure' ? 'Azure' : backend === 'lmstudio' ? 'LM Studio' : backend;
+  const why = status === 'network' ? 'network error' : status === 429 ? 'rate-limited (429)' : status === 408 ? 'timed out (408)' : (typeof status === 'number' && status >= 500) ? `server error (${status})` : `HTTP ${status}`;
+  return `  ${label} ${why} — retry ${attempt} of ${total}, waiting ${(waitMs / 1000).toFixed(1)}s.`;
+}
 
 // Abort-aware sleep: waits out a backoff delay, but resolves/rejects at
 // once when `signal` aborts instead of sleeping the full delay. This is
@@ -84,7 +92,7 @@ function logRateLimitHeaders(resp, backend) {
       const v = resp.headers.get(name);
       if (v != null && String(v).trim() !== '') parts.push(`${name}=${v}`);
     }
-    if (parts.length) tlog(`translate ${backend}: ${parts.join(' ')}`);
+    if (parts.length) tlog(`  ${backend === 'gemini' ? 'Gemini' : backend === 'google' ? 'Google' : backend === 'azure' ? 'Azure' : backend} rate-limit info: ${parts.join(' ')}`);
   } catch {}
 }
 
@@ -240,7 +248,7 @@ function applySourceLanguageGuard(out, texts, settings, backend) {
   const hit = checkSourceLanguageOutput(out, texts, settings.targetLang);
   if (!hit) return out;
   if (hit.kanjiOnly && hit.bad < 0) {
-    tlog(`${backend}: kanji-only output, cannot rule out untranslated kanji — accepted`);
+    tlog(`  ${backend === 'gemini' ? 'Gemini' : backend === 'lmstudio' ? 'LM Studio' : backend} returned kanji-only text — cannot tell if it is translated, kept as-is.`);
     return out;
   }
   // Switch OFF (James, 2026-11-26): guard off — log the would-be failure
@@ -250,10 +258,9 @@ function applySourceLanguageGuard(out, texts, settings, backend) {
   // on the page.
   if (!dropUntranslated(settings)) {
     const srcText = String(texts[hit.bad] || '').replace(/\s+/g, ' ').slice(0, 200);
-    tlog(`${backend} guard OFF — would have failed (${hit.why}), ${hit.badCount} of ${out.length} entries bad; source[${hit.bad}]: ${srcText}`);
+    tlog(`  Guard off — kept untranslated text (${hit.why}) (source: ${srcText}).`);
     return out;
   }
-  tlog(`${backend} returned source-language output (${hit.why}) — ${hit.badCount} of ${out.length} entries bad, failing over`);
   const err = new Error(`${backend}: returned source-language text (${hit.why}), failing over`);
   // Guard-failure marker: lets the Gemini path tell a bad-content reply
   // apart from an HTTP/network failure, so it can retry the request once
@@ -262,6 +269,10 @@ function applySourceLanguageGuard(out, texts, settings, backend) {
   err.guardFailure = true;
   err.guardWhy = hit.why;
   err.guardBadCount = hit.badCount;
+  // First bad source text, so the failover line can name it (James reads
+  // the failing OCR off the log). Kept on the error, not logged here —
+  // the failover notice below logs the one combined line.
+  err.guardSource = String(texts[hit.bad] || '').replace(/\s+/g, ' ').slice(0, 200);
   throw err;
 }
 
@@ -383,7 +394,7 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
         const ra = resp.status === 429 ? retryAfterMsAny(resp) : null;
         if (ra != null) pendingWait = ra;
         lastErr = new Error(`LM Studio: HTTP ${resp.status} from ${label} (retrying)`);
-        typeof tlog === 'function' && tlog(`translate retry lmstudio attempt ${attempt + 1}/${backoffs.length} status=${resp.status} backoff=${pendingWait != null ? pendingWait : backoffs[attempt]}ms`);
+        typeof tlog === 'function' && tlog(plainRetryLine('lmstudio', attempt + 1, backoffs.length, resp.status, pendingWait != null ? pendingWait : backoffs[attempt]));
         continue;
       }
       return resp;
@@ -399,7 +410,7 @@ async function lmStudioFetch(url, opts, signal, label, deadlineMs = 30000) {
       const isNetwork = e && (e.name === 'TypeError' || /fetch failed|cannot reach|network/i.test(String(e.message)));
       if ((isTimeout || isNetwork) && attempt < backoffs.length) {
         lastErr = e;
-        typeof tlog === 'function' && tlog(`translate retry lmstudio attempt ${attempt + 1}/${backoffs.length} ${e && e.name ? e.name : 'network'} backoff=${backoffs[attempt]}ms`);
+        typeof tlog === 'function' && tlog(plainRetryLine('lmstudio', attempt + 1, backoffs.length, 'network', backoffs[attempt]));
         continue;
       }
       throw e;
@@ -507,7 +518,7 @@ async function googleRequest(url, parse, signal, deadlineAt) {
         networkRetries++;
         const rem = remainingMs(deadlineAt);
         if (rem <= 0) break;
-        tlog(`translate retry google attempt ${attempt + 1}/${delays.length} status=network wait=1500ms`);
+        tlog(plainRetryLine('google', attempt + 1, delays.length, 'network', 1500));
         await sleepAbortable(Math.min(1500, rem), signal);
         continue;
       }
@@ -523,17 +534,17 @@ async function googleRequest(url, parse, signal, deadlineAt) {
     if (status === 429) {
       consecutive429++;
       if (consecutive429 >= 2) {
-        tlog('gtx 429, no Retry-After (expected) — second 429 in a row, failing over at once');
+        tlog('  Google rate-limited twice in a row — failing over at once.');
         break;
       }
       const ra = retryAfterMs(resp);
-      if (ra == null) tlog('gtx 429, no Retry-After (expected)');
+      if (ra == null) tlog('  Google rate-limited (429), no wait time given.');
     } else {
       consecutive429 = 0;
     }
     if (status === 408) {
       // 408 like 503: retry once after the fixed delay, then fail over.
-      tlog('translate retry google: HTTP 408 Request Timeout');
+      tlog('  Google timed out (408).');
       if (retries408 >= 1) break;
       retries408++;
     }
@@ -548,7 +559,7 @@ async function googleRequest(url, parse, signal, deadlineAt) {
     if (resp && resp.status === 429) {
       const ra = retryAfterMs(resp);
       if (ra != null && ra > RETRY_AFTER_MAX_MS) {
-        typeof tlog === 'function' && tlog(`translate retry google: Retry-After ${Math.round(ra)}ms too long, failing over instead of waiting`);
+        typeof tlog === 'function' && tlog(`  Google asked to wait ${(ra / 1000).toFixed(1)}s — too long, failing over instead.`);
         break;
       }
       if (ra != null) wait = ra;
@@ -564,7 +575,7 @@ async function googleRequest(url, parse, signal, deadlineAt) {
     const rem = remainingMs(deadlineAt);
     if (rem <= 0) break;
     wait = Math.min(wait, rem);
-    typeof tlog === 'function' && tlog(`translate retry google attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
+    typeof tlog === 'function' && tlog(plainRetryLine('google', attempt + 1, delays.length, resp ? resp.status : 'network', Math.round(wait)));
     await sleepAbortable(wait, signal);
     resp = null;
   }
@@ -721,7 +732,7 @@ async function azure(texts, settings, signal, deadlineAt) {
           networkRetries++;
           const rem = remainingMs(deadlineAt);
           if (rem <= 0) break;
-          tlog(`translate retry azure attempt ${attempt + 1}/${delays.length} status=network wait=1500ms`);
+          tlog(plainRetryLine('azure', attempt + 1, delays.length, 'network', 1500));
           await sleepAbortable(Math.min(1500, rem), signal);
           continue;
         }
@@ -740,7 +751,7 @@ async function azure(texts, settings, signal, deadlineAt) {
           retried401 = true;
           const rem = remainingMs(deadlineAt);
           if (rem <= 0) break;
-          tlog('translate retry azure: 401 once after 2s (transient 401001 on a new token)');
+          tlog('  Azure refused the key once (401) — retrying.');
           await sleepAbortable(Math.min(2000, rem), signal);
           resp = null;
           continue;
@@ -757,7 +768,7 @@ async function azure(texts, settings, signal, deadlineAt) {
         }
       }
       if (resp && resp.status === 408) {
-        tlog('translate retry azure: HTTP 408 Request Timeout');
+        tlog('  Azure timed out (408).');
         if (retries408 >= 1) break;
         retries408++;
       }
@@ -771,7 +782,7 @@ async function azure(texts, settings, signal, deadlineAt) {
       if (resp && resp.status === 429) {
         const ra = retryAfterMsAny(resp);
         if (ra != null && ra > RETRY_AFTER_MAX_MS) {
-          typeof tlog === 'function' && tlog(`translate retry azure: Retry-After ${Math.round(ra)}ms too long, failing over instead of waiting`);
+          typeof tlog === 'function' && tlog(`  Azure asked to wait ${(ra / 1000).toFixed(1)}s — too long, failing over instead.`);
           break;
         }
         if (ra != null) wait = ra;
@@ -780,7 +791,7 @@ async function azure(texts, settings, signal, deadlineAt) {
       const rem = remainingMs(deadlineAt);
       if (rem <= 0) break;
       wait = Math.min(wait, rem);
-      typeof tlog === 'function' && tlog(`translate retry azure attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
+      typeof tlog === 'function' && tlog(plainRetryLine('azure', attempt + 1, delays.length, resp ? resp.status : 'network', Math.round(wait)));
       await sleepAbortable(wait, signal);
       resp = null;
     }
@@ -798,7 +809,7 @@ async function azure(texts, settings, signal, deadlineAt) {
       }
       const mapped = mapHttpStatus(resp.status, 'azure translator');
       const suffix = [slice, reqId ? `X-RequestId ${reqId}` : null].filter(Boolean).join(' ');
-      if (resp.status >= 500 && reqId) tlog(`azure 500/503 X-RequestId=${reqId} X-ClientTraceId=${traceId}`);
+      if (resp.status >= 500 && reqId) tlog(`  Azure server error (${resp.status}).`);
       throw new Error(`${mapped || `azure translator: HTTP ${resp.status} after retries`}${parsed.code ? ` (code ${parsed.code})` : ''}${suffix ? ' — ' + suffix : ''}`);
     }
     const data = await readJsonChecked(resp, 'azure translator');
@@ -1007,7 +1018,7 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
         networkRetries++;
         const rem = remainingMs(deadlineAt);
         if (rem <= 0) break;
-        tlog(`translate retry gemini attempt ${attempt + 1}/${delays.length} status=network wait=1500ms`);
+        tlog(plainRetryLine('gemini', attempt + 1, delays.length, 'network', 1500));
         await sleepAbortable(Math.min(1500, rem), signal);
         continue;
       }
@@ -1064,13 +1075,13 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
         if (found.length) {
           wait = Math.max(...found);
           if (wait > RETRY_AFTER_MAX_MS) {
-            tlog(`translate retry gemini: retry delay ${Math.round(wait)}ms too long, failing over instead of waiting`);
+            tlog(`  Gemini asked to wait ${(wait / 1000).toFixed(1)}s — too long, failing over instead.`);
             break;
           }
         }
       }
       if (status === 504) {
-        tlog('translate retry gemini: HTTP 504 DEADLINE_EXCEEDED');
+        tlog('  Gemini timed out (504).');
         if (retries504 >= 1) break;
         retries504++;
       }
@@ -1079,13 +1090,13 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
         if (ra == null) {
           consecutive503NoRA++;
           if (consecutive503NoRA >= 2) {
-            tlog('translate retry gemini: second 503 with no Retry-After, failing over at once instead of burning the third try');
+            tlog('  Gemini server error twice (503) — failing over at once.');
             break;
           }
         } else consecutive503NoRA = 0;
       }
       if (status === 408) {
-        tlog('translate retry gemini: HTTP 408 Request Timeout');
+        tlog('  Gemini timed out (408).');
         if (retries408 >= 1) break;
         retries408++;
       }
@@ -1096,7 +1107,7 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
     const rem = remainingMs(deadlineAt);
     if (rem <= 0) break;
     wait = Math.min(wait, rem);
-    typeof tlog === 'function' && tlog(`translate retry gemini attempt ${attempt + 1}/${delays.length} status=${resp ? resp.status : 'network'} wait=${Math.round(wait)}ms`);
+    typeof tlog === 'function' && tlog(plainRetryLine('gemini', attempt + 1, delays.length, resp ? resp.status : 'network', Math.round(wait)));
     await sleepAbortable(wait, signal);
     resp = null;
   }
@@ -1125,7 +1136,7 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
   // when the free tier returns it; never fail on its absence.
   try {
     const meta = JSON.parse(bodyText).usageMetadata;
-    if (meta) tlog(`gemini usage: promptTokens=${meta.promptTokenCount ?? '?'} outputTokens=${meta.candidatesTokenCount ?? '?'} totalTokens=${meta.totalTokenCount ?? '?'}`);
+    if (meta) tlog(`  Gemini used ${meta.promptTokenCount ?? '?'} prompt + ${meta.candidatesTokenCount ?? '?'} output tokens.`);
   } catch {}
   const out = parseGeminiBody(bodyText, texts.length);
   // 2.3.28: Gemini sometimes ignores the prompt and echoes the source
@@ -1153,10 +1164,10 @@ async function gemini(texts, settings, signal, deadlineAt, promptOverride = null
     if (e && e.guardFailure && !guardRetried && dropUntranslated(settings)) {
       const rem = remainingMs(deadlineAt);
       if (rem <= GEMINI_GUARD_RETRY_MIN_MS) {
-        tlog(`gemini: guard failed (${e.guardWhy}) but only ${Math.max(0, Math.round(rem))}ms remain — failing over instead of retrying`);
+        tlog(`  Gemini returned untranslated text (${e.guardWhy}) but only ${Math.max(0, Math.round(rem))}ms remain — failing over instead of retrying.`);
         throw e;
       }
-      tlog(`gemini: guard failed (${e.guardWhy}) — second chance: retrying once with a correction note`);
+      tlog(`  Gemini returned untranslated text (${e.guardWhy}) — second chance: retrying once with a correction.`);
       return gemini(texts, settings, signal, deadlineAt, geminiRetryPrompt(texts, settings, e.guardWhy), true);
     }
     throw e;
@@ -1909,8 +1920,15 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
           // Failover deadline for the Google/Azure/Gemini loops: the
           // remaining failover budget, not the original 30s deadline.
           const fbDeadlineAt = Date.now() + remaining;
-          // User-visible notice: failover must not happen silently.
-          onProgress && onProgress({ failoverFrom: backend, failoverTo: fb });
+          // User-visible notice: failover must not happen silently. Carry
+          // the primary's reason (and the failing source text, when the
+          // guard caught untranslated output) so the log shows ONE line
+          // for the failover instead of a guard line plus a failover line.
+          onProgress && onProgress({
+            failoverFrom: backend, failoverTo: fb,
+            failoverWhy: primaryErr && primaryErr.guardFailure ? 'untranslated text' : (primaryErr ? String(primaryErr.message).slice(0, 80) : 'failed'),
+            failoverSource: primaryErr && primaryErr.guardFailure ? (primaryErr.guardSource || '') : '',
+          });
           lastFallbackBackend = fb;
           try {
             results = await runBackend(fb, lmCap, attemptSig, fbDeadlineAt);
@@ -1942,8 +1960,8 @@ export async function translateBlocks(blocks, settings, onProgress, signal, dead
         const primaryLabel = backend === 'google' ? 'Google' : backend === 'gemini' ? 'Gemini' : backend === 'azure' ? 'Azure' : 'LM Studio';
         const fallbackMsg = lastErr.message;
         lastErr = new Error(`translation failed: ${primaryLabel} failed (${primaryErr.message}); ${fbLabel} fallback also failed (${fallbackMsg})`);
-        try { tlog(`translate failover: primary ${primaryLabel} failed: ${primaryErr.message}`); } catch {}
-        try { tlog(`translate failover: fallback ${fbLabel} failed: ${fallbackMsg}`); } catch {}
+        try { tlog(`  ${primaryLabel} failed (${String(primaryErr.message).slice(0, 120)}).`); } catch {}
+        try { tlog(`  ${fbLabel} fallback also failed (${String(fallbackMsg).slice(0, 120)}).`); } catch {}
       }
       // A timeout-abort that failover couldn't rescue must not surface as
       // a bare 'cancelled'. No failover attempted keeps the old

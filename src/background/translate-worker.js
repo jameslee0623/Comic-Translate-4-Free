@@ -24,10 +24,10 @@ self.onmessage = async (e) => {
   const ctrl = new AbortController();
   const deadlineId = setTimeout(() => ctrl.abort(), DEADLINE_MS);
   try {
-    // Forward failover notices so the SW can show a pill.
+    // Forward failover notices so the SW can show a pill and log the line.
     const onProgress = (p) => {
       if (p && p.failoverFrom && p.failoverTo) {
-        self.postMessage({ type: 'failover-notice', failoverFrom: p.failoverFrom, failoverTo: p.failoverTo });
+        self.postMessage({ type: 'failover-notice', failoverFrom: p.failoverFrom, failoverTo: p.failoverTo, failoverWhy: p.failoverWhy || '', failoverSource: p.failoverSource || '' });
       }
     };
     const translated = await translateBlocks(blocks, settings, onProgress, ctrl.signal, DEADLINE_MS);

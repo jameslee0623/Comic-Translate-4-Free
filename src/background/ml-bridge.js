@@ -846,7 +846,7 @@ export async function runGpuInpaint(opts) {
   const fireWatchdog = () => {
     if (watchdogFired || slot.terminated) return;
     watchdogFired = true;
-    try { diag('inpaint gpu watchdog fired: no progress or reply for ' + (lastWindowMs / 1000) + 's, terminating GPU worker'); } catch {}
+    try { diag('Inpaint GPU stalled (no progress for ' + (lastWindowMs / 1000) + 's) — stopping it.'); } catch {}
     terminateGpuSlot(slot, gpuHangError(lastWindowMs));
   };
   // 1.4.0 (m3): two-phase arming. No arg means "use the phase window":
@@ -984,7 +984,7 @@ export async function runChromeGpuInpaint(opts) {
   const fireWatchdog = () => {
     if (watchdogFired) return;
     watchdogFired = true;
-    try { diag('inpaint gpu watchdog fired: no progress or reply for ' + (lastWindowMs / 1000) + 's, terminating GPU worker'); } catch {}
+    try { diag('Inpaint GPU stalled (no progress for ' + (lastWindowMs / 1000) + 's) — stopping it.'); } catch {}
     try { cancelGpuMessage({ type: MSG.ML_GPU_CANCEL, runId }); } catch {}
     try { cancelReject?.(gpuHangError(lastWindowMs)); } catch {}
   };

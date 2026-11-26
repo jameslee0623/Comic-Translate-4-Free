@@ -596,9 +596,10 @@
   }
 
   // Diagnostic for the last inventory, read by the ct/list-images handler.
-  // Lists every big picture (natural size >= 500px) with its shown size and
-  // whether it made the inventory — so a browser that shows a picture big
-  // but does not list it is visible in the diag log.
+  // Human-readable log (James, 2026-11-26): only big pictures LEFT OUT of
+  // the inventory are worth a line — the ones in the list appear as
+  // Picture blocks in the run. Empty when nothing was left out, so a
+  // normal run logs nothing here.
   let lastInventoryDiag = '';
   // Full src URLs of every big picture (in the list and excluded), so the
   // worker can check host permission for ALL of them — not just the ones
@@ -611,7 +612,6 @@
     // filter below still runs.
     try {
       const reasons = { notConn: 0, notComplete: 0, noNat: 0, dispSmall: 0 };
-      const bigLines = [];
       lastBigSrcs = [];
       let nBig = 0, nBigIn = 0;
       for (const im of all) {
@@ -643,17 +643,24 @@
           // URLs entirely — they are not a host to check permission for.
           const src = realSrc(im);
           if (src && !/^data:/i.test(src)) lastBigSrcs.push(src);
-          let loading = '';
-          try { loading = (typeof im.getAttribute === 'function' && im.getAttribute('loading')) || ''; } catch { /* ignore */ }
-          bigLines.push(`big nat ${im.naturalWidth || 0}x${im.naturalHeight || 0} attr ${attrW}x${attrH} disp ${Math.round(r.width)}x${Math.round(r.height)} complete ${im.complete} loading ${loading || '-'} in ${inList ? 'Y' : 'N'} ${src.slice(0, 60)}`);
         }
       }
-      const docImgs = (typeof document !== 'undefined' && document.images) ? document.images.length : 0;
-      const vpW = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 0;
-      const vpH = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 0;
-      lastInventoryDiag = `inventory total ${all.length} (document.images ${docImgs}) viewport ${vpW}x${vpH} big-pics ${nBigIn}/${nBig} in list; excluded notConn ${reasons.notConn} notComplete ${reasons.notComplete} noNat ${reasons.noNat} dispSmall ${reasons.dispSmall}\n` + bigLines.join('\n');
+      // Only the left-out big pictures matter: a picture in the list shows
+      // up as a Picture block in the run. Nothing left out -> empty string,
+      // so a normal run logs nothing here.
+      const leftOut = nBig - nBigIn;
+      if (!leftOut) {
+        lastInventoryDiag = '';
+      } else {
+        const why = [];
+        if (reasons.notConn) why.push(reasons.notConn + ' not connected');
+        if (reasons.notComplete) why.push(reasons.notComplete + ' not loaded yet');
+        if (reasons.noNat) why.push(reasons.noNat + ' no image data');
+        if (reasons.dispSmall) why.push(reasons.dispSmall + ' too small on screen');
+        lastInventoryDiag = leftOut + ' big picture' + (leftOut === 1 ? '' : 's') + ' not listed' + (why.length ? ' (' + why.join(', ') + ')' : '');
+      }
     } catch (e) {
-      lastInventoryDiag = 'inventory diag failed: ' + String((e && e.message) || e).slice(0, 120);
+      lastInventoryDiag = 'Inventory check failed: ' + String((e && e.message) || e).slice(0, 120);
     }
     const imgs = all.filter(im => {
       if (!im.isConnected || !im.complete || !im.naturalWidth) return false;
@@ -856,13 +863,14 @@
   // are on the page now, which uids they carry, and the big pictures' URLs.
   // Travels back on the RENDER reply; the worker logs it before throwing.
   function buildRenderMissDiag(msg) {
-    let line = 'render miss uid=' + (msg.uid || '-') + ' srcUrl=' + (msg.srcUrl || '-') +
-      ' url=' + String(document.URL || '').slice(0, 160);
+    let line = 'Could not put the translated picture back on the page (uid ' + (msg.uid || '-') +
+      ', src ' + (msg.srcUrl || '-') +
+      ', page ' + String(document.URL || '').slice(0, 160) + ').';
     try {
       const all = allImages();
       const withUid = all.filter(im => im.dataset && im.dataset.ctUid);
-      line += ' imgs=' + all.length + ' withUid=' + withUid.length +
-        ' uids=[' + withUid.slice(0, 8).map(im => im.dataset.ctUid).join(',') + ']';
+      line += ' ' + all.length + ' pictures on the page now, ' + withUid.length + ' carry uids [' +
+        withUid.slice(0, 8).map(im => im.dataset.ctUid).join(',') + '].';
       const big = [];
       for (const im of all) {
         let w = 0, h = 0;
@@ -870,7 +878,7 @@
         if (Math.max(w, h) >= 500) big.push(String(im.currentSrc || im.src || '').slice(0, 120));
         if (big.length >= 5) break;
       }
-      line += ' bigSrcs=[' + big.join(' | ') + ']';
+      if (big.length) line += ' Big pictures: [' + big.join(' | ') + '].';
     } catch {}
     return line;
   }
