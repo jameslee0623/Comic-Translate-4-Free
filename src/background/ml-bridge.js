@@ -177,6 +177,32 @@ function nextAttempt(msg) {
 // Progress (inpaint only) is routed by runId to __ctInpaintProgress.
 let mlWorker = null;
 let mlWorkerReady = null; // Promise<Worker> once 'ml-ready' arrives
+// ML worker startup, measured (2026-11-26, item 6 — James: "measure it.
+// Or find a better way. start it from the beginning of the whole pipeline?").
+// mlWorkerStartedAt is when `new Worker(...)` ran; mlWorkerReadyResolved
+// is true once 'ml-ready' arrived. The per-call wait (ML_WORKER_WAIT_MS)
+// is unchanged at 5s — James rejected raising it to 10-15s. What changed
+// is that the wait now bounds only the WAIT, not the worker (see
+// ensureMlWorker): a slow worker is no longer killed at 5s. A worker that
+// is still not ready ML_WORKER_HUNG_MS after creation is hung, not slow,
+// and is killed so the next call starts a fresh one — 30s is a hang guard,
+// not a measured value.
+let mlWorkerStartedAt = 0;
+let mlWorkerReadyResolved = false;
+const ML_WORKER_WAIT_MS = 5000;
+const ML_WORKER_HUNG_MS = 30 * 1000;
+// Diagnostic hook for the worker's startup lines (ready ms, timeout) —
+// the service worker registers diagPush here, so the real startup time
+// lands in the diagnostic log James reads off his phone. Also mirrored to
+// the console, so the measurement survives if the hook is not registered.
+let mlWorkerDiagHook = null;
+export function setMlWorkerDiagHook(fn) {
+  mlWorkerDiagHook = (typeof fn === 'function') ? fn : null;
+}
+function mlWorkerDiag(line) {
+  if (mlWorkerDiagHook) { try { mlWorkerDiagHook(line); } catch {} }
+  try { console.log('[ct] ' + line); } catch {}
+}
 let mlCallSeq = 0;
 let mlAlarmSeq = 0; // alarm-name uniqueness (see callMl)
 const mlPending = new Map(); // callId -> {resolve, reject, runId}
@@ -190,6 +216,8 @@ function killMlWorker() {
   try { mlWorker?.terminate(); } catch {}
   mlWorker = null;
   mlWorkerReady = null;
+  mlWorkerStartedAt = 0;
+  mlWorkerReadyResolved = false;
 }
 
 function failMlPending(errFactory) {
@@ -230,55 +258,95 @@ function routeMlMessage(e) {
   else p.reject(new Error(d.error || 'ML worker failed'));
 }
 
-function ensureMlWorker() {
-  if (mlWorker) return mlWorkerReady;
-  const w = new Worker(chrome.runtime.getURL('src/background/ml-worker.js')); // classic worker
-  mlWorker = w;
-  mlWorkerReady = new Promise((resolve, reject) => {
-    let settled = false;
-    // Wait — the worker's 'ml-ready' postMessage (posted after importScripts(ort)
-    // + dynamic import of the handlers). No other signal exists for a worker
-    // whose import hangs: it posts neither ready nor error. TODO: the 5000ms
-    // value cites no measurement in the code — verify. NOTE: on timeout the
-    // fallback is in-process compute, which can block the main thread — the
-    // exact failure the worker exists to avoid — so a slow (not dead) worker
-    // start trades a hang for main-thread jank.
-    const to = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      killMlWorker();
+export function ensureMlWorker() {
+  // Hung, not slow: a worker that has been starting for over
+  // ML_WORKER_HUNG_MS without posting 'ml-ready' will never become ready
+  // (its import hung) — kill it so the next call starts a fresh one.
+  // Only applies while it is still not ready: a healthy worker that has
+  // been running for 30s must never be killed here.
+  if (mlWorker && !mlWorkerReadyResolved && mlWorkerStartedAt && Date.now() - mlWorkerStartedAt > ML_WORKER_HUNG_MS) {
+    killMlWorker();
+  }
+  if (!mlWorker) {
+    const w = new Worker(chrome.runtime.getURL('src/background/ml-worker.js')); // classic worker
+    mlWorker = w;
+    mlWorkerStartedAt = Date.now();
+    const startedAt = performance.now();
+    // The shared ready promise: resolves when 'ml-ready' arrives, rejects
+    // ONLY on a real worker error (onerror). It NEVER rejects on timeout —
+    // the timeout lives in the per-call race below, so a slow worker keeps
+    // starting and a later call uses it once ready. Before, the 5s timeout
+    // killed the worker, so a slow phone (worker takes > 5s to load ort +
+    // handlers) never got a worker at all: every ML call created a fresh
+    // worker, killed it at 5s, and fell back to in-process compute on the
+    // main thread — the worst mode, the exact thing the worker exists to
+    // avoid. A slow worker is better than no worker.
+    mlWorkerReady = new Promise((resolve, reject) => {
+      // Wait — the worker's 'ml-ready' postMessage (posted after importScripts(ort)
+      // + dynamic import of the handlers). No other signal exists for a worker
+      // whose import hangs: it posts neither ready nor error.
+      w.onmessage = (e) => {
+        if (e.data && e.data.type === 'ml-ready') {
+          mlWorkerReadyResolved = true;
+          mlWorkerDiag('ML worker ready in ' + Math.round(performance.now() - startedAt) + 'ms');
+          w.onmessage = routeMlMessage;
+          w.onerror = (ev) => {
+            if (mlWorker !== w) return; // stale worker (already replaced)
+            // DIAGNOSTIC (temporary): log the worker error as plain text
+            // (the event object itself cannot be expanded usefully).
+            console.error('[ct] ML worker error:', String((ev && ev.message) || ev || ''));
+            // Mid-run crash: fall back to in-process handlers — re-running
+            // from the still-staged originals is safe.
+            failMlPending(mlWorkerFallbackError);
+            killMlWorker();
+          };
+          resolve(w);
+        }
+        // Any other pre-ready message is ignored (no job posts before ready).
+      };
+      w.onerror = (ev) => {
+        console.error('[ct] ML worker error before ready:', String((ev && ev.message) || ev || ''));
+        killMlWorker();
+        reject(mlWorkerFallbackError());
+      };
+    });
+  }
+  // Per-call wait bound (ML_WORKER_WAIT_MS, unchanged at 5s): race the
+  // shared ready promise against a timer. On timeout THIS caller falls
+  // back (runMlViaWorker throws the fallback error, callMl runs
+  // in-process for that call), but the worker keeps starting — the shared
+  // promise stays pending, and the next call races it again (resolving at
+  // once once the worker is ready). The timer is cleared once the race
+  // settles either way, so a resolved race leaves no dangling timer.
+  let to;
+  const timeoutP = new Promise((_, reject) => {
+    to = setTimeout(() => {
+      // Neutral wording on purpose: this fires for a real ML call (which
+      // then falls back to in-process) and for the run-start warm-up
+      // (which just gives up waiting) alike — the worker keeps starting
+      // either way, and the ready line below gives the real time.
+      mlWorkerDiag('ML worker not ready after ' + ML_WORKER_WAIT_MS + 'ms (worker keeps starting)');
       reject(mlWorkerFallbackError());
-    }, 5000);
-    w.onmessage = (e) => {
-      if (settled) return;
-      if (e.data && e.data.type === 'ml-ready') {
-        settled = true;
-        clearTimeout(to);
-        w.onmessage = routeMlMessage;
-        w.onerror = (ev) => {
-          if (mlWorker !== w) return; // stale worker (already replaced)
-          // DIAGNOSTIC (temporary): log the worker error as plain text
-          // (the event object itself cannot be expanded usefully).
-          console.error('[ct] ML worker error:', String((ev && ev.message) || ev || ''));
-          // Mid-run crash: fall back to in-process handlers — re-running
-          // from the still-staged originals is safe.
-          failMlPending(mlWorkerFallbackError);
-          killMlWorker();
-        };
-        resolve(w);
-      }
-      // Any other pre-ready message is ignored (no job posts before ready).
-    };
-    w.onerror = (ev) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(to);
-      console.error('[ct] ML worker error before ready:', String((ev && ev.message) || ev || ''));
-      killMlWorker();
-      reject(mlWorkerFallbackError());
-    };
+    }, ML_WORKER_WAIT_MS);
   });
-  return mlWorkerReady;
+  const raced = Promise.race([mlWorkerReady, timeoutP]);
+  raced.then(() => clearTimeout(to), () => clearTimeout(to));
+  return raced;
+}
+
+// Start the Firefox ML worker at run start, so it warms up during the
+// model wait + capture + inventory instead of starting at the first ML
+// call. Fire-and-forget — the caller never awaits it; the first ML call
+// still waits up to ML_WORKER_WAIT_MS for ready as before. No-op on Chrome
+// (no worker there — directHandlers() is null) and when a worker is
+// already running or starting. The rejection (slow worker) is swallowed:
+// the warm-up only gives up waiting, the worker keeps starting.
+export function warmUpMlWorker() {
+  if (!directHandlers()) return;
+  try {
+    const p = ensureMlWorker();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch {}
 }
 
 async function runMlViaWorker(msg) {

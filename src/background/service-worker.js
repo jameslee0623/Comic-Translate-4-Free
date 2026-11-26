@@ -16,7 +16,7 @@ import { pixelPut, pixelTake, pixelDrop, pixelPruneRun } from '../shared/pixel-b
 import { generateMask, detectContentMaskInBbox } from '../shared/mask.js';
 import { translateBlocks, checkAzure, checkLmStudio, checkGemini, BACKEND_LABEL, BACKEND_SHORT_LABEL, setTranslateLogger } from './translators.js';
 import { detectPageLang } from '../shared/lang-detect.js';
-import { mlHostAlive, ensureMlHost, callMl, cancelMlForRun, runGpuInpaint, cancelGpuInpaint, runChromeGpuInpaint, cancelChromeGpuInpaint, notifyChromeGpuProgress, makeCanvas, canvasToBlob, directHandlers, WEBP_TYPE, WEBP_QUALITY, setMlAlarmRecoveryHook } from './ml-bridge.js';
+import { mlHostAlive, ensureMlHost, callMl, cancelMlForRun, runGpuInpaint, cancelGpuInpaint, runChromeGpuInpaint, cancelChromeGpuInpaint, notifyChromeGpuProgress, makeCanvas, canvasToBlob, directHandlers, WEBP_TYPE, WEBP_QUALITY, setMlAlarmRecoveryHook, warmUpMlWorker, setMlWorkerDiagHook } from './ml-bridge.js';
 import {
   initPageCache, buildCacheKey, buildCacheKeyTier1, buildCacheKeyTier2,
   pageCacheGet, pageCachePut,
@@ -3227,6 +3227,15 @@ async function runPipeline(tabId, opts = {}) {
     // never started.
     settings = await getSettings();
     keepAliveStart(runId); // FIX2: hold the background alive for this run only; released in finally.
+    // ML worker warm-up (item 6, 2026-11-26 — James: start it from the
+    // beginning of the whole pipeline): on Firefox the ML worker is only
+    // started lazily at the first ML call (the LaMa preload below), and
+    // its 5s ready wait can kill a slow worker before it finishes
+    // loading. Start it here, at run start, so it warms up during the
+    // model wait + capture + inventory instead. Fire-and-forget — the run
+    // never waits for it; the first ML call still waits up to 5s for
+    // ready as before. No-op on Chrome (no worker there).
+    warmUpMlWorker();
     // Show the pill at once (1%): before this, a cache-hit run showed
     // nothing for seconds (waitForModels + capture) and then jumped
     // 2% -> 100%, so the user thought it was stuck. The pill must
@@ -5759,6 +5768,9 @@ async function recoverOrphanedRuns() {
 }
 // Alarm recovery hook (ml-bridge onAlarm): the alarm fired because the
 // background died mid-ML-call. Fail that run the same clean way.
+// ML worker startup measurement (item 6): the ready/timeout lines go to
+// the diagnostic log, so James can read the real startup time off his phone.
+setMlWorkerDiagHook((line) => { try { diagPush(line); } catch {} });
 setMlAlarmRecoveryHook(async (entry, msg) => {
   try {
     // 2.1.57: skip a run whose record is already gone — it was auto-resumed
