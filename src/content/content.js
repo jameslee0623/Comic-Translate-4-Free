@@ -1168,7 +1168,7 @@
       }
     };
     btns.appendChild(rateBtn);
-    btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:ucimjuocb@mozmail.com?subject=Comic%20Translate%204%20Free%20feedback'));
+    btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:jameslee0623@gmail.com?subject=Comic%20Translate%204%20Free%20feedback'));
     card.appendChild(x);
     card.appendChild(title);
     card.appendChild(text);
