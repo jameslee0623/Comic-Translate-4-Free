@@ -1173,7 +1173,35 @@
     // shows the code from the start. The button is never hidden and never
     // links to the checkout — the free trial is reached through the
     // "Get Pro" button instead. It needs no checkout URL at all.
+    // In discount mode a click also copies the code "5STARS" to the
+    // clipboard (for pasting at the Dodo checkout) and briefly shows a
+    // checkmark on the button. Copy never blocks the store link.
     let rateIsDiscount = !!rated;
+    // Copy the discount code to the clipboard. Clipboard API first (the
+    // click is a user gesture, so it should work); a hidden textarea +
+    // execCommand fallback when it is unavailable or rejects. Resolves
+    // true on success, false on failure; never throws.
+    const copyDiscountCode = () => {
+      const code = '5STARS';
+      try {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          return navigator.clipboard.writeText(code).then(() => true, () => copyDiscountCodeFallback(code));
+        }
+      } catch { /* fall through to the fallback */ }
+      return Promise.resolve(copyDiscountCodeFallback(code));
+    };
+    const copyDiscountCodeFallback = (code) => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch { return false; }
+    };
     const hasCheckout = typeof checkoutUrl === 'string' && !!checkoutUrl;
     const rateBtn = document.createElement('button');
     const setRateLabel = () => {
@@ -1182,6 +1210,15 @@
     rateBtn.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
     setRateLabel();
     rateBtn.onclick = () => {
+      if (rateIsDiscount) {
+        // Discount mode: copy the code first, then open the store as before.
+        // A successful copy briefly shows a checkmark on the button.
+        copyDiscountCode().then(ok => {
+          if (!ok) return;
+          rateBtn.textContent = '✓ ' + supportMsg('discount_code_5stars', 'Discount Code: 5STARS');
+          setTimeout(() => { try { setRateLabel(); } catch {} }, 1500);
+        }).catch(() => { /* copy failed — store still opens */ });
+      }
       try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: supportStoreUrl() }); } catch { /* link open failed — modal stays */ }
       if (!rateIsDiscount) {
         try { markSupportRated(); } catch {}
