@@ -4030,8 +4030,21 @@ async function maybeAutoStart(tabId, tab, source, injectFirst) {
     // (Checked against the live runs map — not a recorded run id — so the
     // guard works while the run is in flight, which is when it matters.)
     if (prev && prev.url === url && now - prev.at < 900000) {
-      for (const [, r] of runs) {
-        if (r.tabId === tabId && !r.cancelled) { diagPush('auto diag skip: run in flight ' + url.slice(0, 120) + srcTag); return; }
+      for (const [inFlightId, r] of runs) {
+        if (r.tabId === tabId && !r.cancelled) {
+          diagPush('auto diag skip: run in flight ' + url.slice(0, 120) + srcTag);
+          // The content script just injected (it sent this auto-start)
+          // and missed the run's early progress: the first send failed
+          // because the script was not there yet, so the pill never
+          // showed — on a fast cache-hit run no later progress ever
+          // comes, so the pill only appears seconds later, if at all.
+          // Re-send the run's current progress now that the script is
+          // listening, so the pill appears at once.
+          if (currentRun && currentRun.runId === inFlightId) {
+            try { setProgress(inFlightId, currentRun.stage, currentRun.progress); } catch {}
+          }
+          return;
+        }
       }
     }
     // Freemium gate: auto-translate counts against the 50/day free limit
