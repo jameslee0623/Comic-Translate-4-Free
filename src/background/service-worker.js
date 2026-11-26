@@ -892,11 +892,17 @@ async function getPipelineImages(tabId, settings, tabUrl, opts = {}) {
     const r = await withTimeout(chrome.tabs.sendMessage(tabId, { type: 'ct/list-images' }), DATA_TIMEOUT_MS, 'list-images');
     list = r?.images || [];
     total = r?.total || list.length;
-    if (r?.diag) for (const l of String(r.diag).split('\n')) diagPush('inventory-diag ' + l);
+    if (!opts.quiet) {
+      if (r?.diag) for (const l of String(r.diag).split('\n')) diagPush('inventory-diag ' + l);
+    }
     // Permission for EVERY big picture's host — including the ones that did
     // not make the inventory — so a missing grant on a 403 CDN host is
     // visible in the same log, not just the gate's view of the listed ones.
-    if (Array.isArray(r?.bigSrcs) && r.bigSrcs.length) {
+    // Skipped on quiet (pipelined) polls: the run polls every ~500ms while
+    // pictures load, and repeating the full diag + host check each time
+    // would flood the log buffer. The full inventory diag runs once, on
+    // the run's inventory call below.
+    if (!opts.quiet && Array.isArray(r?.bigSrcs) && r.bigSrcs.length) {
       try {
         const missing = await checkImageHostPermissions(r.bigSrcs.map(src => ({ src })));
         const hosts = [...new Set(r.bigSrcs.map(s => { try { return new URL(s).hostname.toLowerCase(); } catch { return ''; } }).filter(Boolean))];
@@ -3339,20 +3345,126 @@ async function runPipeline(tabId, opts = {}) {
     // every picture first (content script scrolls through the page, then
     // jumps back). Best-effort with a timeout — a failure or timeout
     // must never block the run; translate whatever loaded.
+    // Pipelined auto (James's order: "wait only for the pictures that
+    // will be translated ... as soon as first qualified pic is loaded,
+    // it can start translating the first. do not wait everything to
+    // start"): force-load runs in the BACKGROUND — the run does not await
+    // the whole load before starting. It polls ct/list-images until the
+    // first qualifying picture appears, translates pictures from a work
+    // queue as they load (see refillPipelineQueue, called from the
+    // per-image loop), and ends when force-load has settled AND the queue
+    // is empty AND a final poll finds nothing new. Manual runs do not
+    // force-load at all and are untouched by everything below.
+    const isPipelined = !!(opts.auto && !manualSrc);
+    let forceLoadSettled = false;
+    // Queue state for the pipelined auto run (null on the manual path).
+    // pickedCount counts every eligible picture ever picked (including
+    // already-translated ones — the per-run cap is applied before that
+    // skip, as getPipelineImages does); alreadyDone counts the
+    // already-translated pictures dropped per batch; lastProgress is the
+    // progress high-water mark (the pill never goes backwards as the
+    // total grows); gatedCount is how many pictures the initial
+    // permission gate covered (later pictures are checked per image).
+    let pipe = null;
+    let refillPipelineQueue = null;
+    if (isPipelined) {
+      pipe = { seen: new Set(), pickedCount: 0, skippedDetail: [], skippedSeen: new Set(), alreadyDone: 0, ignored: 0, lastProgress: 0, gatedCount: 0, pillSent: false };
+    }
     if (opts.auto && !manualSrc) {
       // TODO: the 20s cap has no measured origin in the code — scroll time
       // grows with page length, so a very long chapter may always time out
       // here. Best-effort only (a timeout never blocks the run), so the
       // cost is a slow start, not a failure. No event exists — the content
-      // script's reply is the only completion signal.
+      // script's reply is the only completion signal. The 20s cap stays:
+      // the race below settles the run's completion signal at 20s even if
+      // the content script is still scrolling.
+      // A synchronous throw from sendMessage (dead tab) must not fail the
+      // run — force-load is best-effort, as the old awaited version's
+      // try/catch was. Mark it settled so the wait loop below does not
+      // spin forever on a signal that will never come.
+      let forceLoadPromise;
       try {
-        const r = await Promise.race([
+        forceLoadPromise = Promise.race([
           chrome.tabs.sendMessage(tabId, { type: 'ct/force-load-images' }),
           new Promise((_, rej) => setTimeout(() => rej(new Error('force-load timeout')), 20000)),
         ]);
-        diagPush('force-load images: ' + (r && r.ok ? (r.loaded + '/' + r.total + ' loaded in ' + r.ms + 'ms (direct ' + (r.directTriggered || 0) + ', ' + (r.scrolled ? r.steps + ' scroll steps' : 'no scroll')) : 'failed: ' + String((r && r.error) || 'no reply').slice(0, 80)));
       } catch (e) {
         diagPush('force-load images skipped: ' + String((e && e.message) || e).slice(0, 80));
+        forceLoadSettled = true;
+        forceLoadPromise = Promise.reject(e);
+        forceLoadPromise.catch(() => {});
+      }
+      forceLoadPromise.then(
+        r => {
+          diagPush('force-load images: ' + (r && r.ok ? (r.loaded + '/' + r.total + ' loaded in ' + r.ms + 'ms (direct ' + (r.directTriggered || 0) + ', ' + (r.scrolled ? r.steps + ' scroll steps' : 'no scroll') + ((r.filterSkipped || 0) ? ', filter skipped ' + r.filterSkipped : '')) : 'failed: ' + String((r && r.error) || 'no reply').slice(0, 80)));
+          forceLoadSettled = true;
+        },
+        e => {
+          diagPush('force-load images skipped: ' + String((e && e.message) || e).slice(0, 80));
+          forceLoadSettled = true;
+        },
+      );
+    }
+    // Pipelined inventory helpers. pollPipelineImages is the non-throwing
+    // wrapper around getPipelineImages: while force-load is still running
+    // an empty inventory only means "not loaded yet", so it returns null
+    // instead of throwing; once force-load has settled it rethrows the
+    // original "no pictures" error, so a truly empty page fails exactly
+    // as before. takeNewPipelineImages absorbs one poll into the queue
+    // state: dedupes by uid (falling back to src), enforces the cumulative
+    // 50-image cap across polls (pictures past the cap go to
+    // skippedDetail with the over-cap reason, as getPipelineImages does),
+    // accumulates skippedDetail (deduped by src+reason), drops
+    // already-translated pictures (counted in pipe.alreadyDone), and
+    // removes a stale skip entry when a picture qualifies after all
+    // (e.g. its displayed size grew once loaded).
+    const pollPipelineImages = async () => {
+      try {
+        return await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc, quiet: true });
+      } catch (e) {
+        if (!forceLoadSettled) return null;
+        throw e;
+      }
+    };
+    const takeNewPipelineImages = (r, target) => {
+      if (!pipe || !r) return;
+      if (Array.isArray(r.skippedDetail)) {
+        for (const d of r.skippedDetail) {
+          const key = (d.src || '') + '|' + (d.reason || '');
+          if (!pipe.skippedSeen.has(key)) { pipe.skippedSeen.add(key); pipe.skippedDetail.push(d); }
+        }
+      }
+      if (typeof r.ignored === 'number') pipe.ignored = r.ignored;
+      for (const im of r.images || []) {
+        const key = im.uid ? 'uid:' + im.uid : 'src:' + (im.src || '');
+        if (pipe.seen.has(key)) continue;
+        pipe.seen.add(key);
+        if (pipe.pickedCount >= MAX_IMAGES_PER_PAGE) {
+          const d = { w: im.w || 0, h: im.h || 0, src: im.src || '', reason: `over ${MAX_IMAGES_PER_PAGE}-image per-run cap` };
+          const k2 = (d.src || '') + '|' + d.reason;
+          if (!pipe.skippedSeen.has(k2)) { pipe.skippedSeen.add(k2); pipe.skippedDetail.push(d); }
+          continue;
+        }
+        pipe.pickedCount++;
+        if (im.translated) { pipe.alreadyDone++; continue; }
+        const si = pipe.skippedDetail.findIndex(d => d.src && d.src === im.src);
+        if (si >= 0) { pipe.skippedSeen.delete(pipe.skippedDetail[si].src + '|' + pipe.skippedDetail[si].reason); pipe.skippedDetail.splice(si, 1); }
+        target.push(im);
+      }
+    };
+    // Wait for the first qualifying picture before taking the inventory
+    // below — the inventory throws on an empty page, and while force-load
+    // is still running "empty" only means "not loaded yet". Polls every
+    // ~500ms. If force-load settles with nothing, the inventory below
+    // throws the original error, exactly as before.
+    if (isPipelined) {
+      for (;;) {
+        checkCancelled(runId);
+        let r = null;
+        try { r = await pollPipelineImages(); } catch (e) { throw e; }
+        if (r && (r.images || []).length) break;
+        if (forceLoadSettled) break;
+        await new Promise(res => setTimeout(res, 500));
       }
     }
     // ---- 1. inventory: every qualifying picture on the page (multi-pic).
@@ -3360,6 +3472,48 @@ async function runPipeline(tabId, opts = {}) {
     // its slice of the overall run, debug titles carry the image index, and one
     // bad picture never kills the rest of the run.
     let { images, skipped, skippedDetail, ignored } = await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc });
+    if (isPipelined) {
+      // First batch through the queue state: already-translated pictures
+      // are dropped here (counted in pipe.alreadyDone) instead of by the
+      // shared skip below, and the per-poll skip strings are deferred —
+      // the cumulative strings are built after the loop, once the total
+      // is known. skippedDetail here IS pipe.skippedDetail (same array),
+      // so later polls keep accumulating into it.
+      const firstBatch = [];
+      takeNewPipelineImages({ images, skippedDetail, ignored }, firstBatch);
+      images = firstBatch;
+      skipped = [];
+      skippedDetail = pipe.skippedDetail;
+      ignored = pipe.ignored;
+      // Refill the work queue from later polls. Appends newly loaded
+      // pictures straight onto `images` — the per-image loop below
+      // iterates that same array, so appended pictures are picked up in
+      // order. Called at the end of each picture: a quick poll when more
+      // pictures are already queued, and a ~500ms poll loop (until new
+      // pictures arrive or force-load settles) when the queue is empty.
+      // Ends when force-load has settled AND the queue is empty AND a
+      // final poll finds nothing new.
+      refillPipelineQueue = async (waitForMore) => {
+        for (;;) {
+          checkCancelled(runId);
+          let r = null;
+          try { r = await pollPipelineImages(); } catch { r = null; }
+          if (r) {
+            const before = images.length;
+            takeNewPipelineImages(r, images);
+            if (images.length > before) return;
+          }
+          if (forceLoadSettled) {
+            let extra = null;
+            try { extra = await getPipelineImages(tabId, settings, tabUrl, { srcUrl: manualSrc, quiet: true }); } catch { extra = null; }
+            if (extra) takeNewPipelineImages(extra, images);
+            return;
+          }
+          if (!waitForMore) return;
+          await new Promise(res => setTimeout(res, 500));
+        }
+      };
+    }
     // Skip pictures already translated (they show the translated render).
     // Resumed runs: the dead run already finished them, so the resumed run
     // finishes from where the old one left instead of redoing the page.
@@ -3370,6 +3524,43 @@ async function runPipeline(tabId, opts = {}) {
     // target language).
     let alreadyDone = 0;
     if ((opts.resume || opts.auto) && !manualSrc) {
+      if (pipe) {
+        // Pipelined: takeNewPipelineImages already dropped the
+        // already-translated pictures (counted in pipe.alreadyDone), so
+        // `images` holds only pictures left to translate.
+        alreadyDone = pipe.alreadyDone;
+        const skipTag = opts.resume ? 'auto-resume' : 'auto-skip';
+        diagPush(`${skipTag}: inventory ${pipe.pickedCount} picture(s), ${alreadyDone} already translated`);
+        if (alreadyDone) diagPush(`${skipTag}: skipping ${alreadyDone} already-translated picture(s), ${images.length} left`);
+        if (!images.length) {
+          if (!forceLoadSettled) {
+            // Nothing to translate YET — more pictures may still load.
+            // The per-image loop below cannot run on an empty list, so
+            // wait here for new pictures (or force-load settling) before
+            // the gate; the loop's refill then keeps polling.
+            await refillPipelineQueue(true);
+            alreadyDone = pipe.alreadyDone;
+          }
+          if (!images.length && forceLoadSettled) {
+            // Everything is already translated — nothing left to do.
+            // (Refill above already ran the final poll, so this is final.)
+            ignored = pipe.ignored;
+            timings.total = Math.round(performance.now() - pipelineT0);
+            setProgress(runId, 'done', 1, { backendLabel: settings.translationBackend });
+            try {
+              await withTimeout(chrome.tabs.sendMessage(tabId, {
+                type: 'ct/run-summary', runId, images: 0, failed: [], ignored,
+                resumed: !!opts.resume, alreadyDone,
+              }), MSG_TIMEOUT_MS, 'run summary');
+            } catch {}
+            if (settings.debugMode) await sendDiagLog(tabId, runId);
+            result = { runId, ok: true, images: 0, imageSrcs: [], failed: [], resumed: !!opts.resume, alreadyDone };
+            return result;
+          }
+          // Fresh pictures arrived while waiting — fall through to the
+          // gate and the queue loop with them.
+        }
+      } else {
       alreadyDone = images.filter(im => im.translated).length;
       // 2.1.57: always log the count, even when 0 — a resumed run that
       // finds nothing already done is the clue that the inventory disagrees
@@ -3393,6 +3584,7 @@ async function runPipeline(tabId, opts = {}) {
         if (settings.debugMode) await sendDiagLog(tabId, runId);
         result = { runId, ok: true, images: 0, imageSrcs: [], failed: [], resumed: !!opts.resume, alreadyDone };
         return result;
+      }
       }
     }
     if (skipped.length) diagPush('skipping page images: ' + skipped.join(' | ').slice(0, 300));
@@ -3455,6 +3647,10 @@ async function runPipeline(tabId, opts = {}) {
       const gateHosts = [...new Set((images || []).map(im => { try { return new URL(im.src).hostname.toLowerCase(); } catch { return ''; } }).filter(Boolean))];
       diagPush('permission gate: all hosts permitted: ' + (gateHosts.join(', ') || 'none'));
     }
+    // Pipelined: the gate above covered exactly these pictures. Pictures
+    // appended to `images` later were never seen by it, so the loop
+    // checks each of them per image instead (see below).
+    if (pipe) pipe.gatedCount = images.length;
     const doneImgs = [], failedImgs = [];
     // URLs of the finished images, for the free daily quota — the quota
     // counts distinct images only, so a re-translation of the same URL
@@ -3472,7 +3668,7 @@ async function runPipeline(tabId, opts = {}) {
     if (skipped.length) failedImgs.push(...skipped);
     let fallbackUrl = null;
     let lastDoneExtra = null;
-    const multi = images.length > 1;
+    let multi = images.length > 1;
     // GPU1 per-run downgrade: set on any GPU failure (error or hang),
     // so GPU is never retried again in THIS run. Next run tries GPU
     // fresh (per-run stick only, per spec). Shared across images in
@@ -4185,14 +4381,53 @@ async function runPipeline(tabId, opts = {}) {
       return { ok: true, doneExtra: { backendLabel: BACKEND_SHORT_LABEL[blocks?.[0]?.backendUsed || settings.translationBackend] || settings.translationBackend } };
     }
     for (const [imgIdx, img] of images.entries()) {
+      // Pipelined: `images` grows as later pictures load (refill appends
+      // at the end of each picture — array iterators see appended items),
+      // so the label and total are read fresh for each picture.
       const imgLabel = multi ? ` — image ${imgIdx + 1}/${images.length} (${img.w}×${img.h})` : '';
       const imgBase = imgIdx / images.length, imgSpan = 1 / images.length;
-      const imgSetProgress = (stage, frac, extra) => setProgress(runId, stage, imgBase + frac * imgSpan, extra || {});
+      // Progress high-water mark (pipelined): the total grows as new
+      // pictures are found, so a naive done/total fraction would go
+      // backwards mid-image. Clamp to the highest progress shown so far.
+      // On the manual path fractions are already monotonic, so the clamp
+      // is a no-op there.
+      const imgSetProgress = (stage, frac, extra) => {
+        const raw = imgBase + frac * imgSpan;
+        if (!pipe) { setProgress(runId, stage, raw, extra || {}); return; }
+        const v = Math.max(pipe.lastProgress, Math.min(1, raw));
+        pipe.lastProgress = v;
+        setProgress(runId, stage, v, extra || {});
+      };
       const imgEmitDebug = (stage, payload) => emitDebug(runId, tabId, settings, stage, { ...payload, title: (payload.title || stage) + imgLabel });
       const imgTimings = {};
       const imgPxKeys = [];
       const imgT0 = performance.now();
       try {
+        // Pipelined auto only: a picture that arrived after the initial
+        // gate was never checked upfront — the run cannot know later
+        // hosts upfront (the old code threw for the whole run because it
+        // knew all hosts before starting). Check this picture's host now;
+        // a missing grant fails just this picture (per-image fault
+        // isolation — the catch below records it and the next picture
+        // runs) instead of failing the whole run.
+        if (pipe && imgIdx >= pipe.gatedCount) {
+          const lateMissing = await checkImageHostPermissions([img]);
+          if (lateMissing.length) {
+            for (const h of lateMissing) await recordMissingHost('https://' + h + '/');
+            diagPush('permission gate (late picture): missing host permission for ' + lateMissing.join(', '));
+            if (!pipe.pillSent) {
+              pipe.pillSent = true;
+              try {
+                await withTimeout(chrome.tabs.sendMessage(tabId, {
+                  type: MSG.PILL_NOTICE,
+                  text: `Pictures on ${displayHost(lateMissing[0])} need permission — open the popup and tap Grant access, then run translate again.`,
+                  sticky: true,
+                }), MSG_TIMEOUT_MS, 'pill notice');
+              } catch { /* pill is best-effort */ }
+            }
+            throw new Error(`Pictures on ${displayHost(lateMissing[0])} need permission — open the extension popup and tap "Grant access", then run translate again.`);
+          }
+        }
         const r = await runOneImage(img, imgSetProgress, imgEmitDebug, imgTimings, imgPxKeys, imgT0);
         // No text in this picture: nothing was translated, nothing was
         // cached, so it counts as neither translated nor quota. It is
@@ -4266,6 +4501,35 @@ async function runPipeline(tabId, opts = {}) {
       } finally {
         for (const k of imgPxKeys.splice(0)) await pixelDrop(k);
       }
+      // Pipelined work queue: pull newly loaded pictures into `images`
+      // (the iterator above picks appended items up in order). A quick
+      // poll while pictures are still queued; a wait (poll every ~500ms
+      // until new pictures arrive or force-load settles) when this was
+      // the last known picture.
+      if (pipe) {
+        await refillPipelineQueue(imgIdx >= images.length - 1);
+        if (images.length > 1) multi = true;
+      }
+    }
+    if (pipe) {
+      // Cumulative accounting for the pipelined run: the per-poll skip
+      // strings were deferred (counts grow as pictures load), so build
+      // them now from the accumulated skippedDetail and count them as
+      // not-translated in the summary, as the old code did up front.
+      // alreadyDone/ignored likewise take their final cumulative values
+      // (later batches may have added already-translated pictures).
+      const belowMin = pipe.skippedDetail.filter(d => String(d.reason || '').startsWith('below min size')).length;
+      const overCap = pipe.skippedDetail.filter(d => String(d.reason || '').startsWith('over ')).length;
+      const minSize = settings.minImageSize || 460;
+      const cumSkipped = [];
+      if (belowMin) cumSkipped.push(`${belowMin} below the minimum image size of ${minSize}px (change it in Settings)`);
+      if (overCap) cumSkipped.push(`${overCap} over the ${MAX_IMAGES_PER_PAGE}-image per-run cap`);
+      if (cumSkipped.length) {
+        failedImgs.push(...cumSkipped);
+        diagPush('skipping page images: ' + cumSkipped.join(' | ').slice(0, 300));
+      }
+      alreadyDone = pipe.alreadyDone;
+      ignored = pipe.ignored;
     }
     if (!doneImgs.length) {
       const err = new Error('no picture could be translated (' + failedImgs.join('; ').slice(0, 400) + ')');

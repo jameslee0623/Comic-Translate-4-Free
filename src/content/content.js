@@ -423,7 +423,9 @@
   // brief scroll-through, not the whole download wait. The budgets below
   // are time limits so a huge / infinite-scroll page can never hang the
   // run — after the budget, translate whatever loaded. Returns
-  // { loaded, total, ms, steps, directTriggered, scrolled }.
+  // { loaded, total, ms, steps, directTriggered, scrolled, filterSkipped }
+  // — filterSkipped counts pictures the qualify-or-skip filter left
+  // untriggered (provably too small, see skipForceLoad).
   async function forceLoadAllImages() {
     const t0 = Date.now();
     const BUDGET_MS = 15000; // whole force-load must fit in this
@@ -446,9 +448,45 @@
     // loaded" exit, but not the stall exit.
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const pageHeight = () => document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+    // Qualify-or-skip filter (pipelined auto): only trigger pictures that
+    // COULD be translated. A picture is skipped from force-load only when
+    // it is provably too small to ever reach the inventory floor (120x120
+    // — the inventory's own list floor in collectPageImages; the worker's
+    // 460px gate still applies after load): (a) both width and height
+    // attributes are present and both are < 120, or (b) its real URL is
+    // still a placeholder/data-URI and it has no data-src/data-srcset to
+    // load a real picture from (a spacer/tracking pixel, not a lazy manga
+    // image). Everything else is triggered — a lazy manga image with no
+    // attributes and a small placeholder box must NOT be excluded; the
+    // inventory after load is the final filter. Limit of (a): attributes
+    // are the page's declared size, and CSS could in principle display
+    // the picture larger, so both-attributes-< 120 is the strongest
+    // signal the DOM offers before load, not a mathematical proof.
+    // The filter applies to the direct phase and to the pending counts
+    // below (a skipped spacer must not hold the load wait open), but NOT
+    // to the scroll check: a placeholder with no data-src could still be
+    // a JS-observer lazy image whose real URL only appears on scroll, and
+    // scrolling is brief and restores the position, while skipping it
+    // there could lose a real manga picture.
+    const skipForceLoad = (im) => {
+      let attrW = 0, attrH = 0, hasW = false, hasH = false;
+      try {
+        const w = im.getAttribute('width'), h = im.getAttribute('height');
+        hasW = w != null && w !== ''; hasH = h != null && h !== '';
+        attrW = parseInt(w || '0', 10) || 0; attrH = parseInt(h || '0', 10) || 0;
+      } catch { /* attributes unreadable — do not skip */ }
+      if (hasW && hasH && Math.max(attrW, attrH) < 120) return 'tiny-attrs';
+      const real = realSrc(im);
+      const hasDataSrc = !!(im.dataset.src || im.dataset.original || im.dataset.lazySrc ||
+        im.getAttribute('data-src') || im.getAttribute('data-original') ||
+        im.dataset.srcset || im.getAttribute('data-srcset'));
+      if (isPlaceholderUrl(real) && !hasDataSrc) return 'placeholder';
+      return null;
+    };
+    let filterSkipped = 0;
     const countPending = () => {
       let n = 0;
-      for (const im of allImages()) if (im.isConnected && !im.complete) n++;
+      for (const im of allImages()) if (im.isConnected && !im.complete && !skipForceLoad(im)) n++;
       return n;
     };
     let steps = 0, directTriggered = 0, scrolled = false;
@@ -462,6 +500,7 @@
     // translated picture (its src is our rendered data URL, complete).
     for (const im of allImages()) {
       if (!im.isConnected || im.complete || im.dataset.ctOriginal) continue;
+      if (skipForceLoad(im)) { filterSkipped++; continue; }
       const cur = im.src || '';
       const real = realSrc(im);
       if (im.loading === 'lazy') {
@@ -553,7 +592,7 @@
       total++;
       if (im.complete && im.naturalWidth) loaded++;
     }
-    return { loaded, total, ms: Date.now() - t0, steps, directTriggered, scrolled };
+    return { loaded, total, ms: Date.now() - t0, steps, directTriggered, scrolled, filterSkipped };
   }
 
   // Diagnostic for the last inventory, read by the ct/list-images handler.
