@@ -68,6 +68,9 @@
   "check_lmstudio": {
     "message": "LM Studio 연결 확인"
   },
+  "copy_discount_code_5stars": {
+    "message": "할인 코드 복사: 5STARS"
+  },
   "ctx_send_image": {
     "message": "Comic Translate 4 Free로 보내기",
     "description": "Context menu item on images: send this image to the translation pipeline"

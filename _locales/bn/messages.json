@@ -68,6 +68,9 @@
   "check_lmstudio": {
     "message": "LM Studio সংযোগ পরীক্ষা করুন"
   },
+  "copy_discount_code_5stars": {
+    "message": "ডিসকাউন্ট কোড কপি করুন: 5STARS"
+  },
   "ctx_send_image": {
     "message": "Send to Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"

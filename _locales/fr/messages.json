@@ -68,6 +68,9 @@
   "check_lmstudio": {
     "message": "Vérifier la connexion LM Studio"
   },
+  "copy_discount_code_5stars": {
+    "message": "Copier le code de réduction: 5STARS"
+  },
   "ctx_send_image": {
     "message": "Envoyer vers Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"

@@ -1096,9 +1096,9 @@
     supportModal = null;
   }
   // "Rated" flag for the support popup: once the user clicks "Rate it in
-  // store", the button becomes "Discount Code: 5STARS" — in this render and in
-  // any later render of the modal. Stored in chrome.storage.local (the
-  // content script's own key; the SW never needs it).
+  // store", the Get Pro button becomes "Copy Discount Code: 5STARS" — in
+  // this render and in any later render of the modal. Stored in
+  // chrome.storage.local (the content script's own key; the SW never needs it).
   function supportRated() {
     return new Promise((resolve) => {
       try {
@@ -1168,15 +1168,6 @@
       };
       return b;
     };
-    // Rate button: every click opens the store. First click also turns this
-    // button into "Discount Code: 5STARS" (stored flag), so a later render
-    // shows the code from the start. The button is never hidden and never
-    // links to the checkout — the free trial is reached through the
-    // "Get Pro" button instead. It needs no checkout URL at all.
-    // In discount mode a click also copies the code "5STARS" to the
-    // clipboard (for pasting at the Dodo checkout) and briefly shows a
-    // checkmark on the button. Copy never blocks the store link.
-    let rateIsDiscount = !!rated;
     // Copy the discount code to the clipboard. Clipboard API first (the
     // click is a user gesture, so it should work); a hidden textarea +
     // execCommand fallback when it is unavailable or rejects. Resolves
@@ -1203,36 +1194,59 @@
       } catch { return false; }
     };
     const hasCheckout = typeof checkoutUrl === 'string' && !!checkoutUrl;
+    // Get Pro button (top button): opens the Pro checkout (Dodo collection).
+    // After the user rates (ctSupportRated), its label becomes
+    // "Copy Discount Code: 5STARS" and a click copies "5STARS" to the
+    // clipboard (for pasting at the Dodo checkout) before opening the
+    // checkout, briefly showing a checkmark. Copy never blocks the
+    // checkout link. Before rating it is plain "Get Pro" and just opens
+    // the checkout. Only rendered when a checkout URL is present; a
+    // missing URL must never produce a dead button. It does not close
+    // the modal. Reuses the pro_get_short locale key ("Get Pro"), the
+    // same label the popup Pro row uses, and the copy_discount_code_5stars
+    // key ("Copy Discount Code: 5STARS").
+    let proBtn = null;
+    let proIsDiscount = !!rated;
+    const setProLabel = () => {
+      if (!proBtn) return;
+      proBtn.textContent = supportMsg(proIsDiscount ? 'copy_discount_code_5stars' : 'pro_get_short', proIsDiscount ? 'Copy Discount Code: 5STARS' : 'Get Pro');
+    };
+    if (hasCheckout) {
+      proBtn = document.createElement('button');
+      proBtn.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
+      setProLabel();
+      proBtn.onclick = () => {
+        if (proIsDiscount) {
+          // Discount mode: copy the code first, then open the checkout.
+          // A successful copy briefly shows a checkmark on the button.
+          copyDiscountCode().then(ok => {
+            if (!ok) return;
+            proBtn.textContent = '✓ ' + supportMsg('copy_discount_code_5stars', 'Copy Discount Code: 5STARS');
+            setTimeout(() => { try { setProLabel(); } catch {} }, 1500);
+          }).catch(() => { /* copy failed — checkout still opens */ });
+        }
+        try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: checkoutUrl }); } catch { /* link open failed — modal stays */ }
+      };
+      btns.appendChild(proBtn);
+    }
+    // Rate button: every click opens the store. It always reads
+    // "⭐ 5 stars at store" — it never becomes the discount code. The
+    // first click marks the user as rated (stored flag); the Get Pro
+    // button's label then changes in place to "Copy Discount Code:
+    // 5STARS". The Rate button is never hidden and never links to the
+    // checkout — the free trial is reached through the "Get Pro" button
+    // instead. It needs no checkout URL at all. It does not copy.
     const rateBtn = document.createElement('button');
-    const setRateLabel = () => {
-      rateBtn.textContent = supportMsg(rateIsDiscount ? 'discount_code_5stars' : 'rate_store', rateIsDiscount ? 'Discount Code: 5STARS' : '⭐ 5 stars at store');
-    };
+    rateBtn.textContent = supportMsg('rate_store', '⭐ 5 stars at store');
     rateBtn.style.cssText = 'padding:9px 14px;border:1px solid #3a3a40;border-radius:6px;background:#232327;color:#e8e8ea;font-size:13px;cursor:pointer;';
-    setRateLabel();
     rateBtn.onclick = () => {
-      if (rateIsDiscount) {
-        // Discount mode: copy the code first, then open the store as before.
-        // A successful copy briefly shows a checkmark on the button.
-        copyDiscountCode().then(ok => {
-          if (!ok) return;
-          rateBtn.textContent = '✓ ' + supportMsg('discount_code_5stars', 'Discount Code: 5STARS');
-          setTimeout(() => { try { setRateLabel(); } catch {} }, 1500);
-        }).catch(() => { /* copy failed — store still opens */ });
-      }
       try { chrome.runtime.sendMessage({ type: 'ct/open-link', url: supportStoreUrl() }); } catch { /* link open failed — modal stays */ }
-      if (!rateIsDiscount) {
+      if (!proIsDiscount) {
         try { markSupportRated(); } catch {}
-        rateIsDiscount = true;
-        setRateLabel();
+        proIsDiscount = true;
+        setProLabel();
       }
     };
-    // Get Pro button: opens the Pro checkout (Dodo collection). First button —
-    // the popup's main job is reminding the user the free auto-translate limit
-    // is reached. Only rendered when a checkout URL is present; a missing URL
-    // must never produce a dead button. It does not close the modal and does
-    // not touch the rated flag. Reuses the pro_get_short locale
-    // key ("Get Pro"), the same label the popup Pro row uses.
-    if (hasCheckout) btns.appendChild(mkBtn('pro_get_short', 'Get Pro', checkoutUrl));
     btns.appendChild(rateBtn);
     btns.appendChild(mkBtn('feedback_email', '✉️ Feedback by email', 'mailto:jameslee0623@muse.ai?subject=Comic%20Translate%204%20Free%20feedback'));
     // "Do not show again": closes the popup and stops it permanently — the

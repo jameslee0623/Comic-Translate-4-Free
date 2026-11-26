@@ -97,6 +97,9 @@
   "checking": {
     "message": "जांच हो रही है…"
   },
+  "copy_discount_code_5stars": {
+    "message": "डिस्काउंट कोड कॉपी करें: 5STARS"
+  },
   "ctx_send_image": {
     "description": "Context menu item on images: send this image to the translation pipeline",
     "message": "Send to Comic Translate 4 Free"

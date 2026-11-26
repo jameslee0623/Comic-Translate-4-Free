@@ -68,6 +68,9 @@
   "check_lmstudio": {
     "message": "檢查 LM Studio 連線"
   },
+  "copy_discount_code_5stars": {
+    "message": "複製折扣碼：5STARS"
+  },
   "ctx_send_image": {
     "message": "傳送到 Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"

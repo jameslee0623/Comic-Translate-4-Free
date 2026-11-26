@@ -68,6 +68,9 @@
   "check_lmstudio": {
     "message": "Verifică conexiunea LM Studio"
   },
+  "copy_discount_code_5stars": {
+    "message": "Copiază codul de reducere: 5STARS"
+  },
   "ctx_send_image": {
     "message": "Trimite la Comic Translate 4 Free",
     "description": "Context menu item on images: send this image to the translation pipeline"
