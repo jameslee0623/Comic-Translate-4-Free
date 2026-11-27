@@ -2194,6 +2194,32 @@
             if (msg.uid) replaced = replaceImageByUid(msg.uid, dataUrl);
             if (!replaced && msg.srcUrl) replaced = replaceImageBySrc(msg.srcUrl, dataUrl);
             if (!replaced && !msg.uid && !msg.srcUrl) replaced = replaceMainImage(dataUrl);
+            // 2.4.10: verify the visible main picture actually shows the
+            // translation. On a page change the put-back above can succeed
+            // on an element that is not the picture on screen, so the run
+            // reports "Run done" while the visible picture is unchanged
+            // (page 13: full Google translate, "Run done", still Japanese
+            // on screen; a refresh fixes it). Only when this render is for
+            // the main picture (auto path: no uid/srcUrl, or the uid names
+            // the main picture); a multi-pic render for another picture
+            // must not touch it.
+            if (mode === 'replace') {
+              try {
+                findMainImage();
+                const mainEl = mainImgEl && mainImgEl.isConnected ? mainImgEl : null;
+                if (mainEl) {
+                  const mainUid = mainEl.dataset.ctUid || '';
+                  const forMain = (!msg.uid && !msg.srcUrl) || (msg.uid && mainUid && msg.uid === mainUid);
+                  const mainCur = mainEl.currentSrc || mainEl.src || '';
+                  if (forMain && !/^data:/i.test(mainCur)) {
+                    if (mainCur) mainEl.dataset.ctOriginal = mainCur;
+                    mainEl.removeAttribute('srcset');
+                    mainEl.src = dataUrl;
+                    replaced = true;
+                  }
+                }
+              } catch {}
+            }
             if (replaced) {
               if (overlay) overlay.style.display = 'none';
             } else {
