@@ -116,7 +116,7 @@ Translations count toward the free 50 images a day while any Pro feature is on. 
 
 - $3/month or $30/year
 - Buy a license key, paste it into the License key field in the extension's Settings, and click Activate Pro. The key works on 2 browsers.
-- When you hit the 50-image free limit, a popup reminds you once a day. After you rate the extension, Get Pro becomes "Copy Discount Code: 5STARS" — tap it to copy the code and open checkout.
+- When you hit the 50-image free limit, a popup reminds you once a day. After you rate the extension, Get Pro offers you a discount code — tap it to copy the code and open checkout.
 
 ---
 
