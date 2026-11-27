@@ -47,7 +47,7 @@
     "alarms",
     "contextMenus"
   ],
-  "version": "2.4.14",
+  "version": "2.4.15",
   "default_locale": "en",
   "web_accessible_resources": [
     {
