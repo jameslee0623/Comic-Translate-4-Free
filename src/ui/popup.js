@@ -238,7 +238,13 @@ async function refreshPromo() {
   if (!banner) return;
   if (!promoActive(CURRENT_PROMO, new Date())) { banner.style.display = 'none'; return; }
   const title = $('promoTitle'), body = $('promoBody');
-  if (title) title.textContent = ctMsg('promo_title', [String(CURRENT_PROMO.discount)]) || title.textContent;
+  // 2.4.20: the icon comes from the promo config (CURRENT_PROMO.icon),
+  // not the locale string, so each sale gets its own icon. The locale
+  // promo_title has no icon; the config icon is prepended here.
+  if (title) {
+    const t = ctMsg('promo_title', [String(CURRENT_PROMO.discount)]);
+    if (t) title.textContent = (CURRENT_PROMO.icon ? CURRENT_PROMO.icon + ' ' : '') + t;
+  }
   if (body) body.textContent = ctMsg('promo_body', [CURRENT_PROMO.code]) || body.textContent;
   if (btn) btn.textContent = ctMsg('promo_button', [String(CURRENT_PROMO.discount)]) || btn.textContent;
   banner.style.display = '';

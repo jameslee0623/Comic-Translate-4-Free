@@ -7,12 +7,17 @@
 //     ($1 placeholders), so they never need re-translating.
 //   - only promo_title carries the event name ("Black Friday"), so it is
 //     the one locale value a new promo re-translates.
+//   - icon is a field here (2.4.20), not in the locale strings, so each
+//     sale gets its own icon by changing this one line — e.g. 🎄 for
+//     Christmas, 🧧 for Lunar New Year, 🎃 for Halloween. The popup
+//     prepends it to the title; the locale promo_title has no icon.
 // The banner launches by itself at begin and changes back by itself at
 // end (local time): it shows only while begin <= now < end.
 export const CURRENT_PROMO = {
   id: 'black-friday-2026',
   code: 'BLACK50',
   discount: 50, // percent off
+  icon: '🏷️', // banner icon for this sale
   begin: new Date(2026, 10, 27), // local Nov 27, 2026, 00:00 (Black Friday)
   end: new Date(2026, 11, 1), // local Dec 1, 2026, 00:00 (after Nov 30, 11:59 PM)
 };

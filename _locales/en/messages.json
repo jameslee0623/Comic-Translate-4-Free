@@ -587,7 +587,7 @@
     "message": "Small fast OCR for Japanese pages only. Needs the OCR model downloaded below. English and Chinese stay on the normal OCR."
   },
   "promo_title": {
-    "message": "🏷️ Black Friday — $1% off Pro"
+    "message": "Black Friday — $1% off Pro"
   },
   "promo_body": {
     "message": "Unlimited auto-translate and pre-translate. Use code $1 at checkout."
