@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "OCR kecil dan cepat hanya untuk halaman Jepang. Membutuhkan model OCR yang diunduh di bawah. Bahasa Inggris dan Mandarin tetap menggunakan OCR normal."
+  },
+  "promo_title": {
+    "message": "🏷️ Black Friday — Diskon $1% untuk Pro"
+  },
+  "promo_body": {
+    "message": "Terjemahan otomatis dan pra-terjemahan tanpa batas. Gunakan kode $1 saat checkout."
+  },
+  "promo_button": {
+    "message": "Dapatkan Pro — Diskon $1%"
   }
 }

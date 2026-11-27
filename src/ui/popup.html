@@ -55,6 +55,18 @@
 <body>
   <h1 class="head">Comic Translate 4 Free <a href="#" id="options" data-i18n="options_settings">⚙️ Settings</a></h1>
 
+  <!-- Promo banner (2.4.14): the active promo from src/shared/promo.js.
+       Shows only while the promo is live (begin <= now < end, local time),
+       so it launches by itself at begin and changes back by itself at end.
+       The text comes from the promo_* locale keys (set by popup.js with
+       the code and discount from the promo); the English below is only the
+       fallback when i18n is unavailable. Hidden by default. -->
+  <div id="promoBanner" style="display:none;margin:0 0 12px;border:1px solid #f0b429;background:rgba(240,180,41,.12);border-radius:8px;padding:10px 12px">
+    <div id="promoTitle" style="font-weight:600;color:#fff;font-size:14px">🏷️ Black Friday — 50% off Pro</div>
+    <div id="promoBody" style="color:#c9c9ce;font-size:12px;margin:4px 0 8px">Unlimited auto-translate and pre-translate. Use code BLACK50 at checkout.</div>
+    <button id="promoBtn" class="primary" style="width:100%">Get Pro — 50% off</button>
+  </div>
+
   <div class="sitebox">
     <div class="row" style="margin:0">
       <span id="site">…</span>

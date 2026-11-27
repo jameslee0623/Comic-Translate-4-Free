@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "OCR pequeño y rápido solo para páginas en japonés. Necesita el modelo OCR descargado abajo. El inglés y el chino siguen usando el OCR normal."
+  },
+  "promo_title": {
+    "message": "🏷️ Black Friday — $1 % de descuento en Pro"
+  },
+  "promo_body": {
+    "message": "Traducción automática y pretraducción ilimitadas. Usa el código $1 al pagar."
+  },
+  "promo_button": {
+    "message": "Obtener Pro — $1 % de descuento"
   }
 }

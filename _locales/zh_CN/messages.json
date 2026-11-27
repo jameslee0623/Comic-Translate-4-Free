@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "僅適用於日文頁面的小型快速 OCR。需要下載下方的 OCR 模型。英文和中文仍使用一般 OCR。"
+  },
+  "promo_title": {
+    "message": "🏷️ 黑色星期五 — Pro $1% 折扣"
+  },
+  "promo_body": {
+    "message": "自动翻译和预翻译无限次使用。结账时使用代码 $1。"
+  },
+  "promo_button": {
+    "message": "开通 Pro — $1% 折扣"
   }
 }

@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "OCR nhỏ và nhanh chỉ dành cho trang tiếng Nhật. Cần tải mô hình OCR bên dưới. Tiếng Anh và tiếng Trung vẫn dùng OCR thường."
+  },
+  "promo_title": {
+    "message": "🏷️ Black Friday — Giảm $1% Pro"
+  },
+  "promo_body": {
+    "message": "Dịch tự động và dịch trước không giới hạn. Dùng mã $1 khi thanh toán."
+  },
+  "promo_button": {
+    "message": "Nhận Pro — Giảm $1%"
   }
 }

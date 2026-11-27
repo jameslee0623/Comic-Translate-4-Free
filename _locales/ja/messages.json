@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "日本語ページ専用の小型で高速なOCRです。下のOCRモデルをダウンロードする必要があります。英語と中国語は通常のOCRのままです。"
+  },
+  "promo_title": {
+    "message": "🏷️ ブラックフライデー — Proが$1%オフ"
+  },
+  "promo_body": {
+    "message": "自動翻訳と事前翻訳が無制限。チェックアウトでコード $1 を使ってください。"
+  },
+  "promo_button": {
+    "message": "Proを取得 — $1%オフ"
   }
 }

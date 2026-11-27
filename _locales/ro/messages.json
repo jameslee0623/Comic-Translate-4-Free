@@ -588,5 +588,14 @@
   },
   "ocr_distil_test_hint": {
     "message": "OCR mic și rapid, doar pentru pagini în japoneză. Necesită modelul OCR descărcat mai jos. Engleza și chineza rămân pe OCR-ul normal."
+  },
+  "promo_title": {
+    "message": "🏷️ Black Friday — $1% reducere la Pro"
+  },
+  "promo_body": {
+    "message": "Traducere automată și pre-traducere nelimitate. Folosește codul $1 la finalizarea comenzii."
+  },
+  "promo_button": {
+    "message": "Obține Pro — $1% reducere"
   }
 }

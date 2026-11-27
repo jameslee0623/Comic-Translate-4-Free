@@ -2,6 +2,7 @@
 import { baseDomain, imageHostOrigins, originAccessPatterns, displayHost, hostOf, isSiteAllowed } from '../shared/site-access.js';
 import { NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings as writeSettings } from '../shared/settings.js';
 import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, proIsActive } from '../shared/pro.js';
+import { CURRENT_PROMO, promoActive } from '../shared/promo.js';
 const $ = id => document.getElementById(id);
 // Escape for innerHTML interpolation (hostnames are DNS-safe, but explicit).
 const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -227,6 +228,41 @@ async function refreshPro() {
   }
 }
 
+// Promo banner (2.4.14): the active promo from src/shared/promo.js.
+// Shows only while the promo is live (begin <= now < end, local time),
+// so it launches by itself at begin and changes back by itself at end.
+// Hidden for Pro users (they already have Pro). The text comes from the
+// promo_* locale keys, with the code and discount from the promo ($1).
+async function refreshPromo() {
+  const banner = $('promoBanner'), btn = $('promoBtn');
+  if (!banner) return;
+  const settings = await getSettings().catch(() => ({}));
+  if (proIsActive(settings) || !promoActive(CURRENT_PROMO, new Date())) { banner.style.display = 'none'; return; }
+  const title = $('promoTitle'), body = $('promoBody');
+  if (title) title.textContent = ctMsg('promo_title', [String(CURRENT_PROMO.discount)]) || title.textContent;
+  if (body) body.textContent = ctMsg('promo_body', [CURRENT_PROMO.code]) || body.textContent;
+  if (btn) btn.textContent = ctMsg('promo_button', [String(CURRENT_PROMO.discount)]) || btn.textContent;
+  banner.style.display = '';
+  if (btn) {
+    btn.onclick = async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(CURRENT_PROMO.code);
+        else {
+          const ta = document.createElement('textarea');
+          ta.value = CURRENT_PROMO.code;
+          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+      } catch {}
+      if (DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE')) chrome.tabs.create({ url: DODO_CHECKOUT_URL });
+      else chrome.runtime.openOptionsPage();
+    };
+  }
+}
+
 // Full refresh: status + settings. The 3s interval only needs the status
 // part — rewriting the settings dropdowns on every tick stomps the user's
 // in-progress selection (the open language list collapses), so settings
@@ -234,7 +270,7 @@ async function refreshPro() {
 async function refresh() {
   // Status and settings load in parallel: a hung status (blocked background)
   // must not delay the settings UI.
-  await Promise.all([refreshStatus(), refreshSettings(), refreshPro()]);
+  await Promise.all([refreshStatus(), refreshSettings(), refreshPro(), refreshPromo()]);
 }
 
 // The pictures often live on CDN hosts different from the page host; without
