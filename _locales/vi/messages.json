@@ -215,9 +215,6 @@
   "reset_azure_notice": {
     "message": "Reset Azure notice"
   },
-  "reset_free_usage": {
-    "message": "Reset free usage today"
-  },
   "reset_gemini_setup": {
     "message": "Reset Gemini setup"
   },

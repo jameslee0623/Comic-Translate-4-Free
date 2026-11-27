@@ -86,14 +86,6 @@ export async function getProUsageCount() {
   } catch { return 0; }
 }
 
-// Reset today's free usage count to 0 (test helper, Debug section only).
-// Removes the whole usage record; getProUsageCount() returns 0 when
-// there is no record. Used while the Dodo account is under screening
-// and Pro cannot be activated yet.
-export async function resetProUsageToday() {
-  try { await chrome.storage.local.remove(USAGE_KEY); } catch { /* ignore */ }
-}
-
 // True when any Pro feature is enabled: auto-translate or pre-translate.
 // A finished translation counts toward the free daily quota when a Pro
 // feature is on; manual translation (both off) is free and unlimited.
