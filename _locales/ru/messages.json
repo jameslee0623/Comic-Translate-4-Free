@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Получить Pro — скидка $1%"
+  },
+  "pro_change_plan": {
+    "message": "Сменить тариф"
   }
 }

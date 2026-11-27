@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "開通 Pro — $1% 折扣"
+  },
+  "pro_change_plan": {
+    "message": "更改方案"
   }
 }

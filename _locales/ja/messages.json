@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Proを取得 — $1%オフ"
+  },
+  "pro_change_plan": {
+    "message": "プランを変更"
   }
 }

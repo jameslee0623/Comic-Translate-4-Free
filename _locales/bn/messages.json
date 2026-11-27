@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Pro নিন — $1% ছাড়"
+  },
+  "pro_change_plan": {
+    "message": "প্ল্যান পরিবর্তন করুন"
   }
 }

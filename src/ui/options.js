@@ -2,7 +2,7 @@
 import { BUILD } from '../shared/version.js';
 import { storeUrlForFirefox } from '../shared/contracts.js';
 import { DEFAULT_SETTINGS, NATIVE_LANGS as LANGS, TARGET_LANGS, getSettings, updateSettings } from '../shared/settings.js';
-import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, getProUsageCount, resetProUsageToday, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
+import { PRO_FREE_DAILY_LIMIT, DODO_CHECKOUT_URL, DODO_PORTAL_URL, getProUsageCount, resetProUsageToday, proIsActive, proCheckDue, canAutoOrPre, activateProLicense, validateProLicense, deactivateProLicense } from '../shared/pro.js';
 import { readBenchLog, clearBenchLog, formatBenchTable } from '../shared/bench.js';
 const $ = id => document.getElementById(id);
 // Defaults live in shared/settings.js — single source of truth.
@@ -316,12 +316,22 @@ async function refreshPro() {
   if (actBtn) actBtn.style.display = active ? 'none' : '';
   if (deactBtn) deactBtn.style.display = active ? '' : 'none';
   if (keyEl && active) keyEl.value = '';
-  // The Get Pro link sits on the same line as the status (like the popup).
-  // It only shows for free users, and only once the Dodo checkout is set.
+  // The link sits on the same line as the status (like the popup).
+  // Free users see "Get Pro" (opens the Dodo checkout); subscribed users
+  // see "Change Plan" (opens the Dodo Customer Portal, where they change
+  // plans and enter a discount code). Plan changes need "Allow Subscription
+  // Updates" on in the Dodo dashboard (Settings -> Subscriptions).
   if (getLink) {
-    const showGet = !active && DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE');
-    if (showGet) getLink.href = DODO_CHECKOUT_URL;
-    getLink.style.display = showGet ? '' : 'none';
+    if (active) {
+      getLink.textContent = ctMsg('pro_change_plan') || 'Change Plan';
+      getLink.href = DODO_PORTAL_URL;
+      getLink.style.display = '';
+    } else {
+      getLink.textContent = ctMsg('pro_get_short') || 'Get Pro';
+      const showGet = DODO_CHECKOUT_URL && !DODO_CHECKOUT_URL.startsWith('REPLACE');
+      if (showGet) getLink.href = DODO_CHECKOUT_URL;
+      getLink.style.display = showGet ? '' : 'none';
+    }
   }
   // Pro lock: without a subscription, auto-translate and pre-translate
   // turn off and gray out once the daily free limit is hit. The stored

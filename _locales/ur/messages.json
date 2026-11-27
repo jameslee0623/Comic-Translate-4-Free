@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Pro حاصل کریں — $1% رعایت"
+  },
+  "pro_change_plan": {
+    "message": "پلان تبدیل کریں"
   }
 }

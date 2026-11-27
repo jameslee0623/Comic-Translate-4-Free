@@ -25,8 +25,14 @@ export function pagesForImage(w, h) {
 // --- Dodo setup: James fills these in after creating the Pro product ---
 // DODO_BUSINESS_ID: the business id shown in the Dodo dashboard.
 // DODO_CHECKOUT_URL: the checkout link for the Pro subscription product.
+// DODO_PORTAL_URL: the Dodo Customer Portal (unified, customer.dodopayments.com).
+// A subscriber opens it, enters their email, and gets a sign-in link to
+// manage their subscription — including changing plans (monthly <-> annual)
+// and entering a discount code there. Plan changes need "Allow Subscription
+// Updates" on in the Dodo dashboard (Settings -> Subscriptions, off by default).
 export const DODO_BUSINESS_ID = 'bus_0NshEEgPyJXea5YDdtX1N';
 export const DODO_CHECKOUT_URL = 'https://checkout.dodopayments.com/buy/pdc_0NshS3ePj2aiNr7Cj03d9';
+export const DODO_PORTAL_URL = 'https://customer.dodopayments.com';
 export const DODO_ACTIVATE_URL = 'https://live.dodopayments.com/licenses/activate';
 export const DODO_VALIDATE_URL = 'https://live.dodopayments.com/licenses/validate';
 export const DODO_DEACTIVATE_URL = 'https://live.dodopayments.com/licenses/deactivate';

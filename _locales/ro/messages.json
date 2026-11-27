@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Obține Pro — $1% reducere"
+  },
+  "pro_change_plan": {
+    "message": "Schimbă planul"
   }
 }

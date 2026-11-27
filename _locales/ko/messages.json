@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Pro 구매 — $1% 할인"
+  },
+  "pro_change_plan": {
+    "message": "플랜 변경"
   }
 }

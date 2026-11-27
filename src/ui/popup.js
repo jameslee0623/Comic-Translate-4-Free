@@ -228,16 +228,15 @@ async function refreshPro() {
   }
 }
 
-// Promo banner (2.4.14): the active promo from src/shared/promo.js.
-// Shows only while the promo is live (begin <= now < end, local time),
-// so it launches by itself at begin and changes back by itself at end.
-// Hidden for Pro users (they already have Pro). The text comes from the
+// Promo banner (2.4.14, 2.4.15): the active promo from src/shared/promo.js.
+// Shows to ALL users (free and Pro) while the promo is live
+// (begin <= now < end, local time), so it launches by itself at begin
+// and changes back by itself at end. The text comes from the
 // promo_* locale keys, with the code and discount from the promo ($1).
 async function refreshPromo() {
   const banner = $('promoBanner'), btn = $('promoBtn');
   if (!banner) return;
-  const settings = await getSettings().catch(() => ({}));
-  if (proIsActive(settings) || !promoActive(CURRENT_PROMO, new Date())) { banner.style.display = 'none'; return; }
+  if (!promoActive(CURRENT_PROMO, new Date())) { banner.style.display = 'none'; return; }
   const title = $('promoTitle'), body = $('promoBody');
   if (title) title.textContent = ctMsg('promo_title', [String(CURRENT_PROMO.discount)]) || title.textContent;
   if (body) body.textContent = ctMsg('promo_body', [CURRENT_PROMO.code]) || body.textContent;

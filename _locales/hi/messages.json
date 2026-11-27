@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Pro लें — $1% छूट"
+  },
+  "pro_change_plan": {
+    "message": "प्लान बदलें"
   }
 }

@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Pro holen — $1 % Rabatt"
+  },
+  "pro_change_plan": {
+    "message": "Tarif ändern"
   }
 }

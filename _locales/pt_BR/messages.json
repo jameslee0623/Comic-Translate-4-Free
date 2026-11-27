@@ -597,5 +597,8 @@
   },
   "promo_button": {
     "message": "Obter Pro — $1% de desconto"
+  },
+  "pro_change_plan": {
+    "message": "Alterar plano"
   }
 }
