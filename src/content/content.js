@@ -1840,7 +1840,12 @@
         // event can replace "let the user see the result, then restore
         // the label". 1.5s is a UX choice, not a measured value.
         const done = (t) => { copyBtn.textContent = t; setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500); };
-        let text = p.log || '';
+        // Only the latest 100 log lines (James, 2026-11-27) — same as the
+        // Settings "Copy log (latest 100)". The full log is up to 2000
+        // lines; 100 covers the recent end without pasting 2000 lines
+        // every time. The times header (total + breakdown) is prepended
+        // on top and is not part of the 100.
+        let text = (p.log || '').split('\n').slice(-100).join('\n');
         if (lastRunTimes) {
           const saved = lastRunTimes.parallelMs != null && lastRunTimes.parallelMs > 0
             ? ` (parallelism saved ${lastRunTimes.parallelMs}ms vs sequential ${lastRunTimes.seqMs}ms)` : '';
