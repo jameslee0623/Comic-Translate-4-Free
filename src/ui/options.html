@@ -184,6 +184,10 @@
 
   <!-- Debug section: hidden unless the dev flag is on (see options.js).
        Only James's devices show it; regular users never see it. -->
+  <!-- Debug section: English only. James is the only user of this section,
+       so its text is not translated — do not add locale keys for new debug
+       controls (the log copy buttons below stay hardcoded English on
+       purpose). All other UI must be translated into all 17 locales. -->
   <div id="debugWrap" style="display:none">
   <h2 data-i18n="debug" id="debugSection">Debug</h2>
   <div class="row"><label data-i18n="debug_mode">Debug mode (stage inspector)</label><label class="switch"><input type="checkbox" id="debugMode"><span class="slider"></span></label></div>

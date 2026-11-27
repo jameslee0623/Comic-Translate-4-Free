@@ -554,23 +554,19 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro activated — thank you for your support!",
-    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+    "message": "Pro activated — thank you for your support!"
   },
   "pro_activating": {
-    "message": "activating…",
-    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+    "message": "activating…"
   },
   "pro_activation_failed": {
-    "message": "activation failed",
-    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+    "message": "activation failed"
   },
   "pro_deactivate": {
     "message": "Deactivate"
   },
   "pro_deactivated": {
-    "message": "Pro deactivated",
-    "description": "bn/hi/ur/vi still need a real translation — English placeholder for now"
+    "message": "Pro deactivated"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"

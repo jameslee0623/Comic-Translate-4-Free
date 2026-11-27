@@ -554,23 +554,19 @@
     "message": "Activate Pro"
   },
   "pro_activated": {
-    "message": "Pro activated — thank you for your support!",
-    "description": "TODO: translate — English placeholder, needs a real translation"
+    "message": "Pro فعال ہو گیا — آپ کی حمایت کا شکریہ!"
   },
   "pro_activating": {
-    "message": "activating…",
-    "description": "TODO: translate — English placeholder, needs a real translation"
+    "message": "فعال کیا جا رہا ہے…"
   },
   "pro_activation_failed": {
-    "message": "activation failed",
-    "description": "TODO: translate — English placeholder, needs a real translation"
+    "message": "فعال کرنا ناکام رہا"
   },
   "pro_deactivate": {
     "message": "Deactivate"
   },
   "pro_deactivated": {
-    "message": "Pro deactivated",
-    "description": "TODO: translate — English placeholder, needs a real translation"
+    "message": "Pro غیر فعال کر دیا گیا"
   },
   "pro_get": {
     "message": "Get Pro — $3/month"

@@ -796,6 +796,8 @@ async function copyDiagLog() {
 }
 // Full copy: everything in storage (last 2000 lines) + the runs section.
 // Settings page only — this button lives inside #debugWrap and nowhere else.
+// Debug section is English only (James is the only user), so these two
+// labels are hardcoded on purpose — do not add locale keys for debug text.
 async function copyDiagLogFull() {
   const btn = $('copyDiagLogFull');
   let text;
