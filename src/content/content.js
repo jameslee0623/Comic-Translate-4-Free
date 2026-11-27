@@ -1782,7 +1782,7 @@
       html += `</p>`;
       if (times.breakdown) html += `<p style="color:#888;margin:0 0 8px">${esc(times.breakdown)}</p>`;
     }
-    if (p.log) html += `<pre style="white-space:pre-wrap;word-break:break-all;color:#ddd;font:11px monospace;max-height:60vh;overflow:auto;border:1px solid #444;padding:8px">${esc(p.log)}</pre>`;
+    if (p.log) html += `<pre style="white-space:pre-wrap;word-break:break-all;text-align:left;color:#ddd;font:11px monospace;max-height:60vh;overflow:auto;border:1px solid #444;padding:8px">${esc(p.log)}</pre>`;
     if (p.ms != null) html += `<p style="color:#888">${p.ms} ms</p>`;
     if (p.error) html += `<p style="color:#f66">${esc(p.error)}</p>`;
     if (p.image) html += `<img src="${p.image}" style="max-width:100%;border:1px solid #444">`;

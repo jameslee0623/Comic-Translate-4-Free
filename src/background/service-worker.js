@@ -205,6 +205,22 @@ let diagTraceReplayedCount = 0;
 async function replayDiagTrace() {
   try {
     if (diagTraceReplayedCount > 0) return diagTraceReplayedCount;
+    // 2.4.18: clean empty log for every version (James). A stored log from
+    // an old version is stale — it would mix old-version lines into the
+    // new version's log and confuse diagnosis. When the version changes,
+    // clear the stored log and start empty (the version stamp is the
+    // first line of the new log). Same-version restarts replay as before.
+    // Follows the gpuInpaintDead version pattern: compare the stored
+    // version to the manifest version, reset on mismatch.
+    const cur = (() => { try { return chrome.runtime.getManifest().version; } catch { return ''; } })();
+    if (cur) {
+      const verSaved = await chrome.storage.local.get('diagLogVersion');
+      const storedVersion = verSaved && typeof verSaved.diagLogVersion === 'string' ? verSaved.diagLogVersion : '';
+      if (storedVersion !== cur) {
+        await chrome.storage.local.set({ [DIAG_TRACE_KEY]: [], diagLogVersion: cur });
+        return 0;
+      }
+    }
     const recovered = await readDiagTrace();
     if (!recovered.length) return 0;
     diagLogBuf.push('--- log from before the restart (recovered) ---');
@@ -216,18 +232,21 @@ async function replayDiagTrace() {
 // Restore the pre-restart log on load so the global log survives a
 // background restart. Fire-and-forget: the buffer fills asynchronously
 // and is ready well before the next run's sendDiagLog.
-replayDiagTrace().catch(() => {});
-
-// 2.3.12/1.7.12: stamp the version into the diag log at background start,
-// so a pasted log says which build it came from — no need to ask the user.
-// diagPush persists the line (diagTrace, last 200), so it survives a
-// restart and shows in the recovered log too. The Firefox build's manifest
-// carries browser_specific_settings; Chrome's does not. Wrapped: a
-// missing getManifest must never break background load.
-try {
-  const _m = chrome.runtime.getManifest();
-  diagPushOnce('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')').catch(() => {});
-} catch {}
+// 2.4.18: the version stamp runs after the replay, so on a version
+// change (the replay clears the old log) the stamp lands in the fresh
+// log, not the old one.
+replayDiagTrace().then(() => {
+  // 2.3.12/1.7.12: stamp the version into the diag log at background start,
+  // so a pasted log says which build it came from — no need to ask the user.
+  // diagPush persists the line (diagTrace, last 200), so it survives a
+  // restart and shows in the recovered log too. The Firefox build's manifest
+  // carries browser_specific_settings; Chrome's does not. Wrapped: a
+  // missing getManifest must never break background load.
+  try {
+    const _m = chrome.runtime.getManifest();
+    diagPushOnce('Comic Translate 4 Free ' + _m.version + ' (' + (_m.browser_specific_settings ? 'Firefox' : 'Chrome') + ')').catch(() => {});
+  } catch {}
+}).catch(() => {});
 // GPU inpaint kill-switch (2.3.27): once WebGPU inpaint fails, it is a
 // deterministic failure on this setup (e.g. a Metal shader that never
 // compiles), so retrying it on every page only wastes time and spams
