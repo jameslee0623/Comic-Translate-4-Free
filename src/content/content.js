@@ -15,18 +15,28 @@
   // lines, so this and the page-load listener can only fire once per
   // page. Top frame only: iframes must not start runs.
   if (window.top === window.self) {
-    // Prerender activation (2.4.2): Vivaldi (and Chrome) pre-load the
-    // next page in the background. This script runs while the document
-    // is still prerendered — the tab is not active, so the background
-    // skips the AUTO_START. When the user opens the page, the browser
-    // activates it (no reload, no 'complete', no fresh injection), so
-    // no trigger ever fires. Wait for the prerenderingchange event
-    // and send AUTO_START on activation. A normal load has
-    // document.prerendering false and sends at once.
-    if (document.prerendering) {
-      document.addEventListener('prerenderingchange', () => {
-        try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
-      }, { once: true });
+    // Pre-loaded page (2.4.12): Vivaldi (and Chrome) pre-load the next
+    // page in the background — either as a prerender
+    // (document.prerendering true) or in a background tab
+    // (prerendering false, but the document is hidden). Either way the
+    // script runs while the page is hidden, so a load-time AUTO_START
+    // is skipped as "tab not active", and no trigger ever fires when
+    // the user opens it (no reload, no 'complete', no fresh injection,
+    // no URL change — the URL was already the new one at pre-load).
+    // One trigger covers both: when the page becomes visible, send
+    // once. A prerendered document becomes visible on activation, so
+    // no separate prerenderingchange listener is needed (2.4.2's is
+    // removed). Only pages loaded hidden get the listener, and it
+    // fires only on the first transition to visible — never on a
+    // tab-switch back. A normal visible load sends at once.
+    if (document.visibilityState === 'hidden') {
+      let sent = false;
+      document.addEventListener('visibilitychange', () => {
+        if (!sent && document.visibilityState === 'visible') {
+          sent = true;
+          try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
+        }
+      });
     } else {
       try { chrome.runtime.sendMessage({ type: 'ct/auto-start' }); } catch {}
     }

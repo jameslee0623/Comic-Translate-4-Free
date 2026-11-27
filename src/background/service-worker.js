@@ -5076,22 +5076,16 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Learned next-page rules: watch URL changes (URL-only learning). Runs
   // on the 'loading' event, which carries changeInfo.url — the 'complete'
   // event below usually does not.
+  // Same-document navigation (reader "next" via history.pushState) does
+  // NOT trigger here: the content script's URL watcher already sends
+  // AUTO_START for it (a7ffc0eb added both; the background one is the
+  // duplicate, removed in 2.4.12). This branch only learns the rule.
   try {
     if (changeInfo && changeInfo.url) {
       const oldUrl = lastTabUrl.get(tabId);
       const newUrl = changeInfo.url;
       if (oldUrl && oldUrl !== newUrl) {
         observeNextPageChange(tabId, oldUrl, newUrl);
-        // Same-document navigation (reader "next" via history.pushState):
-        // the URL changed but the tab never left 'complete', so there is
-        // no 'complete' event and no fresh content-script injection.
-        // Trigger auto-translate here; the dedupe in maybeAutoStart
-        // keeps a later 'complete' for the same URL from double-firing.
-        // A full navigation has status 'loading' here, so it waits for
-        // 'complete' as before and never starts early on a half-loaded page.
-        if (tab && tab.status === 'complete') {
-          maybeAutoStart(tabId, tab, 'page-load', true);
-        }
       }
       lastTabUrl.set(tabId, newUrl);
     }
