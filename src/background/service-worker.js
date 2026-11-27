@@ -5989,9 +5989,10 @@ async function recoverOrphanedRuns() {
         // Auto-resume (2.1.56): a run the background killed mid-way restarts
         // by itself on the same tab, skipping the pictures it already
         // finished, instead of only showing an error. Limits: at most 2
-        // auto-resumes per run (loop guard), the tab must still be open on
-        // the SAME page, and at least one picture must already be finished
-        // (otherwise there is nothing to resume from).
+        // auto-resumes per run (loop guard), and the tab must still be open
+        // on the SAME page. 2.4.13: resume even when 0 pictures finished —
+        // a dead run that died at capture has nothing done yet, but
+        // restarting it from scratch beats dropping it with an error.
         const MAX_AUTO_RESUMES = 2;
         const resumes = (rec && rec.resumes) || 0;
         if (resumes < MAX_AUTO_RESUMES && rec && rec.tabId != null && rec.url) {
@@ -6003,39 +6004,37 @@ async function recoverOrphanedRuns() {
               const r = await withTimeout(chrome.tabs.sendMessage(rec.tabId, { type: 'ct/list-images' }), DATA_TIMEOUT_MS, 'list-images').catch(() => null);
               const list = (r && r.images) || [];
               const alreadyDone = list.filter(im => im && im.translated).length;
-              if (alreadyDone > 0) {
-                diagPush(`A run died mid-translate — resuming it (resume ${resumes + 1} of ${MAX_AUTO_RESUMES}, ${alreadyDone} picture${alreadyDone === 1 ? '' : 's'} already done).`);
-                // Clear the dead run's record + keepalive alarm so it is
-                // not recovered again, then start the resumed run.
-                await clearRunRecord(orphanRunId);
-                try {
-                  if (typeof chrome !== 'undefined' && chrome.alarms) {
-                    const p = chrome.alarms.clear('ct-keepalive:' + orphanRunId);
+              // 2.4.13: resume even at 0 finished — the count is only for
+              // the log line now; a 0-finished resume just does all pictures.
+              diagPush(`A run died mid-translate — resuming it (resume ${resumes + 1} of ${MAX_AUTO_RESUMES}, ${alreadyDone} picture${alreadyDone === 1 ? '' : 's'} already done).`);
+              // Clear the dead run's record + keepalive alarm so it is
+              // not recovered again, then start the resumed run.
+              await clearRunRecord(orphanRunId);
+              try {
+                if (typeof chrome !== 'undefined' && chrome.alarms) {
+                  const p = chrome.alarms.clear('ct-keepalive:' + orphanRunId);
+                  if (p && p.catch) p.catch(() => {});
+                }
+              } catch {}
+              // 2.1.57: clear the dead run's pending ML alarms too. The
+              // ML call it died in never settled, so its alarm entry is
+              // still in storage; when it fires later the hook would fail
+              // a run that was already resumed (spurious error on the tab).
+              try {
+                const store = await chrome.storage.local.get(null);
+                const keys = Object.keys(store || {}).filter(k => k.startsWith('ct-ml-pending:') && k.includes(':' + orphanRunId + ':'));
+                for (const k of keys) {
+                  try { await chrome.storage.local.remove(k); } catch {}
+                  try {
+                    const alarmName = k.slice('ct-ml-pending:'.length);
+                    const p = chrome.alarms.clear(alarmName);
                     if (p && p.catch) p.catch(() => {});
-                  }
-                } catch {}
-                // 2.1.57: clear the dead run's pending ML alarms too. The
-                // ML call it died in never settled, so its alarm entry is
-                // still in storage; when it fires later the hook would fail
-                // a run that was already resumed (spurious error on the tab).
-                try {
-                  const store = await chrome.storage.local.get(null);
-                  const keys = Object.keys(store || {}).filter(k => k.startsWith('ct-ml-pending:') && k.includes(':' + orphanRunId + ':'));
-                  for (const k of keys) {
-                    try { await chrome.storage.local.remove(k); } catch {}
-                    try {
-                      const alarmName = k.slice('ct-ml-pending:'.length);
-                      const p = chrome.alarms.clear(alarmName);
-                      if (p && p.catch) p.catch(() => {});
-                    } catch {}
-                  }
-                  if (keys.length) diagPush(`Resumed run: cleared ${keys.length} pending ML alarm(s) from the dead run.`);
-                } catch {}
-                runPipeline(rec.tabId, { resume: true, resumeCount: resumes, auto: true }).catch(() => {});
-                resumed = true;
-              } else {
-                diagPush(`A run died mid-translate — not resuming it, no picture finished yet (${list.length} pictures on the page).`);
-              }
+                  } catch {}
+                }
+                if (keys.length) diagPush(`Resumed run: cleared ${keys.length} pending ML alarm(s) from the dead run.`);
+              } catch {}
+              runPipeline(rec.tabId, { resume: true, resumeCount: resumes, auto: true }).catch(() => {});
+              resumed = true;
             } else {
               diagPush('A run died mid-translate — not resuming it, the tab is gone or the page changed.');
             }
