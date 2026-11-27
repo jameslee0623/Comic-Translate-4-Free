@@ -892,6 +892,23 @@ load().catch(e => {
   console.error('[ct] options load failed:', e);
 });
 ctApplyI18n();
+// Section titles get an emoji in front (James, 2.4.21, approved from a
+// preview). The emoji lives here in code, not in the locale strings:
+// ctApplyI18n sets each h2's textContent from its locale, so an emoji put
+// in the HTML would be wiped. Prepending after i18n keeps it in all
+// languages, and a future icon change is one line here. Gear is NOT used:
+// it already means Settings. The modal h2s (Azure, Gemini setup) have no
+// id and are left alone.
+const SECTION_EMOJIS = {
+  siteSection: '🌐', langSection: '🗣️', engineSection: '🔄',
+  automationSection: '🤖', proSection: '⭐', modelsSection: '🧠',
+  cacheSection: '💾', aboutSection: 'ℹ️', debugSection: '🐛',
+  diagSection: '📋',
+};
+for (const [id, emoji] of Object.entries(SECTION_EMOJIS)) {
+  const h = document.getElementById(id);
+  if (h && !h.textContent.startsWith(emoji)) h.textContent = emoji + ' ' + h.textContent;
+}
 // About this project: the "5 stars" button goes to this browser's store
 // (Chrome Web Store on Chrome, AMO on Firefox). The HTML default is the
 // Chrome URL, so a missed detection still lands somewhere useful.
