@@ -266,6 +266,16 @@ export async function getSettings() {
     s.minImageSize = 460;
     chrome.storage.local.set({ settings: s }).catch(() => {});
   }
+  // One-time migration (2026-11-27, 2.4.16): debug mode default is off,
+  // but a stored "on" wins over the default, so users who had it on from
+  // early versions kept it on. Reset it to off once. The flag stops the
+  // reset from running again, so after this the user can turn debug back
+  // on (the switch / 5-click) and it stays on.
+  if (stored.settings && !stored.settings._debugModeReset) {
+    if (stored.settings.debugMode === true) s.debugMode = false;
+    s._debugModeReset = true;
+    chrome.storage.local.set({ settings: s }).catch(() => {});
+  }
   // One-time migration (2026-09-28): Latin/Russian source languages were
   // removed. A stored sourceLang that's no longer offered falls back to
   // the default; the orphaned OCR models are deleted.
